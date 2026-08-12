@@ -29,6 +29,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 
 // Client Portal Login & Dashboard
 Route::get('/client/login', [ClientAuthController::class, 'showLogin'])->name('client.login');
+Route::get('/clients/login', fn () => redirect()->route('client.login'));
 Route::post('/client/login', [ClientAuthController::class, 'login']);
 
 Route::middleware(['auth:client'])->prefix('client')->name('client.')->group(function () {

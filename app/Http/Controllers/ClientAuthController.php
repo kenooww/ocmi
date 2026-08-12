@@ -30,8 +30,17 @@ class ClientAuthController extends Controller
 
     public function dashboard()
     {
+        $client = Auth::guard('client')->user();
+
         return Inertia::render('Client/Dashboard', [
-            'client' => Auth::guard('client')->user()
+            'client' => [
+                'id' => $client->id,
+                'name' => $client->name,
+                'email' => $client->email,
+                'phone' => $client->phone,
+                'address' => $client->address,
+                'created_at' => $client->created_at->toFormattedDateString(),
+            ],
         ]);
     }
 
