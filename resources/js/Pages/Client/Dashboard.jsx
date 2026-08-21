@@ -136,12 +136,12 @@ function Sidebar({ active, setActive, mobileOpen, setMobileOpen }) {
     <>
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-20 lg:hidden"
+          className="fixed inset-0 z-[110] bg-black/40 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
       <aside
-        className={`fixed lg:sticky z-30 top-0 left-0 h-screen w-64 shrink-0 flex flex-col transition-transform duration-200 ${
+        className={`fixed left-0 top-0 z-[120] flex h-screen w-64 shrink-0 flex-col transition-transform duration-200 lg:sticky lg:z-30 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
         style={{ backgroundColor: PALETTE.navyDeep }}
@@ -236,7 +236,7 @@ function Topbar({ title, setMobileOpen, client, goProfile }) {
 
   return (
     <div
-      className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 sticky top-0 z-10"
+      className="sticky top-0 z-[90] flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4"
       style={{ backgroundColor: PALETTE.card, borderBottom: `1px solid ${PALETTE.line}` }}
     >
       <div className="flex items-center gap-3 min-w-0">
@@ -271,7 +271,7 @@ function Topbar({ title, setMobileOpen, client, goProfile }) {
         </button>
 
         {profileOpen && (
-          <div className="absolute right-0 top-12 z-50 w-72 rounded border border-slate-200 bg-white shadow-xl">
+          <div className="absolute right-0 top-12 z-[100] w-72 rounded border border-slate-200 bg-white shadow-xl">
             <span className="absolute -top-2 right-5 h-4 w-4 rotate-45 border-l border-t border-slate-200 bg-white" />
             <div className="relative px-5 py-5">
               <div className="flex items-center gap-4">
