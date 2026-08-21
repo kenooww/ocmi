@@ -241,7 +241,7 @@ function TabBar({ active, onChange }) {
   };
 
   return (
-    <div className="mb-5 flex flex-wrap items-center gap-1 border-b border-slate-200">
+    <div className="relative z-30 mb-5 flex flex-wrap items-center gap-1 overflow-visible border-b border-slate-200">
       {primaryTabs.map((tab) => {
         const isActive = active === tab.key;
 
@@ -270,7 +270,7 @@ function TabBar({ active, onChange }) {
         </button>
 
         {moreOpen && (
-          <div className="absolute right-0 z-20 mt-2 w-56 rounded border border-slate-200 bg-white py-1 shadow-lg">
+          <div className="absolute left-0 z-50 mt-2 w-[min(18rem,calc(100vw-2rem))] rounded border border-slate-200 bg-white py-1 shadow-lg sm:left-auto sm:right-0 sm:w-56">
             {moreTabs.map((tab) => {
               const isActive = active === tab.key;
 
