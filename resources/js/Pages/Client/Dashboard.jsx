@@ -1,17 +1,10 @@
-import React from 'react';
-import { Link, useForm } from '@inertiajs/react';
-import { useState } from "react";
-import {
-  Anchor,
-  LayoutDashboard,
-  FilePlus2,
-  History as HistoryIcon,
-  User,
-  Menu,
-  X,
-  Ship,
-  Search,
-} from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { useForm, usePage } from '@inertiajs/react';
+import { Anchor, LayoutDashboard, FilePlus2, History as HistoryIcon, User, Menu, X, Ship, LogOut, Settings } from 'lucide-react';
+import DashboardMain from './Sections/DashboardMain';
+import NewApplication from './Sections/NewApplication';
+import History from './Sections/History';
+import Profile from './Sections/Profile';
 
 const PALETTE = {
   navy: "#0F3049",
@@ -131,12 +124,14 @@ function StatusStamp({ status }) {
 
 const NAV_ITEMS = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { key: "new", label: "New application", icon: FilePlus2 },
-  { key: "history", label: "Application history", icon: HistoryIcon },
   { key: "profile", label: "Profile", icon: User },
 ];
 
 function Sidebar({ active, setActive, mobileOpen, setMobileOpen }) {
+  const { post } = useForm();
+  const { companySettings } = usePage().props;
+  const company = companySettings || {};
+  const logoUrl = company.logo ? `/storage/${company.logo}` : null;
   return (
     <>
       {mobileOpen && (
@@ -152,16 +147,20 @@ function Sidebar({ active, setActive, mobileOpen, setMobileOpen }) {
         style={{ backgroundColor: PALETTE.navyDeep }}
       >
         <div className="flex items-center gap-2 px-6 py-6">
-          <Anchor size={22} color={PALETTE.brass} />
+          {logoUrl ? (
+            <img src={logoUrl} alt={company.company_name || company.portal_name || 'Company'} className="h-8 w-8 rounded bg-white object-contain p-1" />
+          ) : (
+            <Anchor size={22} color={PALETTE.brass} />
+          )}
           <div>
             <p
               className="text-lg leading-tight"
               style={{ fontFamily: "'Fraunces', serif", color: "#F4F1E8", fontWeight: 600 }}
             >
-              Anchor Point
+              {company.portal_name || 'Anchor Point'}
             </p>
             <p className="text-xs" style={{ color: "#9DB0B8" }}>
-              Crewing & recruitment
+              {company.tagline || 'Crewing & recruitment'}
             </p>
           </div>
           <button
@@ -198,7 +197,8 @@ function Sidebar({ active, setActive, mobileOpen, setMobileOpen }) {
         </nav>
 
         <div className="px-6 py-5 text-xs" style={{ color: "#6C818A", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-          Every submission opens a case file, tracked from intake to sign-on.
+          <div className="mb-3">Every submission opens a case file, tracked from intake to sign-on.</div>
+  
         </div>
       </aside>
     </>
@@ -219,8 +219,20 @@ function initialsFor(name) {
     .toUpperCase();
 }
 
-function Topbar({ title, setMobileOpen, client }) {
-  const initials = initialsFor(client?.name);
+function fullNameFor(client) {
+  return [client?.first_name, client?.middle_name, client?.last_name].filter(Boolean).join(" ") || client?.name || "Seafarer";
+}
+
+function Topbar({ title, setMobileOpen, client, goProfile }) {
+  const displayName = fullNameFor(client);
+  const initials = initialsFor(displayName);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const { post } = useForm();
+
+  const handleLogout = () => {
+    setProfileOpen(false);
+    post('/seafarers/logout');
+  };
 
   return (
     <div
@@ -238,13 +250,73 @@ function Topbar({ title, setMobileOpen, client }) {
           {title}
         </h1>
       </div>
-      <div className="flex items-center gap-2">
-        <div
-          className="w-9 h-9 rounded-full flex items-center justify-center text-sm"
-          style={{ backgroundColor: PALETTE.tealBg, color: PALETTE.teal, fontWeight: 600 }}
+
+      <div className="relative flex items-center">
+        <button
+          type="button"
+          onClick={() => setProfileOpen((open) => !open)}
+          className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-slate-300 bg-[#E1EBE6] text-sm font-semibold text-[#1F6F5C] shadow-sm transition hover:border-[#B8863B]"
+          aria-label="Open profile menu"
+          aria-expanded={profileOpen}
         >
-          {initials}
-        </div>
+          {client?.avatar ? (
+            <img
+              src={`/storage/${client.avatar}`}
+              alt={displayName}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            initials
+          )}
+        </button>
+
+        {profileOpen && (
+          <div className="absolute right-0 top-12 z-50 w-72 rounded border border-slate-200 bg-white shadow-xl">
+            <span className="absolute -top-2 right-5 h-4 w-4 rotate-45 border-l border-t border-slate-200 bg-white" />
+            <div className="relative px-5 py-5">
+              <div className="flex items-center gap-4">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E1EBE6] text-lg font-semibold text-[#1F6F5C]">
+                  {client?.avatar ? (
+                    <img src={`/storage/${client.avatar}`} alt={displayName} className="h-full w-full object-cover" />
+                  ) : (
+                    initials
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-blue-600">{displayName}</p>
+                  <p className="mt-1 truncate text-xs text-slate-500">
+                    {client?.email_address || client?.email || 'No email'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    goProfile();
+                  }}
+                  className="flex w-full items-center gap-3 rounded px-2 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                >
+                  <Settings size={16} className="text-slate-500" />
+                  Profile preferences
+                </button>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-200 px-5 py-3">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex w-full items-center gap-3 rounded px-2 py-2 text-left text-sm text-slate-700 transition hover:bg-red-50 hover:text-red-700"
+              >
+                <LogOut size={16} />
+                Logout
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -304,466 +376,55 @@ function ApplicationCard({ a }) {
   );
 }
 
-function DashboardView({ applications, goNew }) {
-  const stats = {
-    total: applications.length,
-    review: applications.filter((a) => a.status === "Under review").length,
-    signed: applications.filter((a) => a.status === "Signed on").length,
-    declined: applications.filter((a) => a.status === "Declined").length,
-  };
-  return (
-    <div className="px-4 py-5 sm:p-6 space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Total filed" value={stats.total} />
-        <StatCard label="Under review" value={stats.review} />
-        <StatCard label="Signed on" value={stats.signed} />
-        <StatCard label="Declined" value={stats.declined} />
-      </div>
-
-      <div
-        className="rounded p-5 flex items-center justify-between flex-wrap gap-3"
-        style={{ backgroundColor: PALETTE.navy }}
-      >
-        <div>
-          <p className="text-sm" style={{ color: "#B7C4C9" }}>
-            Ready for your next contract?
-          </p>
-          <p className="text-base sm:text-lg" style={{ fontFamily: "'Fraunces', serif", color: "#F4F1E8", fontWeight: 600 }}>
-            File a new seafarer application
-          </p>
-        </div>
-        <button
-          onClick={goNew}
-          className="w-full sm:w-auto px-4 py-2 rounded text-sm font-medium shrink-0"
-          style={{ backgroundColor: PALETTE.brass, color: "#241B0C" }}
-        >
-          Start application
-        </button>
-      </div>
-
-      <div>
-        <h2 className="text-sm uppercase tracking-wide mb-3" style={{ color: PALETTE.sub, letterSpacing: "0.08em" }}>
-          Recent cases
-        </h2>
-        <div className="space-y-3">
-          {applications.slice(0, 3).map((a) => (
-            <ApplicationCard key={a.id} a={a} />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function NewApplicationView({ onSubmit, confirmedId }) {
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    rank: "",
-    vessel: "",
-    seamanBook: "",
-    seaService: "",
-    availability: "",
-    note: "",
-  });
-  const [errors, setErrors] = useState({});
-
-  function update(field, value) {
-    setForm((f) => ({ ...f, [field]: value }));
-  }
-
-  function validate() {
-    const errs = {};
-    if (!form.name.trim()) errs.name = "Enter your full name.";
-    if (!form.email.trim()) errs.email = "Enter an email address.";
-    else if (!/^\S+@\S+\.\S+$/.test(form.email)) errs.email = "Enter a valid email address.";
-    if (!form.rank) errs.rank = "Select your rank.";
-    if (!form.seamanBook.trim()) errs.seamanBook = "Enter your seaman's book number.";
-    return errs;
-  }
-
-  function handleSubmit(e) {
-    e.preventDefault();
-    const errs = validate();
-    setErrors(errs);
-    if (Object.keys(errs).length > 0) return;
-    onSubmit(form);
-    setForm({
-      name: "",
-      email: "",
-      phone: "",
-      rank: "",
-      vessel: "",
-      seamanBook: "",
-      seaService: "",
-      availability: "",
-      note: "",
-    });
-  }
-
-  const fieldStyle = (err) => ({
-    backgroundColor: "#fff",
-    border: `1px solid ${err ? PALETTE.rust : PALETTE.line}`,
-    color: PALETTE.ink,
-  });
-
-  return (
-    <div className="px-4 py-5 sm:p-6 max-w-2xl">
-      <div
-        className="rounded p-4 sm:p-6"
-        style={{ backgroundColor: PALETTE.card, border: `1px solid ${PALETTE.line}` }}
-      >
-        <h2 className="text-xl mb-1" style={{ fontFamily: "'Fraunces', serif", color: PALETTE.ink, fontWeight: 600 }}>
-          Seafarer application
-        </h2>
-        <p className="text-sm mb-6" style={{ color: PALETTE.sub }}>
-          Fields marked with an asterisk are required.
-        </p>
-
-        {confirmedId && (
-          <div
-            className="mb-5 px-4 py-3 rounded text-sm"
-            style={{ backgroundColor: PALETTE.tealBg, color: PALETTE.teal, border: `1px solid ${PALETTE.teal}` }}
-          >
-            Application received. Case {confirmedId} was opened.
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm mb-1" style={{ color: PALETTE.ink }}>
-              Full name *
-            </label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => update("name", e.target.value)}
-              placeholder="Renato Cruz"
-              className="w-full px-3 py-2 rounded text-sm outline-none"
-              style={fieldStyle(errors.name)}
-            />
-            {errors.name && <p className="text-xs mt-1" style={{ color: PALETTE.rust }}>{errors.name}</p>}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm mb-1" style={{ color: PALETTE.ink }}>
-                Email *
-              </label>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(e) => update("email", e.target.value)}
-                placeholder="you@email.com"
-                className="w-full px-3 py-2 rounded text-sm outline-none"
-                style={fieldStyle(errors.email)}
-              />
-              {errors.email && <p className="text-xs mt-1" style={{ color: PALETTE.rust }}>{errors.email}</p>}
-            </div>
-            <div>
-              <label className="block text-sm mb-1" style={{ color: PALETTE.ink }}>
-                Phone
-              </label>
-              <input
-                type="tel"
-                value={form.phone}
-                onChange={(e) => update("phone", e.target.value)}
-                placeholder="(555) 010-0192"
-                className="w-full px-3 py-2 rounded text-sm outline-none"
-                style={fieldStyle()}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm mb-1" style={{ color: PALETTE.ink }}>
-                Rank *
-              </label>
-              <select
-                value={form.rank}
-                onChange={(e) => update("rank", e.target.value)}
-                className="w-full px-3 py-2 rounded text-sm outline-none"
-                style={fieldStyle(errors.rank)}
-              >
-                <option value="">Select rank</option>
-                {RANKS.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-              {errors.rank && <p className="text-xs mt-1" style={{ color: PALETTE.rust }}>{errors.rank}</p>}
-            </div>
-            <div>
-              <label className="block text-sm mb-1" style={{ color: PALETTE.ink }}>
-                Preferred vessel type
-              </label>
-              <select
-                value={form.vessel}
-                onChange={(e) => update("vessel", e.target.value)}
-                className="w-full px-3 py-2 rounded text-sm outline-none"
-                style={fieldStyle()}
-              >
-                <option value="">Select vessel type</option>
-                {VESSEL_TYPES.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm mb-1" style={{ color: PALETTE.ink }}>
-                Seaman's book number *
-              </label>
-              <input
-                type="text"
-                value={form.seamanBook}
-                onChange={(e) => update("seamanBook", e.target.value)}
-                placeholder="SB-1234567"
-                className="w-full px-3 py-2 rounded text-sm outline-none"
-                style={fieldStyle(errors.seamanBook)}
-              />
-              {errors.seamanBook && (
-                <p className="text-xs mt-1" style={{ color: PALETTE.rust }}>{errors.seamanBook}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm mb-1" style={{ color: PALETTE.ink }}>
-                Sea service
-              </label>
-              <input
-                type="text"
-                value={form.seaService}
-                onChange={(e) => update("seaService", e.target.value)}
-                placeholder="e.g. 4 years"
-                className="w-full px-3 py-2 rounded text-sm outline-none"
-                style={fieldStyle()}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm mb-1" style={{ color: PALETTE.ink }}>
-              Available from
-            </label>
-            <input
-              type="date"
-              value={form.availability}
-              onChange={(e) => update("availability", e.target.value)}
-              className="w-full px-3 py-2 rounded text-sm outline-none"
-              style={fieldStyle()}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-1" style={{ color: PALETTE.ink }}>
-              Note to the crewing team
-            </label>
-            <textarea
-              value={form.note}
-              onChange={(e) => update("note", e.target.value)}
-              placeholder="Certificates, endorsements, or anything else relevant."
-              rows={4}
-              className="w-full px-3 py-2 rounded text-sm outline-none resize-none"
-              style={fieldStyle()}
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full py-2.5 rounded text-sm font-medium mt-2"
-            style={{ backgroundColor: PALETTE.navy, color: "#F4F1E8" }}
-          >
-            Submit application
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function HistoryView({ applications }) {
-  const [filter, setFilter] = useState("All");
-  const [query, setQuery] = useState("");
-
-  const visible = applications.filter((a) => {
-    const matchesFilter = filter === "All" || a.status === filter;
-    const matchesQuery =
-      query.trim() === "" ||
-      a.name.toLowerCase().includes(query.toLowerCase()) ||
-      a.rank.toLowerCase().includes(query.toLowerCase()) ||
-      a.id.toLowerCase().includes(query.toLowerCase());
-    return matchesFilter && matchesQuery;
-  });
-
-  return (
-    <div className="px-4 py-5 sm:p-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <div className="flex gap-1 text-xs flex-wrap overflow-x-auto pb-1 sm:pb-0">
-          {["All", "Submitted", "Under review", "Signed on", "Declined"].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className="px-2.5 py-1 rounded whitespace-nowrap shrink-0"
-              style={{
-                backgroundColor: filter === f ? PALETTE.navy : "transparent",
-                color: filter === f ? "#F4F1E8" : PALETTE.ink,
-                border: `1px solid ${filter === f ? PALETTE.navy : PALETTE.line}`,
-              }}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-        <div className="relative w-full sm:w-auto">
-          <Search size={15} className="absolute left-2.5 top-2.5" color={PALETTE.sub} />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name, rank, or case ID"
-            className="w-full sm:w-64 pl-8 pr-3 py-1.5 rounded text-sm outline-none"
-            style={{ backgroundColor: "#fff", border: `1px solid ${PALETTE.line}`, color: PALETTE.ink }}
-          />
-        </div>
-      </div>
-
-      {/* Mobile: stacked cards */}
-      <div className="sm:hidden space-y-3">
-        {visible.length === 0 && (
-          <p className="text-sm py-10 text-center" style={{ color: PALETTE.sub }}>
-            No cases match this search.
-          </p>
-        )}
-        {visible.map((a) => (
-          <ApplicationCard key={a.id} a={a} />
-        ))}
-      </div>
-
-      {/* Desktop / tablet: table */}
-      <div
-        className="hidden sm:block rounded overflow-hidden"
-        style={{ backgroundColor: PALETTE.card, border: `1px solid ${PALETTE.line}` }}
-      >
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm" style={{ minWidth: "780px" }}>
-            <thead>
-              <tr style={{ backgroundColor: PALETTE.paper, borderBottom: `1px solid ${PALETTE.line}` }}>
-                {["Case ID", "Name", "Rank", "Vessel type", "Sea service", "Filed", "Status"].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left px-4 py-3 text-xs uppercase tracking-wide"
-                    style={{ color: PALETTE.sub, letterSpacing: "0.06em" }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((a, i) => (
-                <tr
-                  key={a.id}
-                  style={{
-                    borderBottom: i < visible.length - 1 ? `1px solid ${PALETTE.line}` : "none",
-                  }}
-                >
-                  <td
-                    className="px-4 py-3 whitespace-nowrap"
-                    style={{ fontFamily: "'IBM Plex Mono', monospace", color: PALETTE.sub }}
-                  >
-                    {a.id}
-                  </td>
-                  <td className="px-4 py-3 font-medium whitespace-nowrap" style={{ color: PALETTE.ink }}>
-                    {a.name}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap" style={{ color: PALETTE.ink }}>
-                    {a.rank}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap" style={{ color: PALETTE.sub }}>
-                    {a.vessel}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap" style={{ color: PALETTE.sub }}>
-                    {a.seaService}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap" style={{ color: PALETTE.sub }}>
-                    {a.submittedAt}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <StatusStamp status={a.status} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {visible.length === 0 && (
-          <p className="text-sm py-10 text-center" style={{ color: PALETTE.sub }}>
-            No cases match this search.
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ProfileField({ label, value }) {
-  return (
-    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-      <span style={{ color: PALETTE.sub }}>{label}</span>
-      <span className="text-left sm:text-right break-words" style={{ color: PALETTE.ink }}>
-        {value || "Not provided"}
-      </span>
-    </div>
-  );
-}
-
-function ProfileView({ client }) {
-  const displayName = client?.name || "Client";
-  const initials = initialsFor(displayName);
-
-  return (
-    <div className="px-4 py-5 sm:p-6 max-w-xl">
-      <div
-        className="rounded p-4 sm:p-6"
-        style={{ backgroundColor: PALETTE.card, border: `1px solid ${PALETTE.line}` }}
-      >
-        <div className="flex items-center gap-4 mb-5">
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center text-lg"
-            style={{ backgroundColor: PALETTE.tealBg, color: PALETTE.teal, fontWeight: 600 }}
-          >
-            {initials}
-          </div>
-          <div>
-            <p className="text-lg" style={{ fontFamily: "'Fraunces', serif", color: PALETTE.ink, fontWeight: 600 }}>
-              {displayName}
-            </p>
-            <p className="text-sm" style={{ color: PALETTE.sub }}>
-              Client profile
-            </p>
-          </div>
-        </div>
-        <div className="space-y-3 text-sm" style={{ borderTop: `1px solid ${PALETTE.line}`, paddingTop: "1rem" }}>
-          <ProfileField label="Email" value={client?.email} />
-          <ProfileField label="Phone" value={client?.phone} />
-          <ProfileField label="Address" value={client?.address} />
-          <ProfileField label="Client since" value={client?.created_at} />
-        </div>
-      </div>
-    </div>
-  );
-}
+// The Dashboard, NewApplication, History and Profile views have been moved to
+// separate files under resources/js/Pages/Client/Sections/*. They are imported
+// above and used instead of the previous in-file components.
 
 export default function SeafarerPortal({ client }) {
   const [applications, setApplications] = useState(SEED);
-  const [active, setActive] = useState("dashboard");
+  let initialActive = 'dashboard';
+  if (typeof window !== 'undefined') {
+    try {
+      const u = new URL(window.location.href);
+      const qs = u.searchParams.get('section');
+      initialActive = qs || localStorage.getItem('clientDashboardActive') || 'dashboard';
+    } catch (e) {
+      initialActive = localStorage.getItem('clientDashboardActive') || 'dashboard';
+    }
+  }
+
+  const [activeState, setActiveState] = useState(initialActive);
+
+  // wrapper so we persist the active section across page reloads and update URL
+  function setActive(key) {
+    setActiveState(key);
+    try {
+      if (typeof window !== 'undefined') {
+        const u = new URL(window.location.href);
+        u.searchParams.set('section', key);
+        window.history.replaceState(null, '', u.toString());
+        localStorage.setItem('clientDashboardActive', key);
+      }
+    } catch (e) {
+      try { localStorage.setItem('clientDashboardActive', key); } catch (e2) { /* ignore */ }
+    }
+  }
+  const active = activeState;
+
+  // listen to popstate so back/forward updates the active section
+  useEffect(() => {
+    function onPop() {
+      try {
+        const u = new URL(window.location.href);
+        const qs = u.searchParams.get('section') || 'dashboard';
+        setActiveState(qs);
+      } catch (e) {
+        // ignore
+      }
+    }
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [confirmedId, setConfirmedId] = useState(null);
 
@@ -808,16 +469,19 @@ export default function SeafarerPortal({ client }) {
       <Sidebar active={active} setActive={setActive} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <Topbar title={titles[active]} setMobileOpen={setMobileOpen} client={client} />
+        <Topbar title={titles[active]} setMobileOpen={setMobileOpen} client={client} goProfile={() => setActive('profile')} />
 
-        {active === "dashboard" && (
-          <DashboardView applications={applications} goNew={() => setActive("new")} />
+        {active === 'dashboard' && (
+          <DashboardMain
+            applications={applications}
+            client={client}
+            goNew={() => setActive('new')}
+            goProfile={() => setActive('profile')}
+          />
         )}
-        {active === "new" && (
-          <NewApplicationView onSubmit={handleNewApplication} confirmedId={confirmedId} />
-        )}
-        {active === "history" && <HistoryView applications={applications} />}
-        {active === "profile" && <ProfileView client={client} />}
+        {/* {active === 'new' && <NewApplication onSubmit={handleNewApplication} confirmedId={confirmedId} />}
+        {active === 'history' && <History applications={applications} />} */}
+        {active === 'profile' && <Profile client={client} />}
       </div>
     </div>
   );
