@@ -75,7 +75,7 @@ export default function ContinueProfile({ client }) {
     const [modalType, setModalType] = useState(null); // 'success' | 'error'
     const [modalMessage, setModalMessage] = useState('');
 
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         // Identity
         first_name: client?.first_name || '',
         middle_name: client?.middle_name || '',
@@ -124,6 +124,10 @@ export default function ContinueProfile({ client }) {
 
     function submit(e) {
         e.preventDefault();
+        transform(({ avatar, ...payload }) => ({
+            ...payload,
+            ...(avatar instanceof File ? { avatar } : {}),
+        }));
         post('/seafarers/continue', {
             onError: (errorsResp) => {
                 const msgs = Object.values(errorsResp || {}).flat();
