@@ -59,7 +59,7 @@ export default function AdminTabs({ activeTab, title, children }) {
             />
 
             <aside
-                className="fixed lg:sticky z-30 top-0 left-0 h-screen w-64 shrink-0 flex flex-col -translate-x-full peer-checked:translate-x-0 lg:translate-x-0 transition-transform duration-200 print:hidden"
+                className="fixed lg:sticky z-50 top-0 left-0 h-screen w-64 shrink-0 flex flex-col -translate-x-full peer-checked:translate-x-0 lg:translate-x-0 transition-transform duration-200 print:hidden"
                 style={{ backgroundColor: PALETTE.navyDeep }}
             >
                 <div className="flex items-center gap-2 px-6 py-6">
