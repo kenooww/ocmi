@@ -628,16 +628,25 @@ function FleetApplicationForm({ client, title, heading = title, showDocumentHead
     const fullName = fullNameFor(client);
     const documentRows = flexFleetDocumentRows(client);
     const courseRows = flexFleetCourseRows(client);
+    const isFlexFleet = !showDocumentHeader;
     const seaServiceRows = (client?.sea_service || []).map((row, index) => ({
         ...row,
         no: index + 1,
     }));
+    const FlexFleetHeader = () => (
+        <div className="mb-9 grid grid-cols-[72px_1fr_72px] items-start text-center">
+            <img src="/images/flex-fleet-corner-logo.png" alt="Flex Fleet" className="h-16 w-16 object-contain" />
+            <div className="pt-1 text-sm font-medium text-slate-500">{heading}</div>
+            <img src="/images/flex-fleet-corner-logo.png" alt="Flex Fleet" className="ml-auto h-16 w-16 object-contain" />
+        </div>
+    );
 
     return (
         <>
-            <section className="print-page print-page-portrait min-h-[1120px] bg-white p-8 shadow-sm">
+            <section className={`print-page print-page-portrait min-h-[1120px] bg-white shadow-sm ${isFlexFleet ? 'flex-fleet-page p-6' : 'p-8'}`}>
+                <div className={isFlexFleet ? 'flex-fleet-frame min-h-[1055px] rounded-[34px] border-2 border-slate-400 px-7 py-5' : ''}>
                 {showDocumentHeader && <Header client={client} page={`${title} Page 1 of 2`} />}
-                <h1 className="mb-3 text-center text-base font-bold">{heading}</h1>
+                {isFlexFleet ? <FlexFleetHeader /> : <h1 className="mb-3 text-center text-base font-bold">{heading}</h1>}
                 <h2 className="mb-2 text-center text-sm font-bold">PERSONAL PARTICULAR</h2>
                 <CompanyFieldGrid
                     fields={[
@@ -692,11 +701,13 @@ function FleetApplicationForm({ client, title, heading = title, showDocumentHead
                     minRows={courseRows.length}
                     rowLabelKey="name"
                 />
+                </div>
             </section>
 
-            <section className="print-page print-page-portrait min-h-[1120px] bg-white p-8 shadow-sm">
+            <section className={`print-page print-page-portrait min-h-[1120px] bg-white shadow-sm ${isFlexFleet ? 'flex-fleet-page p-6' : 'p-8'}`}>
+                <div className={isFlexFleet ? 'flex-fleet-frame min-h-[1055px] rounded-[34px] border-2 border-slate-400 px-7 py-5' : ''}>
                 {showDocumentHeader && <Header client={client} page={`${title} Page 2 of 2`} />}
-                {!showDocumentHeader && <h1 className="mb-3 text-center text-base font-bold">{heading}</h1>}
+                {isFlexFleet && <FlexFleetHeader />}
                 <h2 className="mb-2 text-center text-sm font-bold">RECORD OF SEA SERVICE</h2>
                 <table className="w-full border-collapse text-[10px]">
                     <thead>
@@ -743,6 +754,7 @@ function FleetApplicationForm({ client, title, heading = title, showDocumentHead
                 </div>
                 <div className="mt-8 text-xs text-slate-500">
                     Notes: *Please delete or change if there is an additional certificate.
+                </div>
                 </div>
             </section>
         </>
@@ -817,6 +829,8 @@ export default function PrintPreview({ client, printForm = 'complete' }) {
                     .print-page { box-shadow: none !important; margin: 0 !important; width: 100% !important; max-width: none !important; min-height: auto !important; padding: 0 !important; page-break-after: always; break-after: page; }
                     .print-page-landscape { width: 285mm !important; max-width: 285mm !important; }
                     .print-page-portrait { width: 190mm !important; max-width: 190mm !important; }
+                    .flex-fleet-page { padding: 0 !important; }
+                    .flex-fleet-frame { min-height: 277mm !important; border-radius: 12mm !important; padding: 7mm 8mm !important; }
                     .zmi-page { position: relative !important; padding-bottom: 18mm !important; overflow: hidden !important; }
                     .zmi-page-portrait { min-height: 277mm !important; height: 277mm !important; }
                     .zmi-page-landscape { min-height: 198mm !important; height: 198mm !important; }
