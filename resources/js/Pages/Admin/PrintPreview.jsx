@@ -296,6 +296,203 @@ function flexFleetCourseRows(client) {
     });
 }
 
+function splitCoverallAndShoe(valueText) {
+    const text = String(valueText || '').trim();
+
+    if (! text) {
+        return ['', ''];
+    }
+
+    const parts = text.split(/[\/,|]/).map((part) => part.trim()).filter(Boolean);
+
+    return [parts[0] || text, parts[1] || ''];
+}
+
+function ageFromDate(dateText) {
+    if (! dateText) {
+        return '';
+    }
+
+    const birthDate = new Date(dateText);
+
+    if (Number.isNaN(birthDate.getTime())) {
+        return '';
+    }
+
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const hasBirthdayPassed = today.getMonth() > birthDate.getMonth()
+        || (today.getMonth() === birthDate.getMonth() && today.getDate() >= birthDate.getDate());
+
+    if (! hasBirthdayPassed) {
+        age -= 1;
+    }
+
+    return `${age} yrs old`;
+}
+
+function DynamicPairRow({ leftLabel, leftValue, rightLabel, rightValue, photo = false, tall = false, rightColSpan = 1 }) {
+    return (
+        <tr>
+            <td className={`border border-black px-2 py-1 align-top font-bold ${tall ? 'h-12' : 'h-7'}`}>
+                {leftLabel && <>{leftLabel}: </>}<span className="font-normal">{upper(leftValue)}</span>
+            </td>
+            <td colSpan={rightColSpan} className={`border border-black px-2 py-1 align-top font-bold ${tall ? 'h-12' : 'h-7'}`}>
+                {rightLabel && <>{rightLabel}: </>}<span className="font-normal">{upper(rightValue)}</span>
+            </td>
+            {photo && (
+                <td rowSpan={6} className="w-48 border border-black p-1 text-center text-xs font-bold">
+                    <div className="flex h-44 items-center justify-center">
+                        {photo === true ? (
+                            'PHOTO WITH WHITE BACKGROUND'
+                        ) : (
+                            <img src={photo} alt="Applicant" className="h-full w-full object-cover" />
+                        )}
+                    </div>
+                </td>
+            )}
+        </tr>
+    );
+}
+
+function DynamicApplicationForm({ client }) {
+    const fullName = fullNameFor(client);
+    const [coverallSize, shoeSize] = splitCoverallAndShoe(client?.coverall_shoe_size);
+    const photo = client?.avatar ? `/storage/${client.avatar}` : true;
+    const documents = documentRowsFor(client);
+    const passport = findRowByName(documents, ['passport']);
+    const seamanBook = findRowByName(documents, ["seaman's book", 'seaman book']);
+    const certifications = client?.certifications || [];
+    const nationalCoc = certifications[0] || {};
+    const otherCoc = certifications[1] || {};
+    const stcwRows = [
+        ...(client?.proficiency || []),
+        ...(client?.vaccinations || []),
+    ];
+    const namedStcwRows = [
+        'T-BOSIET (OPITO Approved)',
+        'H2S Training (OPITO Approved)',
+        'ADNOC Offshore Safety Induction',
+        'ADNOC Welding Safety',
+        'ADNOC Safe Lifting',
+    ].map((name) => {
+        const match = findRowByName(stcwRows, [name]);
+
+        return {
+            name,
+            number: match.number || match.certificate_number,
+            date_of_issue: match.date_of_issue,
+            date_of_expiry: match.date_of_expiry,
+            place_of_issue: match.place_of_issue,
+        };
+    });
+    const seaServiceRows = (client?.sea_service || []).map((row) => ({
+        ...row,
+        type_make: row.type_imo_number,
+        grt_hp_kw: [row.grt, row.main_engine_kw].filter(Boolean).join(' / '),
+        operation_details: [row.area_of_operation, row.oilfield_yn, row.propulsion_type].filter(Boolean).join(' / '),
+        company: row.ship_owner_manager_contact,
+        end_client: '',
+    }));
+    const documentColumns = [
+        { key: 'number', label: 'NUMBER' },
+        { key: 'date_of_issue', label: 'DATE OF ISSUE' },
+        { key: 'date_of_expiry', label: 'EXPIRY DATE' },
+        { key: 'place_of_issue', label: 'PLACE OF ISSUE' },
+    ];
+
+    return (
+        <>
+            <section className="print-page print-page-landscape min-h-[790px] w-[1120px] max-w-full bg-white p-6 shadow-sm print:w-full">
+                <table className="w-full table-fixed border-collapse text-[11px]">
+                    <tbody>
+                        <DynamicPairRow leftLabel="First Name" leftValue={client?.first_name || fullName} rightLabel="Surname" rightValue={client?.last_name} photo={photo} />
+                        <DynamicPairRow leftLabel="Rank/Post" leftValue={client?.position_applied_for || client?.current_position} rightLabel="Nationality" rightValue={client?.nationality} />
+                        <DynamicPairRow leftLabel="Permanent Address" leftValue={client?.current_home_address} rightLabel="Current Address" rightValue={client?.current_home_address} tall />
+                        <DynamicPairRow leftLabel="Date of Birth" leftValue={client?.date_of_birth} rightLabel="Age" rightValue={ageFromDate(client?.date_of_birth)} />
+                        <DynamicPairRow leftLabel="Height cm" leftValue={client?.height_cm} rightLabel="Body Weight & BMI" rightValue={client?.body_weight_bmi} />
+                        <DynamicPairRow leftLabel="Coverall Size" leftValue={coverallSize} rightLabel="Shoe Size" rightValue={shoeSize} />
+                        <DynamicPairRow leftLabel="Religion" leftValue={client?.religion} rightLabel="Nearest Airport" rightValue={client?.nearest_airport} rightColSpan={2} />
+                        <DynamicPairRow leftLabel="Mobile" leftValue={client?.personal_mobile_no} rightLabel="Next of Kin Name" rightValue={client?.next_of_kin} rightColSpan={2} />
+                        <DynamicPairRow leftLabel="Home Tel" leftValue={client?.fax_no} rightLabel="Next of Kin Relation" rightValue={client?.relationship} rightColSpan={2} />
+                        <DynamicPairRow leftLabel="Email" leftValue={client?.email_address || client?.email} rightLabel="Next of Kin contact No." rightValue={client?.emergency_contact} rightColSpan={2} />
+                        <DynamicPairRow leftLabel="Current Salary" leftValue={client?.last_salary} rightLabel="" rightValue="" rightColSpan={2} />
+                        <DynamicPairRow leftLabel="Expected Salary" leftValue="" rightLabel="" rightValue="" rightColSpan={2} />
+                    </tbody>
+                </table>
+
+                <SimpleTable
+                    title="DOCUMENTS"
+                    columns={documentColumns}
+                    rows={[
+                        { ...passport, name: 'Passport' },
+                        { ...seamanBook, name: 'Seaman Book' },
+                    ]}
+                    minRows={2}
+                    rowLabelKey="name"
+                />
+                <SimpleTable
+                    title="COC"
+                    columns={documentColumns}
+                    rows={[
+                        { name: 'National', number: nationalCoc.certificate_number, date_of_issue: nationalCoc.date_of_issue, date_of_expiry: nationalCoc.date_of_expiry, place_of_issue: nationalCoc.place_of_issue },
+                        { name: 'Others', number: otherCoc.certificate_number, date_of_issue: otherCoc.date_of_issue, date_of_expiry: otherCoc.date_of_expiry, place_of_issue: otherCoc.place_of_issue },
+                    ]}
+                    minRows={2}
+                    rowLabelKey="name"
+                />
+                <SimpleTable title="FLAG ENDORESMENT" columns={documentColumns} rows={client?.flag_documents || []} minRows={3} rowLabelKey="name" />
+                <SimpleTable title="STCW CERTIFICATES" columns={documentColumns} rows={[...stcwRows, ...namedStcwRows]} minRows={20} rowLabelKey="name" />
+                <SimpleTable title="OTHER CERTIFICATES" columns={documentColumns} rows={client?.other_certificates || []} minRows={15} rowLabelKey="name" />
+            </section>
+
+            <section className="print-page print-page-landscape min-h-[790px] w-[1120px] max-w-full bg-white p-6 shadow-sm print:w-full">
+                <h2 className="mb-2 text-center text-sm font-bold">Sea Service History</h2>
+                <table className="print-wide-table w-full table-fixed border-collapse text-[10px]">
+                    <thead>
+                        <tr>
+                            {[
+                                'Vessel Name',
+                                'Type/Make',
+                                'GRT/HP/KW',
+                                'Rank',
+                                'Type of Operation Brief Details',
+                                'Company',
+                                'End Client',
+                                'Area of Operation',
+                                'Sign-on',
+                                'Sign-off',
+                            ].map((label) => (
+                                <th key={label} className="border border-black px-1 py-1">{label}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rowsWithMinimum(seaServiceRows, 12).map((row, index) => (
+                            <tr key={index}>
+                                {[
+                                    row.vessel_name,
+                                    row.type_make,
+                                    row.grt_hp_kw,
+                                    row.position,
+                                    row.operation_details,
+                                    row.company,
+                                    row.end_client,
+                                    row.area_of_operation,
+                                    row.from_date,
+                                    row.to_date,
+                                ].map((text, cellIndex) => (
+                                    <td key={cellIndex} className="h-10 border border-black px-1 py-1 align-top">{upper(text)}</td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </section>
+        </>
+    );
+}
+
 function ZmiApplicationForm({ client }) {
     const { companySettings } = usePage().props;
     const company = companySettings || {};
@@ -609,7 +806,7 @@ export default function PrintPreview({ client, printForm = 'complete' }) {
             <main className="print-document mx-auto max-w-5xl space-y-5 px-4 print:max-w-none print:space-y-0 print:px-0">
                 {showZmi && <ZmiApplicationForm client={client} />}
                 {showFlexFleet && <FleetApplicationForm client={client} title="FLEX FLEET APPLICATION FORM" heading="FLEX FLEET SHIP MANAGEMENT SERVIVES LLC" showDocumentHeader={false} />}
-                {showDynamic && <FleetApplicationForm client={client} title="DYNAMIC APPLICATION FORM" />}
+                {showDynamic && <DynamicApplicationForm client={client} />}
 
                 {showPersonal && (
                 <section className="print-page print-page-portrait min-h-[1120px] bg-white p-8 shadow-sm">
