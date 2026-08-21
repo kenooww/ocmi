@@ -805,9 +805,9 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
   function save(e) {
     e.preventDefault();
 
-    transform((payload) => ({
+    transform(({ avatar, ...payload }) => ({
       ...payload,
-      ...(payload.avatar && typeof payload.avatar !== 'string' ? { avatar: payload.avatar } : {}),
+      ...(avatar instanceof File ? { avatar } : {}),
       ...(methodOverride ? { _method: methodOverride } : {}),
     }));
 
