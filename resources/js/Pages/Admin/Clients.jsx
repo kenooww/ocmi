@@ -207,6 +207,31 @@ export default function Clients({ clients, filters = {} }) {
 
     return (
         <AdminTabs activeTab="clients" title="Seafarers">
+            <style>{`
+                .print-form-scroll {
+                    scrollbar-width: thin;
+                    scrollbar-color: #94a3b8 #f1f5f9;
+                }
+
+                .print-form-scroll::-webkit-scrollbar {
+                    width: 10px;
+                }
+
+                .print-form-scroll::-webkit-scrollbar-track {
+                    background: #f1f5f9;
+                    border-radius: 999px;
+                }
+
+                .print-form-scroll::-webkit-scrollbar-thumb {
+                    background: linear-gradient(180deg, #94a3b8, #64748b);
+                    border: 2px solid #f1f5f9;
+                    border-radius: 999px;
+                }
+
+                .print-form-scroll::-webkit-scrollbar-thumb:hover {
+                    background: linear-gradient(180deg, #64748b, #475569);
+                }
+            `}</style>
             <div className="mx-auto max-w-6xl">
                 <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -442,8 +467,8 @@ export default function Clients({ clients, filters = {} }) {
 
             {printClient && (
                 <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-xl rounded bg-white shadow-xl">
-                        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
+                    <div className="flex max-h-[92vh] w-full max-w-xl flex-col overflow-hidden rounded bg-white shadow-xl">
+                        <div className="shrink-0 flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
                             <div>
                                 <h3 className="text-lg font-semibold text-slate-900">Print Forms</h3>
                                 <p className="mt-1 text-sm text-slate-500">
@@ -455,7 +480,7 @@ export default function Clients({ clients, filters = {} }) {
                             </button>
                         </div>
 
-                        <div className="space-y-3 px-6 py-5">
+                        <div className="print-form-scroll min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-5">
                             {PRINTOUT_FORMS.map((form) => (
                                 <Link
                                     key={form.key}
@@ -474,7 +499,7 @@ export default function Clients({ clients, filters = {} }) {
                             ))}
                         </div>
 
-                        <div className="flex justify-end border-t border-slate-200 px-6 py-4">
+                        <div className="shrink-0 flex justify-end border-t border-slate-200 px-6 py-4">
                             <button type="button" onClick={closePrintModal} className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
                                 Cancel
                             </button>

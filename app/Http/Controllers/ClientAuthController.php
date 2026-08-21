@@ -203,6 +203,11 @@ class ClientAuthController extends Controller
         if (! $client) {
             return redirect()->route('seafarers.login')->withErrors(['auth' => 'You must be logged in to complete your profile.']);
         }
+
+        if (! $request->hasFile('avatar')) {
+            $request->request->remove('avatar');
+        }
+
         $data = $request->validate([
             // Identity
             'first_name' => 'required|string|max:255',

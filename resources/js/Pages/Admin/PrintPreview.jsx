@@ -355,6 +355,21 @@ function DynamicPairRow({ leftLabel, leftValue, rightLabel, rightValue, photo = 
     );
 }
 
+function DynamicHeader() {
+    return (
+        <div className="mb-2 border-b-2 border-[#0072bc] pb-1">
+            <div className="flex items-center gap-4">
+                <img src="/images/dynamic-header.jpeg" alt="Dynamic Marine Services" className="h-14 w-48 object-contain" />
+                <div className="text-[11px] font-bold leading-4 text-slate-500">
+                    P.O. Box: 15201 Dubai, UAE, Phone: +9714 3245525, Fax: +9714 3245527 Email:
+                    <br />
+                    info@dynamicmarine.net.ae, Website: www.dynamicmarine.net
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function DynamicApplicationForm({ client }) {
     const fullName = fullNameFor(client);
     const [coverallSize, shoeSize] = splitCoverallAndShoe(client?.coverall_shoe_size);
@@ -404,6 +419,7 @@ function DynamicApplicationForm({ client }) {
     return (
         <>
             <section className="print-page print-page-landscape min-h-[790px] w-[1120px] max-w-full bg-white p-6 shadow-sm print:w-full">
+                <DynamicHeader />
                 <table className="w-full table-fixed border-collapse text-[11px]">
                     <tbody>
                         <DynamicPairRow leftLabel="First Name" leftValue={client?.first_name || fullName} rightLabel="Surname" rightValue={client?.last_name} photo={photo} />
@@ -447,6 +463,7 @@ function DynamicApplicationForm({ client }) {
             </section>
 
             <section className="print-page print-page-landscape min-h-[790px] w-[1120px] max-w-full bg-white p-6 shadow-sm print:w-full">
+                <DynamicHeader />
                 <h2 className="mb-2 text-center text-sm font-bold">Sea Service History</h2>
                 <table className="print-wide-table w-full table-fixed border-collapse text-[10px]">
                     <thead>
@@ -504,12 +521,36 @@ function ZmiApplicationForm({ client }) {
         { key: 'date_of_issue', label: 'Issue Date' },
         { key: 'date_of_expiry', label: 'Expiry Date' },
     ];
+    const ZmiHeader = ({ page }) => (
+        <div className="mb-3 grid grid-cols-[145px_1fr_265px] border-l border-t border-black text-xs text-slate-600">
+            <div className="flex items-center justify-center border-b border-r border-black px-3 py-2">
+                <img src="/images/zmi-holdings-header.jpeg" alt="ZMI Holdings" className="h-9 w-full object-contain" />
+            </div>
+            <div className="flex items-center justify-center border-b border-r border-black px-3 py-2 text-center text-base font-bold leading-5 text-slate-500">
+                FLEET PERSONNEL MANUAL
+                <br />
+                FORMS
+            </div>
+            <div className="grid grid-cols-[1fr_1fr]">
+                <div className="border-b border-r border-black px-2 py-1">Document No.</div>
+                <div className="border-b border-r border-black px-2 py-1">FPM-SP-03-01</div>
+                <div className="border-b border-r border-black px-2 py-1">Revision No. & Date</div>
+                <div className="border-b border-r border-black px-2 py-1">01, 01.05.2025</div>
+                <div className="border-b border-r border-black px-2 py-1">Page</div>
+                <div className="border-b border-r border-black px-2 py-1">{page}</div>
+            </div>
+        </div>
+    );
+    const ZmiFooter = () => (
+        <div className="zmi-footer pointer-events-none absolute bottom-6 left-8">
+            <img src="/images/zmi-holdings-header.jpeg" alt="ZMI Holdings" className="h-8 w-40 object-contain opacity-35" />
+        </div>
+    );
 
     return (
         <>
-            <section className="print-page print-page-portrait min-h-[1120px] bg-white p-8 shadow-sm">
-                <Header client={client} page="ZMI Page 1 of 3" />
-                <h1 className="mb-3 text-center text-base font-bold">ZMI APPLICATION FORM</h1>
+            <section className="zmi-page zmi-page-portrait print-page print-page-portrait relative min-h-[1120px] bg-white p-8 pb-20 shadow-sm">
+                <ZmiHeader page="1 of 3" />
                 <CompanyFieldGrid
                     fields={[
                         ['Name of Applicant', fullName],
@@ -546,10 +587,11 @@ function ZmiApplicationForm({ client }) {
                     rowLabelKey="name"
                 />
                 <SimpleTable title="Certificate of Competency / GMDSS Details" columns={certificateColumns} rows={client?.certifications || []} minRows={5} />
+                <ZmiFooter />
             </section>
 
-            <section className="print-page print-page-portrait min-h-[1120px] bg-white p-8 shadow-sm">
-                <Header client={client} page="ZMI Page 2 of 3" />
+            <section className="zmi-page zmi-page-portrait print-page print-page-portrait relative min-h-[1120px] bg-white p-8 pb-20 shadow-sm">
+                <ZmiHeader page="2 of 3" />
                 <SimpleTable title="STCW Certificate Details" columns={certificateColumns} rows={certificateRowsFor(client)} minRows={12} />
                 <SimpleTable title="Offshore Training Certificate Details" columns={certificateColumns} rows={client?.proficiency || []} minRows={4} />
                 <SimpleTable
@@ -564,10 +606,11 @@ function ZmiApplicationForm({ client }) {
                     rows={client?.employment_history || []}
                     minRows={2}
                 />
+                <ZmiFooter />
             </section>
 
-            <section className="print-page print-page-landscape min-h-[790px] w-[1120px] max-w-full bg-white p-8 shadow-sm print:w-full">
-                <Header client={client} page="ZMI Page 3 of 3" />
+            <section className="zmi-page zmi-page-landscape print-page print-page-landscape relative min-h-[790px] w-[1120px] max-w-full bg-white p-8 pb-20 shadow-sm print:w-full">
+                <ZmiHeader page="3 of 3" />
                 <SeaServiceTable rows={client?.sea_service || []} />
                 <DeckOfficerTable rows={client?.deck_officer_experience || []} />
                 <div className="mt-6 grid grid-cols-3 gap-8 text-xs">
@@ -575,6 +618,7 @@ function ZmiApplicationForm({ client }) {
                     <div className="border-t border-black pt-1">Rank: {upper(client?.current_position)}</div>
                     <div className="border-t border-black pt-1">Signature:</div>
                 </div>
+                <ZmiFooter />
             </section>
         </>
     );
@@ -773,6 +817,10 @@ export default function PrintPreview({ client, printForm = 'complete' }) {
                     .print-page { box-shadow: none !important; margin: 0 !important; width: 100% !important; max-width: none !important; min-height: auto !important; padding: 0 !important; page-break-after: always; break-after: page; }
                     .print-page-landscape { width: 285mm !important; max-width: 285mm !important; }
                     .print-page-portrait { width: 190mm !important; max-width: 190mm !important; }
+                    .zmi-page { position: relative !important; padding-bottom: 18mm !important; overflow: hidden !important; }
+                    .zmi-page-portrait { min-height: 277mm !important; height: 277mm !important; }
+                    .zmi-page-landscape { min-height: 198mm !important; height: 198mm !important; }
+                    .zmi-footer { bottom: 6mm !important; left: 8mm !important; }
                     .print-page:last-child { page-break-after: auto; }
                     .print-table-scroll { overflow: visible !important; }
                     .print-wide-table { min-width: 0 !important; width: 100% !important; table-layout: fixed !important; font-size: 8px !important; }
