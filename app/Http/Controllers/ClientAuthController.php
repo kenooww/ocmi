@@ -26,6 +26,24 @@ class ClientAuthController extends Controller
         'seafarers_identification_document',
     ];
 
+    private const TYPE_OF_JOB_OPTIONS = [
+        'Landbased/Skilled/Office Job',
+        'Seabased/Seaman',
+    ];
+
+    private const STATUS_OPTIONS = [
+        'single',
+        'married',
+        'widowed',
+        'divorced',
+        'separated',
+    ];
+
+    private const GENDER_OPTIONS = [
+        'Male',
+        'Female',
+    ];
+
     public function showLogin()
     {
         return Inertia::render('Client/ClientLogin');
@@ -61,6 +79,12 @@ class ClientAuthController extends Controller
 
         Auth::guard('client')->login($client);
         $request->session()->regenerate();
+        $request->session()->forget('client_authenticated_via_google');
+
+        if ($this->requiresMandatoryPasswordChange($request, $client)) {
+            return redirect()->route('seafarers.password.mandatory');
+        }
+
         return $this->redirectToDashboard();
     }
 
@@ -78,6 +102,10 @@ class ClientAuthController extends Controller
             'seaServices',
             'deckOfficerExperiences',
         ]);
+
+        if ($this->requiresMandatoryPasswordChange(request(), $client)) {
+            return redirect()->route('seafarers.password.mandatory');
+        }
 
         if (! $client->hasCompletedContinueProfile()) {
             return redirect()
@@ -143,21 +171,41 @@ class ClientAuthController extends Controller
             return Inertia::render('Client/GoogleRegister', ['error' => 'Google OAuth failed: ' . $e->getMessage()]);
         }
 
-        $email = $googleUser['email'] ?? null;
+        $email = $this->normalizeEmail($googleUser['email'] ?? null);
         $name = $googleUser['name'] ?? ($googleUser['given_name'] ?? 'Client');
+        $nameParts = $this->namePartsFromGoogleUser($googleUser);
 
         if (! $email) {
             return Inertia::render('Client/GoogleRegister', ['error' => 'Google did not provide an email address.']);
         }
 
-        $client = Client::firstOrCreate(
-            ['email' => $email],
-            ['name' => $name, 'password' => bcrypt(Str::random(24))]
-        );
+        $client = Client::whereRaw('LOWER(email) = ?', [$email])->first();
+
+        $temporaryPassword = null;
+
+        if (! $client) {
+            $temporaryPassword = Str::random(12);
+            $client = Client::create([
+                'email' => $email,
+                'name' => $name,
+                'password' => bcrypt($temporaryPassword),
+                'must_change_password' => true,
+                'first_name' => $nameParts['first_name'],
+                'middle_name' => $nameParts['middle_name'],
+                'last_name' => $nameParts['last_name'],
+                'application_status' => Client::DEFAULT_APPLICATION_STATUS,
+            ]);
+        }
+
+        if (! $client->wasRecentlyCreated && blank($client->first_name) && blank($client->last_name)) {
+            $client->forceFill($nameParts)->save();
+        }
 
         // If the account already exists and is verified, log in and go to dashboard
         if ($client->email_verified_at) {
             Auth::guard('client')->login($client);
+            $request->session()->regenerate();
+            $request->session()->put('client_authenticated_via_google', true);
             return $this->redirectToDashboard();
         }
 
@@ -166,14 +214,58 @@ class ClientAuthController extends Controller
         $client->save();
 
         $link = route('seafarers.verify', $client->verification_token);
-        SendClientVerificationEmail::dispatch($client, $link);
+        SendClientVerificationEmail::dispatch($client, $link, $temporaryPassword);
 
         return Inertia::render('Client/GoogleRegister', ['notice' => 'A verification email has been sent. Please check your inbox.']);
+    }
+
+    public function showMandatoryPassword()
+    {
+        $client = Auth::guard('client')->user();
+
+        if (! $client) {
+            return redirect()->route('seafarers.login');
+        }
+
+        if (! $this->requiresMandatoryPasswordChange(request(), $client)) {
+            return $this->redirectToDashboard();
+        }
+
+        return Inertia::render('Client/MandatoryChangePassword');
+    }
+
+    public function updateMandatoryPassword(Request $request)
+    {
+        $client = Auth::guard('client')->user();
+
+        if (! $client) {
+            return redirect()->route('seafarers.login')->withErrors(['auth' => 'You must be logged in to update your password.']);
+        }
+
+        $data = $request->validate([
+            'current_password' => 'required|current_password:client',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        $client->update([
+            'password' => Hash::make($data['password']),
+            'must_change_password' => false,
+        ]);
+
+        if (! $client->hasCompletedContinueProfile()) {
+            return redirect()->route('seafarers.continue')->with('notice', 'Password updated successfully. Please complete your profile.');
+        }
+
+        return $this->redirectToDashboard()->with('notice', 'Password updated successfully.');
     }
 
     public function showContinueProfile()
     {
         $client = Auth::guard('client')->user();
+
+        if ($client && $this->requiresMandatoryPasswordChange(request(), $client)) {
+            return redirect()->route('seafarers.password.mandatory');
+        }
 
         if ($client && $client->hasCompletedContinueProfile()) {
             return $this->redirectToDashboard();
@@ -213,6 +305,9 @@ class ClientAuthController extends Controller
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
             'last_name' => 'required|string|max:255',
+            'gender' => ['nullable', 'string', Rule::in(self::GENDER_OPTIONS)],
+            'status' => ['nullable', 'string', Rule::in(self::STATUS_OPTIONS)],
+            'type_of_job' => ['nullable', 'string', Rule::in(self::TYPE_OF_JOB_OPTIONS)],
             'date_applied' => 'required|date',
 
             // Birth & family
@@ -238,8 +333,14 @@ class ClientAuthController extends Controller
             // Contact & address
             'current_home_address' => 'required|string|max:2000',
             'personal_mobile_no' => 'required|string|max:50',
+            'whatsapp_number' => 'nullable|string|max:50',
             'fax_no' => 'nullable|string|max:50',
-            'email_address' => 'required|email|max:255',
+            'email_address' => [
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('clients', 'email_address')->ignore($client->id),
+            ],
             'nearest_airport' => 'required|string|max:255',
 
             // Next of kin / emergency
@@ -590,6 +691,7 @@ class ClientAuthController extends Controller
             unset($data['avatar']);
         }
 
+        $data['email_address'] = $this->normalizeEmail($data['email_address'] ?? null) ?: $data['email_address'];
         $client->update($data);
       
         return $this->redirectToDashboard()->with('notice', 'Profile saved successfully.');
@@ -643,6 +745,46 @@ class ClientAuthController extends Controller
                 return $data;
             })
             ->values();
+    }
+
+    private function namePartsFromGoogleUser(array $googleUser): array
+    {
+        $givenName = trim((string) ($googleUser['given_name'] ?? ''));
+        $familyName = trim((string) ($googleUser['family_name'] ?? ''));
+        $displayName = trim((string) ($googleUser['name'] ?? ''));
+
+        if ($givenName !== '' || $familyName !== '') {
+            $givenParts = preg_split('/\s+/', $givenName, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+            return [
+                'first_name' => $givenParts[0] ?? $givenName,
+                'middle_name' => count($givenParts) > 1 ? implode(' ', array_slice($givenParts, 1)) : null,
+                'last_name' => $familyName ?: null,
+            ];
+        }
+
+        $parts = preg_split('/\s+/', $displayName, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        if (count($parts) <= 1) {
+            return [
+                'first_name' => $parts[0] ?? null,
+                'middle_name' => null,
+                'last_name' => null,
+            ];
+        }
+
+        return [
+            'first_name' => $parts[0],
+            'middle_name' => count($parts) > 2 ? implode(' ', array_slice($parts, 1, -1)) : null,
+            'last_name' => $parts[count($parts) - 1],
+        ];
+    }
+
+    private function normalizeEmail(?string $email): ?string
+    {
+        $email = trim((string) $email);
+
+        return $email === '' ? null : strtolower($email);
     }
 
     private function syncRows(Client $client, string $relation, array $rows, array $fields, ?string $storageFolder = null, ?string $requestKey = null): void
@@ -738,7 +880,11 @@ class ClientAuthController extends Controller
         if ($email) {
             $client = Client::firstOrCreate(
                 ['email' => $email],
-                ['name' => $email, 'password' => bcrypt(Str::random(24))]
+                [
+                    'name' => $email,
+                    'password' => bcrypt(Str::random(24)),
+                    'application_status' => Client::DEFAULT_APPLICATION_STATUS,
+                ]
             );
         } else {
             $client = Auth::guard('client')->user();
@@ -766,6 +912,27 @@ class ClientAuthController extends Controller
         return redirect()->route('seafarers.login');
     }
 
+    public function updatePassword(Request $request)
+    {
+        $client = Auth::guard('client')->user();
+
+        if (! $client) {
+            return redirect()->route('seafarers.login')->withErrors(['auth' => 'You must be logged in to update your password.']);
+        }
+
+        $data = $request->validate([
+            'current_password' => 'required|current_password:client',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        $client->update([
+            'password' => Hash::make($data['password']),
+            'must_change_password' => false,
+        ]);
+
+        return back()->with('notice', 'Password updated successfully.');
+    }
+
     private function redirectToDashboard()
     {
         if (RouteFacade::has('seafarers.dashboard')) {
@@ -774,7 +941,13 @@ class ClientAuthController extends Controller
 
         return redirect('/client/dashboard?section=dashboard');
     }
-    public function verify($token)
+
+    private function requiresMandatoryPasswordChange(Request $request, Client $client): bool
+    {
+        return $client->must_change_password && ! (bool) $request->session()->get('client_authenticated_via_google', false);
+    }
+
+    public function verify(Request $request, $token)
 {
     $client = Client::where('verification_token', $token)->first();
 
@@ -787,7 +960,11 @@ class ClientAuthController extends Controller
     $client->verification_token = null;
     $client->save();
 
-    return Inertia::render('Client/ContinueProfile', ['client' => $client]);
+    Auth::guard('client')->login($client);
+    $request->session()->regenerate();
+    $request->session()->forget('client_authenticated_via_google');
+
+    return redirect()->route('seafarers.continue');
 
     
 }

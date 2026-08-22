@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CompanySetting;
+use App\Models\ApplicationStatusLog;
 use App\Models\User;
 use App\Models\Client;
+use App\Jobs\SendClientVerificationEmail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -21,6 +23,31 @@ class AdminController extends Controller
         'visa',
         'seamans_book',
         'seafarers_identification_document',
+    ];
+
+    private const TYPE_OF_JOB_OPTIONS = [
+        'Landbased/Skilled/Office Job',
+        'Seabased/Seaman',
+    ];
+
+    private const STATUS_OPTIONS = [
+        'single',
+        'married',
+        'widowed',
+        'divorced',
+        'separated',
+    ];
+
+    private const GENDER_OPTIONS = [
+        'Male',
+        'Female',
+    ];
+
+    private const APPLICATION_STATUS_OPTIONS = [
+        'PENDING/ONHOLD',
+        'TO REPORT',
+        'FOR REEVAL/FOR APPROVAL',
+        'FAILED',
     ];
 
     public function dashboard()
@@ -224,12 +251,17 @@ class AdminController extends Controller
 
         return Inertia::render('Admin/Clients', [
             'clients' => Client::query()
+                ->with(['applicationStatusLogs' => fn ($query) => $query->latest()])
                 ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
                     $query
                         ->where('name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%")
-                        ->orWhere('phone', 'like', "%{$search}%")
-                        ->orWhere('address', 'like', "%{$search}%");
+                        ->orWhere('first_name', 'like', "%{$search}%")
+                        ->orWhere('middle_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('type_of_job', 'like', "%{$search}%")
+                        ->orWhere('whatsapp_number', 'like', "%{$search}%")
+                        ->orWhere('processed_by', 'like', "%{$search}%")
+                        ->orWhere('application_status', 'like', "%{$search}%");
                 }))
                 ->latest()
                 ->paginate(10)
@@ -242,8 +274,23 @@ class AdminController extends Controller
                     'last_name' => $client->last_name,
                     'email' => $client->email,
                     'phone' => $client->phone,
+                    'personal_mobile_no' => $client->personal_mobile_no,
                     'address' => $client->address,
                     'avatar' => $client->avatar,
+                    'type_of_job' => $client->type_of_job,
+                    'whatsapp_number' => $client->whatsapp_number,
+                    'processed_by' => $client->processed_by,
+                    'application_status' => $client->application_status,
+                    'application_status_logs' => $client->applicationStatusLogs
+                        ->map(fn ($log) => [
+                            'id' => $log->id,
+                            'previous_status' => $log->previous_status,
+                            'status' => $log->status,
+                            'processed_by' => $log->processed_by,
+                            'remarks' => $log->remarks,
+                            'created_at' => optional($log->created_at)->format('Y-m-d H:i'),
+                        ])
+                        ->values(),
                 ]),
             'filters' => [
                 'search' => $search,
@@ -384,13 +431,19 @@ class AdminController extends Controller
             'password' => Hash::make($request->password),
             'phone' => $request->phone,
             'address' => $request->address,
+            'application_status' => Client::DEFAULT_APPLICATION_STATUS,
         ];
 
         if ($request->hasFile('avatar')) {
             $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
         }
 
-        Client::create($data);
+        $client = Client::create($data);
+
+        if (! $client->email_verified_at) {
+            $link = route('seafarers.verify', $client->verification_token);
+            SendClientVerificationEmail::dispatch($client, $link);
+        }
 
         return back()->with('success', 'Client added successfully.');
     }
@@ -401,6 +454,9 @@ class AdminController extends Controller
             'first_name' => 'nullable|string|max:255',
             'middle_name' => 'nullable|string|max:255',
             'last_name' => 'nullable|string|max:255',
+            'gender' => ['nullable', 'string', Rule::in(self::GENDER_OPTIONS)],
+            'status' => ['nullable', 'string', Rule::in(self::STATUS_OPTIONS)],
+            'type_of_job' => ['nullable', 'string', Rule::in(self::TYPE_OF_JOB_OPTIONS)],
             'date_applied' => 'nullable|date',
             'place_of_birth' => 'nullable|string|max:255',
             'date_of_birth' => 'nullable|date',
@@ -418,8 +474,14 @@ class AdminController extends Controller
             'coverall_shoe_size' => 'nullable|string|max:100',
             'current_home_address' => 'nullable|string|max:2000',
             'personal_mobile_no' => 'nullable|string|max:50',
+            'whatsapp_number' => 'nullable|string|max:50',
             'fax_no' => 'nullable|string|max:50',
-            'email_address' => 'nullable|email|max:255',
+            'email_address' => [
+                'nullable',
+                'email',
+                'max:255',
+                Rule::unique('clients', 'email_address')->ignore($client->id),
+            ],
             'nearest_airport' => 'nullable|string|max:255',
             'next_of_kin' => 'nullable|string|max:255',
             'relationship' => 'nullable|string|max:255',
@@ -576,6 +638,33 @@ class AdminController extends Controller
         $client->update($data);
 
         return back()->with('success', 'Seafarer profile updated successfully.');
+    }
+
+    public function updateApplicationStatus(Request $request, Client $client)
+    {
+        $data = $request->validate([
+            'application_status' => ['required', 'string', Rule::in(self::APPLICATION_STATUS_OPTIONS)],
+            'remarks' => 'nullable|string|max:5000',
+        ]);
+
+        $admin = Auth::user();
+        $processedBy = $admin ? ($admin->name ?: $admin->email) : null;
+        $previousStatus = $client->application_status;
+
+        $client->update([
+            'application_status' => $data['application_status'],
+            'processed_by' => $processedBy,
+        ]);
+
+        ApplicationStatusLog::create([
+            'client_id' => $client->id,
+            'previous_status' => $previousStatus,
+            'status' => $data['application_status'],
+            'processed_by' => $processedBy,
+            'remarks' => $data['remarks'] ?? null,
+        ]);
+
+        return back()->with('success', 'Application status updated successfully.');
     }
 
     private function syncDependents(Client $client, array $rows, Request $request): void

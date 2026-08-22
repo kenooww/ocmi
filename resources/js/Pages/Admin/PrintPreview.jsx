@@ -296,6 +296,17 @@ function flexFleetCourseRows(client) {
     });
 }
 
+function CheckBox({ label, checked = false }) {
+    return (
+        <span className="mr-3 inline-flex items-center gap-1 whitespace-nowrap">
+            <span className="inline-flex h-3 w-3 items-center justify-center border border-black text-[9px] leading-none">
+                {checked ? 'X' : ''}
+            </span>
+            {label}
+        </span>
+    );
+}
+
 function splitCoverallAndShoe(valueText) {
     const text = String(valueText || '').trim();
 
@@ -430,6 +441,7 @@ function DynamicApplicationForm({ client }) {
                         <DynamicPairRow leftLabel="Coverall Size" leftValue={coverallSize} rightLabel="Shoe Size" rightValue={shoeSize} />
                         <DynamicPairRow leftLabel="Religion" leftValue={client?.religion} rightLabel="Nearest Airport" rightValue={client?.nearest_airport} rightColSpan={2} />
                         <DynamicPairRow leftLabel="Mobile" leftValue={client?.personal_mobile_no} rightLabel="Next of Kin Name" rightValue={client?.next_of_kin} rightColSpan={2} />
+                        <DynamicPairRow leftLabel="WhatsApp" leftValue={client?.whatsapp_number} rightLabel="" rightValue="" rightColSpan={2} />
                         <DynamicPairRow leftLabel="Home Tel" leftValue={client?.fax_no} rightLabel="Next of Kin Relation" rightValue={client?.relationship} rightColSpan={2} />
                         <DynamicPairRow leftLabel="Email" leftValue={client?.email_address || client?.email} rightLabel="Next of Kin contact No." rightValue={client?.emergency_contact} rightColSpan={2} />
                         <DynamicPairRow leftLabel="Current Salary" leftValue={client?.last_salary} rightLabel="" rightValue="" rightColSpan={2} />
@@ -514,13 +526,31 @@ function ZmiApplicationForm({ client }) {
     const { companySettings } = usePage().props;
     const company = companySettings || {};
     const fullName = fullNameFor(client);
-    const certificateColumns = [
-        { key: 'name', label: 'Certificate Grade / Name' },
-        { key: 'certificate_number', label: 'Certificate Number' },
-        { key: 'place_of_issue', label: 'Country / Place of Issue' },
-        { key: 'date_of_issue', label: 'Issue Date' },
-        { key: 'date_of_expiry', label: 'Expiry Date' },
+    const documents = documentRowsFor(client);
+    const passport = findRowByName(documents, ['passport']);
+    const seamanBook = findRowByName(documents, ["seaman's book", 'seaman book']);
+    const allCertificates = certificateRowsFor(client);
+    const coc = client?.certifications?.[0] || {};
+    const gmdss = findRowByName(allCertificates, ['gmdss']) || {};
+    const [boilerSuitSize, safetyShoeSize] = splitCoverallAndShoe(client?.coverall_shoe_size);
+    const stcwNames = [
+        'Basic Safety Training',
+        'Personal Survival Techniques',
+        'Proficiency in Survival Crafts & Rescue Boats',
+        'Basic / Advanced Fire Fighting',
+        'Basic First Aid / Medical Care / Medical First Aid',
+        'Personal Safety & Social Responsibility',
+        'Automatic Radar Plotting Aid [ARPA]',
+        'Radar Observer Course [ROC]',
+        'Ships Security Awareness / Officer',
+        'ECDIS',
+        'Bridge/Engine resource management',
+        'DP Certificate / Maintenance',
     ];
+    const offshoreNames = ['BOSIET - OPITO', 'H2S - OPITO', 'HERTM - OPITO', 'HERTL - OPITO'];
+    const stcwRows = stcwNames.map((name) => ({ ...findRowByName(allCertificates, [name]), name }));
+    const offshoreRows = offshoreNames.map((name) => ({ ...findRowByName(allCertificates, [name]), name }));
+    const referenceRows = rowsWithMinimum(client?.employment_history || [], 2);
     const ZmiHeader = ({ page }) => (
         <div className="mb-3 grid grid-cols-[145px_1fr_265px] border-l border-t border-black text-xs text-slate-600">
             <div className="flex items-center justify-center border-b border-r border-black px-3 py-2">
@@ -546,66 +576,146 @@ function ZmiApplicationForm({ client }) {
             <img src="/images/zmi-holdings-header.jpeg" alt="ZMI Holdings" className="h-8 w-40 object-contain opacity-35" />
         </div>
     );
+    const ZmiCell = ({ label, valueText, children, colSpan = 1, className = '' }) => (
+        <td colSpan={colSpan} className={`border border-black px-2 py-1 align-top ${className}`}>
+            {label && <span className="font-bold">{label}: </span>}
+            {children || <span>{upper(valueText)}</span>}
+        </td>
+    );
+    const ZmiTitleRow = ({ children, colSpan = 4 }) => (
+        <tr>
+            <td colSpan={colSpan} className="border border-black bg-slate-100 px-2 py-1 text-center text-xs font-bold">
+                {children}
+            </td>
+        </tr>
+    );
+    const ZmiCertificateTable = ({ title, rows, minRows }) => (
+        <section className="mt-3">
+            <table className="w-full border-collapse text-[10px]">
+                <thead>
+                    <tr>
+                        <th colSpan={4} className="border border-black bg-slate-100 px-2 py-1 text-center font-bold">{title}</th>
+                    </tr>
+                    <tr>
+                        <th className="border border-black px-2 py-1 text-left">Certificate</th>
+                        <th className="border border-black px-2 py-1">Issue Date</th>
+                        <th className="border border-black px-2 py-1">Expiry Date</th>
+                        <th className="border border-black px-2 py-1">Issued At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rowsWithMinimum(rows, minRows).map((row, index) => (
+                        <tr key={index}>
+                            <td className="h-7 border border-black px-2 py-1 font-medium">{upper(row.name)}</td>
+                            <td className="border border-black px-2 py-1">{upper(row.date_of_issue)}</td>
+                            <td className="border border-black px-2 py-1">{upper(row.date_of_expiry)}</td>
+                            <td className="border border-black px-2 py-1">{upper(row.place_of_issue)}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </section>
+    );
 
     return (
         <>
             <section className="zmi-page zmi-page-portrait print-page print-page-portrait relative min-h-[1120px] bg-white p-8 pb-20 shadow-sm">
                 <ZmiHeader page="1 of 3" />
-                <CompanyFieldGrid
-                    fields={[
-                        ['Name of Applicant', fullName],
-                        ['Rank Applied for', client?.position_applied_for],
-                        ['Date of Application', client?.date_applied],
-                        ['Agency Name', company.company_name || 'Alpha Omega Crewing Mgmt Inc.'],
-                        ['Availability', 'Anytime'],
-                        ['Nationality', client?.nationality],
-                        ['Mother Full Name', client?.mothers_maiden_name],
-                        ['Religion', client?.religion],
-                        ['Date of Birth', client?.date_of_birth],
-                        ['Place / Country of Birth', client?.place_of_birth],
-                        ['Permanent Address', client?.current_home_address],
-                        ['Mobile No.', client?.personal_mobile_no],
-                        ['Email', client?.email_address || client?.email],
-                        ['Next of Kin', client?.next_of_kin],
-                        ['Relation', client?.relationship],
-                        ['Contact Details', client?.emergency_contact],
-                        ['Nearest International Airport', client?.nearest_airport],
-                        ['PPE Boiler Suit Size', client?.coverall_shoe_size],
-                        ['Safety Shoe Size', client?.coverall_shoe_size],
-                    ]}
-                />
-                <SimpleTable
-                    title="Passport / Seaman Book Details"
-                    columns={[
-                        { key: 'number', label: 'Number' },
-                        { key: 'place_of_issue', label: 'Country of Issue' },
-                        { key: 'date_of_issue', label: 'Date Issued' },
-                        { key: 'date_of_expiry', label: 'Expiry Date' },
-                    ]}
-                    rows={documentRowsFor(client)}
-                    minRows={4}
-                    rowLabelKey="name"
-                />
-                <SimpleTable title="Certificate of Competency / GMDSS Details" columns={certificateColumns} rows={client?.certifications || []} minRows={5} />
+                <table className="w-full table-fixed border-collapse text-[10px]">
+                    <tbody>
+                        <tr>
+                            <ZmiCell label="Name of Applicant" valueText={client?.last_name} />
+                            <ZmiCell valueText={client?.first_name} />
+                            <ZmiCell valueText={client?.middle_name} />
+                            <td rowSpan={7} className="w-28 border border-black p-1 text-center text-[9px]">
+                                {client?.avatar ? <img src={`/storage/${client.avatar}`} alt={fullName} className="h-32 w-full object-cover" /> : 'Photo'}
+                            </td>
+                        </tr>
+                        <tr className="text-center text-[9px]"><td className="border border-black">(Surname)</td><td className="border border-black">(Given Name)</td><td className="border border-black">(Middle Name)</td></tr>
+                        <tr><ZmiCell label="Rank Applied for" valueText={client?.position_applied_for} colSpan={3} /></tr>
+                        <tr><ZmiCell label="Date of Application" valueText={client?.date_applied} colSpan={3} /></tr>
+                        <tr><ZmiCell label="Direct Application" colSpan={3}><CheckBox label="Yes" /><CheckBox label="No" /> <span className="text-[9px]">(if No, indicate below the agency name)</span></ZmiCell></tr>
+                        <tr><ZmiCell label="Agency Name" valueText={company.company_name || 'Alpha Omega Crewing Mgmt Inc.'} colSpan={3} /></tr>
+                        <tr><ZmiCell label="Availability" valueText="Anytime" colSpan={3} /></tr>
+                        <ZmiTitleRow>Basic Information</ZmiTitleRow>
+                        <tr><ZmiCell label="Nationality" valueText={client?.nationality} colSpan={2} /><ZmiCell label="Mother Full Name" valueText={client?.mothers_maiden_name} colSpan={2} /></tr>
+                        <tr><ZmiCell label="Religion" valueText={client?.religion} colSpan={2} /><ZmiCell label="Sector / Sub caste" valueText="" colSpan={2} /></tr>
+                        <tr><ZmiCell label="Date of Birth & Age" valueText={client?.date_of_birth} colSpan={2} /><ZmiCell label="Place & Country Of Birth" valueText={client?.place_of_birth} colSpan={2} /></tr>
+                        <tr><ZmiCell label="Permanent Address" valueText={client?.current_home_address} colSpan={4} /></tr>
+                        <tr><ZmiCell label="Telephone Numbers" valueText={client?.fax_no} colSpan={2} /><ZmiCell label="Mobile No. (Home)" valueText={client?.personal_mobile_no} colSpan={2} /></tr>
+                        <tr><ZmiCell label="Email" valueText={client?.email_address || client?.email} colSpan={2} /><ZmiCell label="WhatsApp No." valueText={client?.whatsapp_number} colSpan={2} /></tr>
+                        <tr>
+                            <ZmiCell label="Marital Status (please mark)" colSpan={4}>
+                                <CheckBox label="Married" checked={String(client?.status || '').toLowerCase() === 'married'} />
+                                <CheckBox label="Single" checked={String(client?.status || '').toLowerCase() === 'single'} />
+                                <CheckBox label="Other:" checked={Boolean(client?.status) && ! ['married', 'single'].includes(String(client?.status).toLowerCase())} />
+                                {client?.status && ! ['married', 'single'].includes(String(client.status).toLowerCase()) ? ` ${upper(client.status)}` : ''}
+                            </ZmiCell>
+                        </tr>
+                        <tr><ZmiCell label="Next of kin / Relative to be contacted (in case of emergency)" colSpan={4}>Name: {upper(client?.next_of_kin)} &nbsp;&nbsp; Relation: {upper(client?.relationship)}</ZmiCell></tr>
+                        <tr><ZmiCell label="Contact Details" valueText={client?.emergency_contact} colSpan={4} /></tr>
+                        <tr><ZmiCell label="Nearest International Airport, Country" valueText={client?.nearest_airport} colSpan={4} /></tr>
+                        <tr><ZmiCell label="Passport Number" valueText={passport.number} colSpan={2} /><ZmiCell label="Date Issued" valueText={passport.date_of_issue} colSpan={2} /></tr>
+                        <tr><ZmiCell label="Country of Issue" valueText={passport.place_of_issue} colSpan={2} /><ZmiCell label="Expiry Date" valueText={passport.date_of_expiry} colSpan={2} /></tr>
+                        <tr><ZmiCell label="Seaman Book Number" valueText={seamanBook.number} colSpan={2} /><ZmiCell label="Date Issued" valueText={seamanBook.date_of_issue} colSpan={2} /></tr>
+                        <tr><ZmiCell label="Country of Issue" valueText={seamanBook.place_of_issue} colSpan={2} /><ZmiCell label="Expiry Date" valueText={seamanBook.date_of_expiry} colSpan={2} /></tr>
+                        <ZmiTitleRow>PPE Details</ZmiTitleRow>
+                        <tr><ZmiCell label="Boiler Suite Size" valueText={boilerSuitSize} colSpan={2} /><ZmiCell label="Safety Shoe Size" valueText={safetyShoeSize} colSpan={2} /></tr>
+                        <ZmiTitleRow>Certificate of Competency Details</ZmiTitleRow>
+                        <tr><ZmiCell label="Certificate Grade" valueText={coc.name} colSpan={2} /><ZmiCell label="Expiry Date" valueText={coc.date_of_expiry} colSpan={2} /></tr>
+                        <tr><ZmiCell label="Certificate Number" valueText={coc.certificate_number} colSpan={2} /><ZmiCell label="Country Of Issue" valueText={coc.place_of_issue} colSpan={2} /></tr>
+                        <tr><ZmiCell label="STCW Regulation" valueText="" colSpan={2} /><ZmiCell label="Revalidation Date" valueText="" colSpan={2} /></tr>
+                        <tr><ZmiCell label="Endorsement Number" valueText="" colSpan={2} /><ZmiCell label="Expiry Date" valueText="" colSpan={2} /></tr>
+                        <ZmiTitleRow>GMDSS Certificate Details</ZmiTitleRow>
+                        <tr><ZmiCell label="Certificate Number" valueText={gmdss.certificate_number || gmdss.number} colSpan={2} /><ZmiCell label="Expiry Date" valueText={gmdss.date_of_expiry} colSpan={2} /></tr>
+                        <tr><ZmiCell label="Endorsement Number" valueText="" colSpan={2} /><ZmiCell label="Expiry Date" valueText="" colSpan={2} /></tr>
+                    </tbody>
+                </table>
                 <ZmiFooter />
             </section>
 
             <section className="zmi-page zmi-page-portrait print-page print-page-portrait relative min-h-[1120px] bg-white p-8 pb-20 shadow-sm">
                 <ZmiHeader page="2 of 3" />
-                <SimpleTable title="STCW Certificate Details" columns={certificateColumns} rows={certificateRowsFor(client)} minRows={12} />
-                <SimpleTable title="Offshore Training Certificate Details" columns={certificateColumns} rows={client?.proficiency || []} minRows={4} />
-                <SimpleTable
-                    title="Reference From Last Two Employers"
-                    columns={[
-                        { key: 'company', label: 'Company Name' },
-                        { key: 'contact_person_name', label: 'Contact Person Name' },
-                        { key: 'designation', label: 'Designation' },
-                        { key: 'contact_person_number', label: 'Contact Numbers' },
-                        { key: 'country', label: 'Country' },
-                    ]}
-                    rows={client?.employment_history || []}
-                    minRows={2}
-                />
+                <table className="w-full table-fixed border-collapse text-[10px]">
+                    <tbody>
+                        <ZmiTitleRow colSpan={7}>Flag Documents (If the document is available, provide the expiry date)</ZmiTitleRow>
+                        <tr className="text-center font-bold"><td className="border border-black px-1 py-1">Flag</td><td colSpan={2} className="border border-black px-1 py-1">COC</td><td colSpan={2} className="border border-black px-1 py-1">Endorsement</td><td colSpan={2} className="border border-black px-1 py-1">Seaman's Book</td></tr>
+                        <tr className="text-center font-bold"><td className="border border-black px-1 py-1" /><td className="border border-black px-1 py-1">Available</td><td className="border border-black px-1 py-1">Expiry Date</td><td className="border border-black px-1 py-1">Available</td><td className="border border-black px-1 py-1">Expiry Date</td><td className="border border-black px-1 py-1">Available</td><td className="border border-black px-1 py-1">Expiry Date</td></tr>
+                        {['St. Vincent', 'Panama', 'Others: (Specify)'].map((flag) => {
+                            const flagRow = findRowByName(client?.flag_documents || [], [flag]);
+                            return (
+                                <tr key={flag}>
+                                    <td className="border border-black px-2 py-1 font-bold">{flag}</td>
+                                    {[0, 1, 2].map((index) => (
+                                        <React.Fragment key={index}>
+                                            <td className="border border-black px-2 py-1"><CheckBox label="Yes" /><CheckBox label="No" /></td>
+                                            <td className="border border-black px-2 py-1">{upper(index === 0 ? flagRow.date_of_expiry : '')}</td>
+                                        </React.Fragment>
+                                    ))}
+                                </tr>
+                            );
+                        })}
+                        <ZmiTitleRow colSpan={7}>Client Approval</ZmiTitleRow>
+                        <tr><td colSpan={7} className="border border-black px-2 py-1">Do you have the valid document for the below? If yes, indicate the issue date.</td></tr>
+                        <tr><td colSpan={7} className="border border-black px-2 py-1 font-bold">Client Approval Client Name: <span className="font-normal">&nbsp;</span><CheckBox label="Yes" /><CheckBox label="No" /> Issue Date: _____________________</td></tr>
+                    </tbody>
+                </table>
+                <ZmiCertificateTable title="STCW Certificate Details - All must be valid. If validity of certificate is not mentioned, expiry dates to be considered as 3 years from date of issue." rows={stcwRows} minRows={12} />
+                <ZmiCertificateTable title="Offshore Training Certificate Details" rows={offshoreRows} minRows={4} />
+                <section className="mt-3">
+                    <table className="w-full border-collapse text-[10px]">
+                        <tbody>
+                            <tr><td colSpan={5} className="border border-black bg-slate-100 px-2 py-1 text-center font-bold">Reference From Last Two Employers [All details are Mandatory]</td></tr>
+                            {referenceRows.slice(0, 2).map((row, index) => (
+                                <React.Fragment key={index}>
+                                    <tr><td className="border border-black px-2 py-1 font-bold">Company {index + 1}</td><td colSpan={4} className="border border-black px-2 py-1">Company Name (not the manning agents, must be Owners): {upper(row.company)}</td></tr>
+                                    <tr><td colSpan={3} className="border border-black px-2 py-1">Contact Person Name: {upper(row.contact_person_name)}</td><td colSpan={2} className="border border-black px-2 py-1">Designation: {upper(row.designation)}</td></tr>
+                                    <tr><td colSpan={3} className="border border-black px-2 py-1">Contact Numbers: {upper(row.contact_person_number)}</td><td colSpan={2} className="border border-black px-2 py-1">Country: {upper(row.country)}</td></tr>
+                                </React.Fragment>
+                            ))}
+                        </tbody>
+                    </table>
+                </section>
                 <ZmiFooter />
             </section>
 
@@ -656,11 +766,12 @@ function FleetApplicationForm({ client, title, heading = title, showDocumentHead
                         ['Next of Kin (NOK)', client?.next_of_kin],
                         ['Nationality', client?.nationality],
                         ['Relation of NOK', client?.relationship],
-                        ['Marital Status', ''],
+                        ['Marital Status', client?.status],
                         ['Wife Name', ''],
                         ['Religion', client?.religion],
                         ["Wife I/C No", ''],
                         ['Contact Number', client?.personal_mobile_no],
+                        ['WhatsApp Number', client?.whatsapp_number],
                         ["Wife's Occupation", ''],
                         ['EPF No', ''],
                         ['Contact Number NOK', client?.emergency_contact],
@@ -787,6 +898,7 @@ export default function PrintPreview({ client, printForm = 'complete' }) {
     const pageLabel = (pageNumber) => `Page ${pageNumber} of ${visiblePageCount}`;
     const personalFields = [
         ['First Name', client?.first_name], ['Middle Name', client?.middle_name], ['Last Name', client?.last_name],
+        ['Gender', client?.gender], ['Status', client?.status], ['Type of Job', client?.type_of_job],
         ['Place Of Birth', client?.place_of_birth], ['Current Position', client?.current_position], ['Date of Birth', client?.date_of_birth],
         ['Position applied for', client?.position_applied_for], ["Mother's Maiden Name", client?.mothers_maiden_name],
         ['Religion', client?.religion], ["Father's Name", client?.fathers_name], ['Next of Kin', client?.next_of_kin],
@@ -794,7 +906,8 @@ export default function PrintPreview({ client, printForm = 'complete' }) {
         ['Nationality', client?.nationality], ['Emergency Contact Person/ Number', client?.emergency_contact],
         ['Educational Attainment', client?.educational_attainment], ['Fax No.', client?.fax_no],
         ['Body Weight and BMI', client?.body_weight_bmi], ['Personal Mobile No.', client?.personal_mobile_no],
-        ['Height in cm', client?.height_cm], ['Email Address', client?.email_address || client?.email],
+        ['WhatsApp Number', client?.whatsapp_number], ['Email Address', client?.email_address || client?.email],
+        ['Height in cm', client?.height_cm],
         ['Last Salary', client?.last_salary], ['Coverall and Shoe Size', client?.coverall_shoe_size],
         ['E-registration Number', client?.e_registration_number], ['Nearest Airport', client?.nearest_airport],
         ['SSS No.', client?.sss_no], ['Pag-ibig No.', client?.pagibig_no], ['Philhealth No.', client?.philhealth_no],

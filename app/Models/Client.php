@@ -5,14 +5,13 @@ namespace App\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
-use App\Mail\ClientVerificationMail;
-use App\Jobs\SendClientVerificationEmail;
 
 class Client extends Authenticatable
 {
     use Notifiable;
+
+    public const DEFAULT_APPLICATION_STATUS = 'PENDING/ONHOLD';
 
     public const CONTINUE_PROFILE_REQUIRED_FIELDS = [
         'first_name' => 'First name',
@@ -42,13 +41,13 @@ class Client extends Authenticatable
     ];
 
     protected $fillable = [
-        'name', 'email', 'password', 'phone', 'address', 'verification_token', 'email_verified_at',
+        'name', 'email', 'password', 'must_change_password', 'phone', 'address', 'verification_token', 'email_verified_at',
         // profile fields
-        'first_name','middle_name','last_name','date_applied',
+        'first_name','middle_name','last_name','gender','status','type_of_job','processed_by','application_status','date_applied',
         'place_of_birth','date_of_birth','mothers_maiden_name','fathers_name','nationality','religion',
         'current_position','position_applied_for','educational_attainment','last_salary','e_registration_number',
         'body_weight_bmi','height_cm','coverall_shoe_size',
-        'current_home_address','personal_mobile_no','fax_no','email_address','nearest_airport',
+        'current_home_address','personal_mobile_no','whatsapp_number','fax_no','email_address','nearest_airport',
         'next_of_kin','relationship','emergency_contact',
         'sss_no','pagibig_no','philhealth_no','avatar'
     ];
@@ -57,9 +56,14 @@ class Client extends Authenticatable
         'date_applied' => 'date',
         'date_of_birth' => 'date',
         'email_verified_at' => 'datetime',
+        'must_change_password' => 'boolean',
     ];
 
     protected $hidden = ['password', 'verification_token'];
+
+    protected $attributes = [
+        'application_status' => self::DEFAULT_APPLICATION_STATUS,
+    ];
 
     public function missingContinueProfileFields(): array
     {
@@ -124,6 +128,11 @@ class Client extends Authenticatable
         return $this->hasMany(DeckOfficerExperience::class);
     }
 
+    public function applicationStatusLogs(): HasMany
+    {
+        return $this->hasMany(ApplicationStatusLog::class);
+    }
+
     protected static function booted()
     {
         static::creating(function ($client) {
@@ -131,14 +140,11 @@ class Client extends Authenticatable
             if (empty($client->verification_token)) {
                 $client->verification_token = Str::random(40);
             }
-        });
 
-        static::created(function ($client) {
-            // send verification email after creation (skip if already verified)
-            if (! $client->email_verified_at) {
-                $link = route('seafarers.verify', $client->verification_token);
-                SendClientVerificationEmail::dispatch($client, $link);
+            if (empty($client->application_status)) {
+                $client->application_status = self::DEFAULT_APPLICATION_STATUS;
             }
         });
+
     }
 }

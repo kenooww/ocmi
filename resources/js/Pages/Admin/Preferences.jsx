@@ -67,7 +67,7 @@ export default function Preferences({ adminUser }) {
                                 </div>
                                 <label className="mt-5 inline-flex cursor-pointer items-center justify-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
                                     <Camera size={16} />
-                                    Upload avatar
+                                    Upload photo
                                     <input name="avatar" type="file" accept="image/*" onChange={handleAvatarChange} className="sr-only" />
                                 </label>
                                 {errors.avatar && <p className="mt-2 text-sm text-red-600">{errors.avatar}</p>}

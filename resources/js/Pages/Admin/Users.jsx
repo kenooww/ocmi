@@ -278,14 +278,14 @@ export default function Users({ users, filters = {} }) {
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                                 <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E1EBE6] text-lg font-semibold text-[#1F6F5C]">
                                     {avatarPreview ? (
-                                        <img src={avatarPreview} alt="Avatar preview" className="h-full w-full object-cover" />
+                                        <img src={avatarPreview} alt="Photo preview" className="h-full w-full object-cover" />
                                     ) : (
                                         (data.name || 'U').slice(0, 1).toUpperCase()
                                     )}
                                 </div>
                                 <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
                                     <Upload size={16} />
-                                    Upload Avatar
+                                    Upload Photo
                                     <input name="avatar" type="file" accept="image/*" onChange={handleAvatarChange} className="sr-only" />
                                 </label>
                                 {errors.avatar && <div className="text-xs text-red-600">{errors.avatar}</div>}

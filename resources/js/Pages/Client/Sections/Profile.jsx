@@ -3,13 +3,31 @@ import { useForm } from '@inertiajs/react';
 import { CalendarDays, ChevronDown, FileText, Mail, Phone, Plus, Trash2, Upload, X } from 'lucide-react';
 
 const FIELD_KEYS = [
-  'avatar', 'first_name', 'middle_name', 'last_name', 'date_applied', 'nationality',
+  'avatar', 'first_name', 'middle_name', 'last_name', 'gender', 'status', 'type_of_job', 'date_applied', 'nationality',
   'place_of_birth', 'date_of_birth', 'mothers_maiden_name', 'fathers_name', 'religion',
   'current_position', 'position_applied_for', 'educational_attainment', 'last_salary', 'e_registration_number',
   'body_weight_bmi', 'height_cm', 'coverall_shoe_size',
-  'current_home_address', 'personal_mobile_no', 'fax_no', 'email_address', 'nearest_airport',
+  'current_home_address', 'personal_mobile_no', 'whatsapp_number', 'fax_no', 'email_address', 'nearest_airport',
   'next_of_kin', 'relationship', 'emergency_contact',
   'sss_no', 'pagibig_no', 'philhealth_no',
+];
+
+const TYPE_OF_JOB_OPTIONS = [
+  'Landbased/Skilled/Office Job',
+  'Seabased/Seaman',
+];
+
+const STATUS_OPTIONS = [
+  'single',
+  'married',
+  'widowed',
+  'divorced',
+  'separated',
+];
+
+const GENDER_OPTIONS = [
+  'Male',
+  'Female',
 ];
 
 const EMPTY_DEPENDENT = { name: '', date_of_birth: '', relationship: '', dependent: '', beneficiary: '', attachment: null };
@@ -78,6 +96,9 @@ const GROUPS = [
       ['First name', 'first_name'],
       ['Middle name', 'middle_name'],
       ['Last name', 'last_name'],
+      ['Gender', 'gender', 'select', GENDER_OPTIONS],
+      ['Status', 'status', 'select', STATUS_OPTIONS],
+      ['Type of job', 'type_of_job', 'select', TYPE_OF_JOB_OPTIONS],
       ['Date applied', 'date_applied', 'date'],
       ['Nationality', 'nationality'],
     ],
@@ -115,6 +136,7 @@ const GROUPS = [
     fields: [
       ['Home address', 'current_home_address'],
       ['Personal mobile no.', 'personal_mobile_no'],
+      ['WhatsApp number', 'whatsapp_number'],
       ['Fax no.', 'fax_no'],
       ['Email address', 'email_address', 'email'],
       ['Nearest airport', 'nearest_airport'],
@@ -174,7 +196,7 @@ function buildTravelDocuments(documents = []) {
   }));
 }
 
-function FieldRow({ label, name, value, editing, data, setData, error, type = 'text' }) {
+function FieldRow({ label, name, value, editing, data, setData, error, type = 'text', options = [] }) {
   if (!editing) {
     return (
       <div className="border-b border-slate-100 py-3">
@@ -187,14 +209,29 @@ function FieldRow({ label, name, value, editing, data, setData, error, type = 't
   return (
     <div className="border-b border-slate-100 py-3">
       <label className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</label>
-      <input
-        type={type}
-        value={data[name] ?? ''}
-        onChange={(e) => setData(name, e.target.value)}
-        className={`mt-1 w-full rounded border p-2.5 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${
-          error ? 'border-red-300' : 'border-slate-300'
-        }`}
-      />
+      {type === 'select' ? (
+        <select
+          value={data[name] ?? ''}
+          onChange={(e) => setData(name, e.target.value)}
+          className={`mt-1 w-full rounded border p-2.5 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${
+            error ? 'border-red-300' : 'border-slate-300'
+          }`}
+        >
+          <option value="">Select {label.toLowerCase()}</option>
+          {options.map((option) => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+      ) : (
+        <input
+          type={type}
+          value={data[name] ?? ''}
+          onChange={(e) => setData(name, e.target.value)}
+          className={`mt-1 w-full rounded border p-2.5 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${
+            error ? 'border-red-300' : 'border-slate-300'
+          }`}
+        />
+      )}
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
   );
@@ -205,7 +242,7 @@ function Section({ title, fields, client, editing, data, setData, errors }) {
     <section className="rounded border border-slate-200 bg-white p-5 shadow-sm">
       <h3 className="text-base font-semibold text-slate-900">{title}</h3>
       <div className="mt-3 grid grid-cols-1 gap-x-8 sm:grid-cols-2">
-        {fields.map(([label, key, type]) => (
+        {fields.map(([label, key, type, options]) => (
           <FieldRow
             key={key}
             label={label}
@@ -216,6 +253,7 @@ function Section({ title, fields, client, editing, data, setData, errors }) {
             setData={setData}
             error={errors[key]}
             type={type}
+            options={options}
           />
         ))}
       </div>
@@ -767,7 +805,7 @@ function EmptyTabPanel({ title }) {
   );
 }
 
-export default function Profile({ client, updateRouteName = 'seafarers.update-profile', updateRouteParams = [], methodOverride = null }) {
+export default function Profile({ client, updateRouteName = 'seafarers.update-profile', updateRouteParams = [], methodOverride = null, headerActions = null }) {
   const [editing, setEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
 
@@ -946,18 +984,21 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               </div>
 
               {!editing ? (
-                <button
-                  type="button"
-                  onClick={startEditing}
-                  className="rounded bg-[#0A2436] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#12364F]"
-                >
-                  Update Profile
-                </button>
+                <div className="flex flex-wrap justify-end gap-2">
+                  {headerActions}
+                  <button
+                    type="button"
+                    onClick={startEditing}
+                    className="rounded bg-[#0A2436] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#12364F]"
+                  >
+                    Update Profile
+                  </button>
+                </div>
               ) : (
                 <div className="flex flex-wrap justify-end gap-2">
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
                     <Upload size={16} />
-                    Upload Avatar
+                    Upload Photo
                     <input name="avatar" type="file" accept="image/*" onChange={(e) => setData('avatar', e.target.files[0] ?? null)} className="sr-only" />
                   </label>
                   <button
