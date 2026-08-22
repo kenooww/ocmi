@@ -14,10 +14,16 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
 class AdminController extends Controller
 {
+    private const USER_ROLE_OPTIONS = [
+        'admin',
+        'staff',
+    ];
+
     private const TRAVEL_DOCUMENT_TYPES = [
         'passport',
         'visa',
@@ -48,6 +54,10 @@ class AdminController extends Controller
         'TO REPORT',
         'FOR REEVAL/FOR APPROVAL',
         'FAILED',
+        'PROPOSED',
+        'APPROVED',
+        'DOCUMENT PROCESSING',
+        'DISAPPROVED',
     ];
 
     public function dashboard()
@@ -167,7 +177,8 @@ class AdminController extends Controller
                 ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
                     $query
                         ->where('name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('role', 'like', "%{$search}%");
                 }))
                 ->latest()
                 ->paginate(10)
@@ -176,6 +187,7 @@ class AdminController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'role' => $user->role ?? 'admin',
                     'avatar' => $user->avatar,
                 ]),
             'filters' => [
@@ -189,6 +201,7 @@ class AdminController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users',
+            'role' => ['required', 'string', Rule::in(self::USER_ROLE_OPTIONS)],
             'password' => 'required|min:6',
             'avatar' => 'nullable|image|max:2048',
         ]);
@@ -196,6 +209,7 @@ class AdminController extends Controller
         $data = [
             'name' => $request->name,
             'email' => $request->email,
+            'role' => $request->role,
             'password' => Hash::make($request->password),
         ];
 
@@ -213,10 +227,11 @@ class AdminController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
+            'role' => ['required', 'string', Rule::in(self::USER_ROLE_OPTIONS)],
             'avatar' => 'nullable|image|max:2048',
         ]);
 
-        $data = $request->only('name', 'email');
+        $data = $request->only('name', 'email', 'role');
 
         if ($request->hasFile('avatar')) {
             if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
@@ -258,6 +273,8 @@ class AdminController extends Controller
                         ->orWhere('first_name', 'like', "%{$search}%")
                         ->orWhere('middle_name', 'like', "%{$search}%")
                         ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('current_position', 'like', "%{$search}%")
+                        ->orWhere('position_applied_for', 'like', "%{$search}%")
                         ->orWhere('type_of_job', 'like', "%{$search}%")
                         ->orWhere('whatsapp_number', 'like', "%{$search}%")
                         ->orWhere('processed_by', 'like', "%{$search}%")
@@ -277,6 +294,8 @@ class AdminController extends Controller
                     'personal_mobile_no' => $client->personal_mobile_no,
                     'address' => $client->address,
                     'avatar' => $client->avatar,
+                    'current_position' => $client->current_position,
+                    'position_applied_for' => $client->position_applied_for,
                     'type_of_job' => $client->type_of_job,
                     'whatsapp_number' => $client->whatsapp_number,
                     'processed_by' => $client->processed_by,
@@ -347,6 +366,7 @@ class AdminController extends Controller
 
         $clientData['created_at_human'] = optional($client->created_at)->toFormattedDateString();
         $clientData['email_verified_at_human'] = optional($client->email_verified_at)->toFormattedDateString();
+        $clientData['privacy_act_accepted_at_human'] = optional($client->privacy_act_accepted_at)->toFormattedDateString();
         $clientData['dependents'] = $client->dependents
             ->map(fn ($dependent) => [
                 'id' => $dependent->id,
@@ -355,6 +375,7 @@ class AdminController extends Controller
                 'relationship' => $dependent->relationship,
                 'dependent' => $dependent->dependent,
                 'beneficiary' => $dependent->beneficiary,
+                'address' => $dependent->address,
                 'attachment' => $dependent->attachment,
             ])
             ->values();
@@ -423,6 +444,8 @@ class AdminController extends Controller
             'phone' => 'nullable|string',
             'address' => 'nullable|string',
             'avatar' => 'nullable|image|max:2048',
+            'resume_attachment' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
+            'privacy_act_accepted' => 'nullable|boolean',
         ]);
 
         $data = [
@@ -436,6 +459,10 @@ class AdminController extends Controller
 
         if ($request->hasFile('avatar')) {
             $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
+        }
+
+        if ($request->hasFile('resume_attachment')) {
+            $data['resume_attachment'] = $request->file('resume_attachment')->store('resume-attachments', 'public');
         }
 
         $client = Client::create($data);
@@ -485,11 +512,14 @@ class AdminController extends Controller
             'nearest_airport' => 'nullable|string|max:255',
             'next_of_kin' => 'nullable|string|max:255',
             'relationship' => 'nullable|string|max:255',
+            'contact_person' => 'nullable|string|max:255',
             'emergency_contact' => 'nullable|string|max:255',
             'sss_no' => 'nullable|string|max:100',
             'pagibig_no' => 'nullable|string|max:100',
             'philhealth_no' => 'nullable|string|max:100',
             'avatar' => 'nullable|image|max:2048',
+            'resume_attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
+            'privacy_act_accepted' => 'nullable|boolean',
 
             'dependents' => 'nullable|array',
             'dependents.*.id' => ['nullable', 'integer', Rule::exists('client_dependents', 'id')->where('client_id', $client->id)],
@@ -498,6 +528,7 @@ class AdminController extends Controller
             'dependents.*.relationship' => 'nullable|string|max:255',
             'dependents.*.dependent' => 'nullable|string|max:255',
             'dependents.*.beneficiary' => 'nullable|string|max:255',
+            'dependents.*.address' => 'nullable|string|max:1000',
             'dependents.*.attachment' => 'nullable',
 
             'travel_documents' => 'nullable|array',
@@ -620,6 +651,22 @@ class AdminController extends Controller
             unset($data['avatar']);
         }
 
+        if ($request->hasFile('resume_attachment')) {
+            $path = $request->file('resume_attachment')->store('resume-attachments', 'public');
+            if ($client->resume_attachment && Storage::disk('public')->exists($client->resume_attachment)) {
+                Storage::disk('public')->delete($client->resume_attachment);
+            }
+            $data['resume_attachment'] = $path;
+        } else {
+            unset($data['resume_attachment']);
+        }
+
+        $privacyActAccepted = $request->boolean('privacy_act_accepted');
+        $data['privacy_act_accepted'] = $privacyActAccepted;
+        $data['privacy_act_accepted_at'] = $privacyActAccepted
+            ? ($client->privacy_act_accepted_at ?: now())
+            : null;
+
         $name = collect([$data['first_name'] ?? null, $data['middle_name'] ?? null, $data['last_name'] ?? null])->filter()->implode(' ');
         if ($name !== '') {
             $data['name'] = $name;
@@ -632,6 +679,7 @@ class AdminController extends Controller
         $this->syncRows($client, 'flagDocuments', $flagDocumentRows, ['name', 'number', 'place_of_issue', 'date_of_issue', 'date_of_expiry']);
         $this->syncRows($client, 'otherCertificates', $otherCertificateRows, ['name', 'number', 'place_of_issue', 'date_of_issue', 'date_of_expiry'], 'other-certificate-attachments', 'other_certificates');
         $this->syncRows($client, 'employmentHistories', $employmentHistoryRows, ['company', 'contact_person_name', 'designation', 'contact_person_number', 'country'], 'employment-history-attachments', 'employment_history');
+        $seaServiceRows = $this->applySeaServiceDurations($seaServiceRows);
         $this->syncRows($client, 'seaServices', $seaServiceRows, ['from_date', 'to_date', 'duration_months', 'duration_days', 'position', 'vessel_name', 'type_imo_number', 'area_of_operation', 'flag', 'oilfield_yn', 'propulsion_type', 'grt', 'bollard_pull', 'main_engine_type_model', 'main_engine_kw', 'ship_owner_manager_contact']);
         $this->syncRows($client, 'deckOfficerExperiences', $deckOfficerExperienceRows, ['vessel_name', 'charterer', 'area_of_operation', 'dp_operation_hours', 'supply', 'dsv', 'survey', 'anchor_type', 'anchor_weight', 'barges', 'rig_move', 'propelled', 'non_propelled']);
 
@@ -691,6 +739,7 @@ class AdminController extends Controller
                 'relationship' => $row['relationship'] ?? '',
                 'dependent' => $row['dependent'] ?? '',
                 'beneficiary' => $row['beneficiary'] ?? '',
+                'address' => $row['address'] ?? '',
                 'attachment' => $attachment,
             ];
 
@@ -816,11 +865,109 @@ class AdminController extends Controller
             });
     }
 
+    private function applySeaServiceDurations(array $rows): array
+    {
+        return array_map(function ($row) {
+            $fromDate = $row['from_date'] ?? null;
+            $toDate = $row['to_date'] ?? null;
+
+            if (! $fromDate || ! $toDate) {
+                $row['duration_months'] = null;
+                $row['duration_days'] = null;
+                return $row;
+            }
+
+            $from = Carbon::parse($fromDate)->startOfDay();
+            $to = Carbon::parse($toDate)->startOfDay();
+
+            if ($to->lt($from)) {
+                $row['duration_months'] = null;
+                $row['duration_days'] = null;
+                return $row;
+            }
+
+            $months = $from->diffInMonths($to);
+            $anchor = $from->copy()->addMonths($months);
+
+            if ($anchor->gt($to)) {
+                $months -= 1;
+                $anchor = $from->copy()->addMonths($months);
+            }
+
+            $row['duration_months'] = max($months, 0);
+            $row['duration_days'] = max($anchor->diffInDays($to), 0);
+
+            return $row;
+        }, $rows);
+    }
+
     public function deleteClient(Client $client)
     {
+        abort_unless(Auth::user() && Auth::user()->role === 'admin', 403);
+
         $client->delete();
         return back()->with('success', 'Client deleted successfully.');
     }
+
+    public function viewClientResume(Client $client)
+    {
+        return $this->resumeViewerResponse(
+            $client,
+            route('admin.seafarers.resume.file', $client),
+            route('admin.seafarers.resume.download', $client),
+            route('admin.seafarers.show', $client)
+        );
+    }
+
+    public function inlineClientResume(Client $client)
+    {
+        return $this->resumeFileResponse($client, false);
+    }
+
+    public function downloadClientResume(Client $client)
+    {
+        return $this->resumeFileResponse($client, true);
+    }
+
+    private function resumeViewerResponse(Client $client, string $fileUrl, string $downloadUrl, string $backUrl)
+    {
+        $attachment = $this->resumeAttachmentOrFail($client);
+        $extension = strtolower(pathinfo($attachment, PATHINFO_EXTENSION));
+
+        return Inertia::render('ResumeViewer', [
+            'title' => 'Resume Attachment',
+            'fileName' => basename($attachment),
+            'fileType' => $extension,
+            'canPreview' => in_array($extension, ['pdf', 'jpg', 'jpeg', 'png'], true),
+            'fileUrl' => $fileUrl,
+            'downloadUrl' => $downloadUrl,
+            'backUrl' => $backUrl,
+        ]);
+    }
+
+    private function resumeFileResponse(Client $client, bool $download = false)
+    {
+        $attachment = $this->resumeAttachmentOrFail($client);
+        $path = Storage::disk('public')->path($attachment);
+        $fileName = basename($attachment);
+
+        if ($download) {
+            return response()->download($path, $fileName);
+        }
+
+        return response()->file($path, [
+            'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+        ]);
+    }
+
+    private function resumeAttachmentOrFail(Client $client): string
+    {
+        abort_unless($client->resume_attachment, 404);
+        abort_unless(Storage::disk('public')->exists($client->resume_attachment), 404);
+
+        return $client->resume_attachment;
+    }
+
     public function logout(Request $request)
     {
         Auth::guard('web')->logout();

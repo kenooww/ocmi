@@ -109,6 +109,7 @@ export default function ContinueProfile({ client }) {
     const [modalOpen, setModalOpen] = useState(false);
     const [modalType, setModalType] = useState(null); // 'success' | 'error'
     const [modalMessage, setModalMessage] = useState('');
+    const [avatarPreview, setAvatarPreview] = useState(null);
 
     const { data, setData, post, processing, errors, transform } = useForm({
         // Identity
@@ -151,6 +152,7 @@ export default function ContinueProfile({ client }) {
         // Next of kin / emergency
         next_of_kin: client?.next_of_kin || '',
         relationship: client?.relationship || '',
+        contact_person: client?.contact_person || '',
         emergency_contact: client?.emergency_contact || '',
 
         // Government IDs
@@ -159,13 +161,16 @@ export default function ContinueProfile({ client }) {
         philhealth_no: client?.philhealth_no || '',
         // Avatar
         avatar: null,
+        resume_attachment: null,
+        privacy_act_accepted: Boolean(client?.privacy_act_accepted),
     });
 
     function submit(e) {
         e.preventDefault();
-        transform(({ avatar, ...payload }) => ({
+        transform(({ avatar, resume_attachment, ...payload }) => ({
             ...payload,
             ...(avatar instanceof File ? { avatar } : {}),
+            ...(resume_attachment instanceof File ? { resume_attachment } : {}),
         }));
         post('/seafarers/continue', {
             onError: (errorsResp) => {
@@ -186,6 +191,13 @@ export default function ContinueProfile({ client }) {
         });
     }
 
+    function handleAvatarChange(e) {
+        const file = e.target.files[0] ?? null;
+
+        setData('avatar', file);
+        setAvatarPreview(file ? URL.createObjectURL(file) : null);
+    }
+
     useEffect(() => {
         if (notice) {
             setModalType('success');
@@ -201,6 +213,12 @@ export default function ContinueProfile({ client }) {
             setModalOpen(true);
         }
     }, [errors.profile]);
+
+    useEffect(() => () => {
+        if (avatarPreview) {
+            URL.revokeObjectURL(avatarPreview);
+        }
+    }, [avatarPreview]);
 
     const fieldProps = { data, errors, setData };
 
@@ -286,9 +304,11 @@ export default function ContinueProfile({ client }) {
                     </p>
 
                     <form onSubmit={submit} className="space-y-4">
-                        <div className="flex items-center gap-4 mb-4">
+                        <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center">
                             <div>
-                                {client?.avatar ? (
+                                {avatarPreview ? (
+                                    <img src={avatarPreview} alt="Selected profile photo preview" className="w-20 h-20 rounded-full object-cover border" />
+                                ) : client?.avatar ? (
                                     <img src={`/storage/${client.avatar}`} alt="avatar" className="w-20 h-20 rounded-full object-cover border" />
                                 ) : (
                                     <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: PALETTE.tealBg, color: PALETTE.teal }}>{(client?.first_name||'C')[0]}{(client?.last_name||'L')[0]}</div>
@@ -296,8 +316,29 @@ export default function ContinueProfile({ client }) {
                             </div>
                             <div className="flex-1">
                                 <label className="block text-sm mb-1">Profile photo</label>
-                                <input type="file" accept="image/*" onChange={(e) => setData('avatar', e.target.files[0])} />
+                                <input type="file" accept="image/*" onChange={handleAvatarChange} />
                                 {errors.avatar && <p className="text-xs mt-1" style={{ color: PALETTE.rust }}>{errors.avatar}</p>}
+                            </div>
+                            <div className="flex-1">
+                                <label className="block text-sm mb-1">Resume attachment <span style={{ color: PALETTE.rust }}>*</span></label>
+                                {client?.resume_attachment && (
+                                    <a
+                                        href={route('seafarers.resume.view')}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="mb-2 block text-sm underline"
+                                        style={{ color: PALETTE.teal }}
+                                    >
+                                        View current resume
+                                    </a>
+                                )}
+                                <input
+                                    type="file"
+                                    accept=".pdf,.doc,.docx,image/*"
+                                    required={!client?.resume_attachment}
+                                    onChange={(e) => setData('resume_attachment', e.target.files[0] ?? null)}
+                                />
+                                {errors.resume_attachment && <p className="text-xs mt-1" style={{ color: PALETTE.rust }}>{errors.resume_attachment}</p>}
                             </div>
                         </div>
                         <SectionTitle>Personal Information</SectionTitle>
@@ -309,6 +350,7 @@ export default function ContinueProfile({ client }) {
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <Field {...fieldProps} label="Gender" name="gender" type="select" options={GENDER_OPTIONS} />
                             <Field {...fieldProps} label="Status" name="status" type="select" options={STATUS_OPTIONS} />
+                            <Field {...fieldProps} label="Position applied for" name="position_applied_for" required />
                             <Field {...fieldProps} label="Type of job" name="type_of_job" type="select" options={TYPE_OF_JOB_OPTIONS} />
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -328,7 +370,6 @@ export default function ContinueProfile({ client }) {
                         <SectionTitle>Position &amp; background</SectionTitle>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <Field {...fieldProps} label="Current position" name="current_position" required />
-                            <Field {...fieldProps} label="Position applied for" name="position_applied_for" required />
                             <Field {...fieldProps} label="Educational attainment" name="educational_attainment" required />
                             <Field {...fieldProps} label="Last salary" name="last_salary" />
                             <Field {...fieldProps} label="E-registration number" name="e_registration_number" />
@@ -336,7 +377,7 @@ export default function ContinueProfile({ client }) {
 
                         <SectionTitle>Physical details</SectionTitle>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <Field {...fieldProps} label="Body weight & BMI" name="body_weight_bmi" required />
+                            <Field {...fieldProps} label="Body weight (lbs)" name="body_weight_bmi" required />
                             <Field {...fieldProps} label="Height (cm)" name="height_cm" type="number" required />
                             <Field {...fieldProps} label="Coverall & shoe size" name="coverall_shoe_size" required />
                         </div>
@@ -370,10 +411,11 @@ export default function ContinueProfile({ client }) {
                         </div>
 
                         <SectionTitle>Next of kin / emergency contact</SectionTitle>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <Field {...fieldProps} label="Next of kin" name="next_of_kin" required />
                             <Field {...fieldProps} label="Relationship" name="relationship" required />
-                            <Field {...fieldProps} label="Emergency contact person / number" name="emergency_contact" required />
+                            <Field {...fieldProps} label="Emergency contact person" name="contact_person" required />
+                            <Field {...fieldProps} label="Emergency contact number" name="emergency_contact" required />
                         </div>
 
                         <SectionTitle>Government IDs</SectionTitle>
@@ -381,6 +423,29 @@ export default function ContinueProfile({ client }) {
                             <Field {...fieldProps} label="SSS No." name="sss_no" required />
                             <Field {...fieldProps} label="Pag-IBIG No." name="pagibig_no" required />
                             <Field {...fieldProps} label="PhilHealth No." name="philhealth_no" required />
+                        </div>
+
+                        <div
+                            className="rounded p-4"
+                            style={{ border: `1px solid ${errors.privacy_act_accepted ? PALETTE.rust : PALETTE.line}`, backgroundColor: PALETTE.paper }}
+                        >
+                            <label className="flex items-start gap-3 text-sm" style={{ color: PALETTE.ink }}>
+                                <input
+                                    type="checkbox"
+                                    checked={Boolean(data.privacy_act_accepted)}
+                                    onChange={(e) => setData('privacy_act_accepted', e.target.checked)}
+                                    className="mt-1 h-4 w-4 rounded border-gray-300"
+                                    required
+                                />
+                                <span>
+                                    I have read, understood, and agree that the personal information and documents I provided may be collected,
+                                    processed, stored, verified, and used for recruitment, employment processing, and record management in
+                                    accordance with the Data Privacy Act.
+                                </span>
+                            </label>
+                            {errors.privacy_act_accepted && (
+                                <p className="text-xs mt-2" style={{ color: PALETTE.rust }}>{errors.privacy_act_accepted}</p>
+                            )}
                         </div>
 
                         <button

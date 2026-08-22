@@ -102,21 +102,29 @@ const APPLICATION_STATUS_OPTIONS = [
     'TO REPORT',
     'FOR REEVAL/FOR APPROVAL',
     'FAILED',
+    'PROPOSED',
+    'APPROVED',
+    'DOCUMENT PROCESSING',
+    'DISAPPROVED',
 ];
 
 function applicationStatusClass(status) {
     const normalized = String(status || '').toUpperCase();
 
-    if (normalized === 'FAILED') {
+    if (normalized === 'FAILED' || normalized === 'DISAPPROVED') {
         return 'bg-red-100 text-red-700 ring-1 ring-red-200';
     }
 
-    if (normalized === 'TO REPORT') {
+    if (normalized === 'TO REPORT' || normalized === 'APPROVED') {
         return 'bg-green-100 text-green-700 ring-1 ring-green-200';
     }
 
-    if (normalized === 'FOR REEVAL/FOR APPROVAL') {
+    if (normalized === 'FOR REEVAL/FOR APPROVAL' || normalized === 'DOCUMENT PROCESSING') {
         return 'bg-blue-100 text-blue-700 ring-1 ring-blue-200';
+    }
+
+    if (normalized === 'PROPOSED') {
+        return 'bg-purple-100 text-purple-700 ring-1 ring-purple-200';
     }
 
     if (normalized === 'PENDING/ONHOLD') {
@@ -129,6 +137,7 @@ function applicationStatusClass(status) {
 export default function Clients({ clients, filters = {} }) {
     const { auth } = usePage().props;
     const adminName = auth?.user?.name || auth?.user?.email || 'Current admin';
+    const canDeleteSeafarers = auth?.user?.role !== 'staff';
     const { data, setData, post, delete: destroy, reset, errors, clearErrors, processing } = useForm({
         name: '',
         email: '',
@@ -136,6 +145,7 @@ export default function Clients({ clients, filters = {} }) {
         phone: '',
         address: '',
         avatar: null,
+        resume_attachment: null,
         _method: '',
     });
     const {
@@ -153,6 +163,7 @@ export default function Clients({ clients, filters = {} }) {
     const [search, setSearch] = useState(filters.search ?? '');
     const [editId, setEditId] = useState(null);
     const [preview, setPreview] = useState(null);
+    const [resumePath, setResumePath] = useState(null);
     const [seafarerModalOpen, setSeafarerModalOpen] = useState(false);
     const [printClient, setPrintClient] = useState(null);
     const [applicationClient, setApplicationClient] = useState(null);
@@ -171,6 +182,7 @@ export default function Clients({ clients, filters = {} }) {
         clearErrors();
         clearPreview();
         setEditId(null);
+        setResumePath(null);
         setSeafarerModalOpen(true);
     };
 
@@ -180,6 +192,7 @@ export default function Clients({ clients, filters = {} }) {
         reset();
         clearErrors();
         clearPreview();
+        setResumePath(null);
     };
 
     const handleSubmit = (e) => {
@@ -210,9 +223,11 @@ export default function Clients({ clients, filters = {} }) {
             phone: client.phone || '',
             address: client.address || '',
             avatar: null,
+            resume_attachment: null,
             _method: 'PUT',
         });
         setPreview(client.avatar ? `/storage/${client.avatar}` : null);
+        setResumePath(client.resume_attachment || null);
         setSeafarerModalOpen(true);
     };
 
@@ -225,6 +240,10 @@ export default function Clients({ clients, filters = {} }) {
 
         setData('avatar', file);
         setPreview(file ? URL.createObjectURL(file) : null);
+    };
+
+    const handleResumeChange = (e) => {
+        setData('resume_attachment', e.target.files[0] ?? null);
     };
 
     const handleSearch = (e) => {
@@ -331,7 +350,7 @@ export default function Clients({ clients, filters = {} }) {
                     <div className="flex flex-col gap-3 border-b border-slate-200 p-5 lg:flex-row lg:items-center lg:justify-between">
                         <div>
                             <h3 className="text-lg font-semibold text-slate-900">Seafarer Listing</h3>
-                            <p className="mt-1 text-sm text-slate-500">Search by seafarer, job type, WhatsApp, processed by, or status.</p>
+                            <p className="mt-1 text-sm text-slate-500">Search by rank, applied position, job type, WhatsApp, processed by, or status.</p>
                         </div>
                         <form onSubmit={handleSearch} className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
                             <div className="relative w-full sm:w-80">
@@ -363,98 +382,113 @@ export default function Clients({ clients, filters = {} }) {
                         </form>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full min-w-[1040px] border-collapse">
+                    <div className="overflow-hidden">
+                        <table className="w-full table-fixed border-collapse">
+                            <colgroup>
+                                <col className="w-[18%]" />
+                                <col className="w-[13%]" />
+                                <col className="w-[17%]" />
+                                <col className="w-[11%]" />
+                                <col className="w-[12%]" />
+                                <col className="w-[14%]" />
+                                <col className="w-[15%]" />
+                            </colgroup>
                             <thead>
-                                <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                    <th className="px-5 py-3">Seafarer</th>
-                                    <th className="px-5 py-3">Type of Job</th>
-                                    <th className="px-5 py-3">WhatsApp</th>
-                                    <th className="px-5 py-3">Processed By</th>
-                                    <th className="px-5 py-3">Application Status</th>
-                                    <th className="px-5 py-3 text-right">Actions</th>
+                                <tr className="border-b border-slate-200 bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                    <th className="px-3 py-3 leading-tight">Rank</th>
+                                    <th className="px-3 py-3 leading-tight">Applied Position</th>
+                                    <th className="px-3 py-3 leading-tight">Type of Job</th>
+                                    <th className="px-3 py-3 leading-tight">WhatsApp</th>
+                                    <th className="px-3 py-3 leading-tight">Processed By</th>
+                                    <th className="px-3 py-3 leading-tight">Application Status</th>
+                                    <th className="px-3 py-3 text-right leading-tight">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {(clients?.data ?? []).length > 0 ? (
                                     clients.data.map((client) => (
                                         <tr key={client.id} className="text-sm transition hover:bg-slate-50">
-                                            <td className="px-5 py-4">
-                                                <div className="flex items-center gap-3">
+                                            <td className="px-3 py-4">
+                                                <div className="flex min-w-0 items-center gap-2">
                                                     {client.avatar ? (
                                                         <img
                                                             src={`/storage/${client.avatar}`}
                                                             alt={client.name}
-                                                            className="h-11 w-11 shrink-0 rounded-full object-cover ring-2 ring-[#E1EBE6]"
+                                                            className="h-10 w-10 shrink-0 rounded-full object-cover ring-2 ring-[#E1EBE6]"
                                                         />
                                                     ) : (
-                                                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#E1EBE6] text-sm font-semibold text-[#1F6F5C]">
+                                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#E1EBE6] text-sm font-semibold text-[#1F6F5C]">
                                                             {initialsFor(client.name)}
                                                         </div>
                                                     )}
-                                                    <div>
-                                                        <div className="font-medium text-slate-900">{client.first_name} {client.middle_name} {client.last_name}</div>
-                                                        <div className="mt-0.5 inline-flex items-center gap-1 rounded bg-[#F5EBDA] px-2 py-0.5 text-xs font-medium text-[#8A642C]">
-                                                            <Ship size={12} />
-                                                            Seafarer
+                                                    <div className="min-w-0">
+                                                        <div className="break-words font-medium leading-snug text-slate-900">{client.first_name} {client.middle_name} {client.last_name}</div>
+                                                        <div className="mt-1 inline-flex max-w-full items-center gap-1 rounded bg-[#F5EBDA] px-2 py-0.5 text-[11px] font-medium leading-tight text-[#8A642C]">
+                                                            <Ship size={12} className="shrink-0" />
+                                                            <span className="break-words">{client.current_position || 'Not set'}</span>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-5 py-4 text-slate-600">
+                                            <td className="break-words px-3 py-4 leading-snug text-slate-600">
+                                                {client.position_applied_for || 'Not set'}
+                                            </td>
+                                            <td className="break-words px-3 py-4 leading-snug text-slate-600">
                                                 {client.type_of_job || 'Not set'}
                                             </td>
-                                            <td className="px-5 py-4 text-slate-600">
+                                            <td className="break-words px-3 py-4 leading-snug text-slate-600">
                                                 {client.whatsapp_number || 'Not set'}
                                             </td>
-                                            <td className="px-5 py-4 text-slate-600">
+                                            <td className="break-words px-3 py-4 leading-snug text-slate-600">
                                                 {client.processed_by || 'Not set'}
                                             </td>
-                                            <td className="px-5 py-4">
-                                                <span className={`inline-flex rounded px-2 py-1 text-xs font-medium ${applicationStatusClass(client.application_status)}`}>
-                                                    {client.application_status || 'Not set'}
+                                            <td className="px-3 py-4">
+                                                <span className={`inline-flex max-w-full rounded px-2 py-1 text-center text-[11px] font-medium leading-tight ${applicationStatusClass(client.application_status)}`}>
+                                                    <span className="break-words whitespace-normal">{client.application_status || 'Not set'}</span>
                                                 </span>
                                             </td>
-                                            <td className="px-5 py-4">
-                                                <div className="flex justify-end gap-2">
+                                            <td className="px-3 py-4">
+                                                <div className="flex flex-nowrap justify-end gap-1">
                                                     <Link
                                                         href={route('admin.seafarers.show', client.id)}
-                                                        className="inline-flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                                                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-emerald-100 bg-emerald-50 text-emerald-700 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-100 hover:shadow"
                                                         aria-label={`View ${client.name}`}
                                                     >
-                                                        <Eye size={16} />
+                                                        <Eye size={14} />
                                                     </Link>
                                                     <button
                                                         type="button"
                                                         onClick={() => setPrintClient(client)}
-                                                        className="inline-flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                                                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-sky-100 bg-sky-50 text-sky-700 shadow-sm transition hover:-translate-y-0.5 hover:border-sky-200 hover:bg-sky-100 hover:shadow"
                                                         aria-label={`Print forms for ${client.name}`}
                                                     >
-                                                        <Printer size={16} />
+                                                        <Printer size={14} />
                                                     </button>
                                                     <button
                                                         type="button"
                                                         onClick={() => openApplicationModal(client)}
-                                                        className="inline-flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700"
+                                                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-amber-100 bg-amber-50 text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-200 hover:bg-amber-100 hover:shadow"
                                                         aria-label={`Update application status for ${client.name}`}
                                                     >
-                                                        <ClipboardCheck size={16} />
+                                                        <ClipboardCheck size={14} />
                                                     </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => confirm('Delete seafarer record?') && destroy(route('admin.seafarers.destroy', client.id), { preserveScroll: true })}
-                                                        className="inline-flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
-                                                        aria-label={`Delete ${client.name}`}
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                    {canDeleteSeafarers && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => confirm('Delete seafarer record?') && destroy(route('admin.seafarers.destroy', client.id), { preserveScroll: true })}
+                                                            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-red-100 bg-red-50 text-red-700 shadow-sm transition hover:-translate-y-0.5 hover:border-red-200 hover:bg-red-100 hover:shadow"
+                                                            aria-label={`Delete ${client.name}`}
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="6" className="px-5 py-12 text-center text-sm text-slate-500">
+                                        <td colSpan="7" className="px-5 py-12 text-center text-sm text-slate-500">
                                             No seafarers found.
                                         </td>
                                     </tr>
@@ -491,8 +525,25 @@ export default function Clients({ clients, filters = {} }) {
                                     Upload Photo
                                     <input name="avatar" type="file" accept="image/*" onChange={handleAvatarChange} className="sr-only" />
                                 </label>
+                                <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                                    <FileText size={16} />
+                                    {editId ? 'Upload Resume' : 'Upload Resume *'}
+                                    <input name="resume_attachment" type="file" accept=".pdf,.doc,.docx,image/*" required={!editId} onChange={handleResumeChange} className="sr-only" />
+                                </label>
                                 {errors.avatar && <div className="text-xs text-red-600">{errors.avatar}</div>}
+                                {errors.resume_attachment && <div className="text-xs text-red-600">{errors.resume_attachment}</div>}
                             </div>
+                            {resumePath && (
+                                <a
+                                    href={route('admin.seafarers.resume.view', editId)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-2 text-sm font-medium text-[#1F6F5C] hover:text-[#155444]"
+                                >
+                                    <FileText size={16} />
+                                    View current resume
+                                </a>
+                            )}
 
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>

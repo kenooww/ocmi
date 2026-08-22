@@ -441,9 +441,9 @@ function DynamicApplicationForm({ client }) {
                         <DynamicPairRow leftLabel="Coverall Size" leftValue={coverallSize} rightLabel="Shoe Size" rightValue={shoeSize} />
                         <DynamicPairRow leftLabel="Religion" leftValue={client?.religion} rightLabel="Nearest Airport" rightValue={client?.nearest_airport} rightColSpan={2} />
                         <DynamicPairRow leftLabel="Mobile" leftValue={client?.personal_mobile_no} rightLabel="Next of Kin Name" rightValue={client?.next_of_kin} rightColSpan={2} />
-                        <DynamicPairRow leftLabel="WhatsApp" leftValue={client?.whatsapp_number} rightLabel="" rightValue="" rightColSpan={2} />
+                        <DynamicPairRow leftLabel="WhatsApp" leftValue={client?.whatsapp_number} rightLabel="Emergency Contact Person" rightValue={client?.contact_person} rightColSpan={2} />
                         <DynamicPairRow leftLabel="Home Tel" leftValue={client?.fax_no} rightLabel="Next of Kin Relation" rightValue={client?.relationship} rightColSpan={2} />
-                        <DynamicPairRow leftLabel="Email" leftValue={client?.email_address || client?.email} rightLabel="Next of Kin contact No." rightValue={client?.emergency_contact} rightColSpan={2} />
+                        <DynamicPairRow leftLabel="Email" leftValue={client?.email_address || client?.email} rightLabel="Emergency Contact Number" rightValue={client?.emergency_contact} rightColSpan={2} />
                         <DynamicPairRow leftLabel="Current Salary" leftValue={client?.last_salary} rightLabel="" rightValue="" rightColSpan={2} />
                         <DynamicPairRow leftLabel="Expected Salary" leftValue="" rightLabel="" rightValue="" rightColSpan={2} />
                     </tbody>
@@ -653,7 +653,7 @@ function ZmiApplicationForm({ client }) {
                             </ZmiCell>
                         </tr>
                         <tr><ZmiCell label="Next of kin / Relative to be contacted (in case of emergency)" colSpan={4}>Name: {upper(client?.next_of_kin)} &nbsp;&nbsp; Relation: {upper(client?.relationship)}</ZmiCell></tr>
-                        <tr><ZmiCell label="Contact Details" valueText={client?.emergency_contact} colSpan={4} /></tr>
+                        <tr><ZmiCell label="Emergency Contact Person" valueText={client?.contact_person} colSpan={2} /><ZmiCell label="Emergency Contact Number" valueText={client?.emergency_contact} colSpan={2} /></tr>
                         <tr><ZmiCell label="Nearest International Airport, Country" valueText={client?.nearest_airport} colSpan={4} /></tr>
                         <tr><ZmiCell label="Passport Number" valueText={passport.number} colSpan={2} /><ZmiCell label="Date Issued" valueText={passport.date_of_issue} colSpan={2} /></tr>
                         <tr><ZmiCell label="Country of Issue" valueText={passport.place_of_issue} colSpan={2} /><ZmiCell label="Expiry Date" valueText={passport.date_of_expiry} colSpan={2} /></tr>
@@ -774,6 +774,7 @@ function FleetApplicationForm({ client, title, heading = title, showDocumentHead
                         ['WhatsApp Number', client?.whatsapp_number],
                         ["Wife's Occupation", ''],
                         ['EPF No', ''],
+                        ['Emergency Contact Person', client?.contact_person],
                         ['Contact Number NOK', client?.emergency_contact],
                         ['SOCSO No', ''],
                         ['No of Children', client?.dependents?.length || ''],
@@ -903,7 +904,8 @@ export default function PrintPreview({ client, printForm = 'complete' }) {
         ['Position applied for', client?.position_applied_for], ["Mother's Maiden Name", client?.mothers_maiden_name],
         ['Religion', client?.religion], ["Father's Name", client?.fathers_name], ['Next of Kin', client?.next_of_kin],
         ['Current Home Address', client?.current_home_address], ['Relationship', client?.relationship],
-        ['Nationality', client?.nationality], ['Emergency Contact Person/ Number', client?.emergency_contact],
+        ['Nationality', client?.nationality], ['Emergency Contact Person', client?.contact_person],
+        ['Emergency Contact Number', client?.emergency_contact],
         ['Educational Attainment', client?.educational_attainment], ['Fax No.', client?.fax_no],
         ['Body Weight and BMI', client?.body_weight_bmi], ['Personal Mobile No.', client?.personal_mobile_no],
         ['WhatsApp Number', client?.whatsapp_number], ['Email Address', client?.email_address || client?.email],
@@ -1007,6 +1009,7 @@ export default function PrintPreview({ client, printForm = 'complete' }) {
                             { key: 'relationship', label: 'Relationship' },
                             { key: 'dependent', label: 'Dependent/s' },
                             { key: 'beneficiary', label: 'Beneficiaries' },
+                            { key: 'address', label: 'Address' },
                         ]}
                         rows={client?.dependents || []}
                         minRows={3}

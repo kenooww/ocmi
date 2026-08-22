@@ -15,6 +15,7 @@ use App\Services\GoogleOauthService;
 use App\Mail\ClientVerificationMail;
 use App\Jobs\SendClientVerificationEmail;
 use App\Models\Client;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
 class ClientAuthController extends Controller
@@ -80,6 +81,7 @@ class ClientAuthController extends Controller
         Auth::guard('client')->login($client);
         $request->session()->regenerate();
         $request->session()->forget('client_authenticated_via_google');
+        $request->session()->forget('client_authenticated_via_verification');
 
         if ($this->requiresMandatoryPasswordChange($request, $client)) {
             return redirect()->route('seafarers.password.mandatory');
@@ -130,6 +132,7 @@ class ClientAuthController extends Controller
 
         // Keep created_at human-friendly for display
         $clientData['created_at_human'] = $client->created_at->toFormattedDateString();
+        $clientData['privacy_act_accepted_at_human'] = optional($client->privacy_act_accepted_at)->toFormattedDateString();
         $clientData['dependents'] = $client->dependents
             ->map(fn ($dependent) => [
                 'id' => $dependent->id,
@@ -138,6 +141,7 @@ class ClientAuthController extends Controller
                 'relationship' => $dependent->relationship,
                 'dependent' => $dependent->dependent,
                 'beneficiary' => $dependent->beneficiary,
+                'address' => $dependent->address,
                 'attachment' => $dependent->attachment,
             ])
             ->values();
@@ -300,6 +304,10 @@ class ClientAuthController extends Controller
             $request->request->remove('avatar');
         }
 
+        if (! $request->hasFile('resume_attachment')) {
+            $request->request->remove('resume_attachment');
+        }
+
         $data = $request->validate([
             // Identity
             'first_name' => 'required|string|max:255',
@@ -346,6 +354,7 @@ class ClientAuthController extends Controller
             // Next of kin / emergency
             'next_of_kin' => 'required|string|max:255',
             'relationship' => 'required|string|max:255',
+            'contact_person' => 'required|string|max:255',
             'emergency_contact' => 'required|string|max:255',
 
             // Dependents
@@ -360,6 +369,7 @@ class ClientAuthController extends Controller
             'dependents.*.relationship' => 'nullable|string|max:255',
             'dependents.*.dependent' => 'nullable|string|max:255',
             'dependents.*.beneficiary' => 'nullable|string|max:255',
+            'dependents.*.address' => 'nullable|string|max:1000',
             'dependents.*.attachment' => 'nullable',
 
             // Travel documents
@@ -471,6 +481,13 @@ class ClientAuthController extends Controller
             'philhealth_no' => 'required|string|max:100',
             // Avatar upload
             'avatar' => 'nullable|image|max:2048',
+            'resume_attachment' => [
+                $client->resume_attachment ? 'nullable' : 'required',
+                'file',
+                'mimes:pdf,doc,docx,jpg,jpeg,png',
+                'max:5120',
+            ],
+            'privacy_act_accepted' => 'accepted',
         ]);
 
         $dependentRows = $data['dependents'] ?? [];
@@ -517,6 +534,7 @@ class ClientAuthController extends Controller
                 $dependent['relationship'] ?? null,
                 $dependent['dependent'] ?? null,
                 $dependent['beneficiary'] ?? null,
+                $dependent['address'] ?? null,
                 $attachment,
             ])->contains(fn ($value) => filled($value));
 
@@ -532,6 +550,7 @@ class ClientAuthController extends Controller
                     'relationship' => $dependent['relationship'] ?? '',
                     'dependent' => $dependent['dependent'] ?? '',
                     'beneficiary' => $dependent['beneficiary'] ?? '',
+                    'address' => $dependent['address'] ?? '',
                     'attachment' => $attachment,
                 ]
             );
@@ -642,6 +661,7 @@ class ClientAuthController extends Controller
             'contact_person_number',
             'country',
         ], 'employment-history-attachments', 'employment_history');
+        $seaServiceRows = $this->applySeaServiceDurations($seaServiceRows);
         $this->syncRows($client, 'seaServices', $seaServiceRows, [
             'from_date',
             'to_date',
@@ -690,6 +710,22 @@ class ClientAuthController extends Controller
         } else {
             unset($data['avatar']);
         }
+
+        if ($request->hasFile('resume_attachment')) {
+            $file = $request->file('resume_attachment');
+            $path = $file->store('resume-attachments', 'public');
+
+            if ($client->resume_attachment && Storage::disk('public')->exists($client->resume_attachment)) {
+                Storage::disk('public')->delete($client->resume_attachment);
+            }
+
+            $data['resume_attachment'] = $path;
+        } else {
+            unset($data['resume_attachment']);
+        }
+
+        $data['privacy_act_accepted'] = true;
+        $data['privacy_act_accepted_at'] = $client->privacy_act_accepted_at ?: now();
 
         $data['email_address'] = $this->normalizeEmail($data['email_address'] ?? null) ?: $data['email_address'];
         $client->update($data);
@@ -850,6 +886,42 @@ class ClientAuthController extends Controller
             });
     }
 
+    private function applySeaServiceDurations(array $rows): array
+    {
+        return array_map(function ($row) {
+            $fromDate = $row['from_date'] ?? null;
+            $toDate = $row['to_date'] ?? null;
+
+            if (! $fromDate || ! $toDate) {
+                $row['duration_months'] = null;
+                $row['duration_days'] = null;
+                return $row;
+            }
+
+            $from = Carbon::parse($fromDate)->startOfDay();
+            $to = Carbon::parse($toDate)->startOfDay();
+
+            if ($to->lt($from)) {
+                $row['duration_months'] = null;
+                $row['duration_days'] = null;
+                return $row;
+            }
+
+            $months = $from->diffInMonths($to);
+            $anchor = $from->copy()->addMonths($months);
+
+            if ($anchor->gt($to)) {
+                $months -= 1;
+                $anchor = $from->copy()->addMonths($months);
+            }
+
+            $row['duration_months'] = max($months, 0);
+            $row['duration_days'] = max($anchor->diffInDays($to), 0);
+
+            return $row;
+        }, $rows);
+    }
+
     public function resendVerification(Request $request)
     {
         $data = $request->validate([
@@ -944,7 +1016,10 @@ class ClientAuthController extends Controller
 
     private function requiresMandatoryPasswordChange(Request $request, Client $client): bool
     {
-        return $client->must_change_password && ! (bool) $request->session()->get('client_authenticated_via_google', false);
+        $bypassMandatoryChange = (bool) $request->session()->get('client_authenticated_via_google', false)
+            || (bool) $request->session()->get('client_authenticated_via_verification', false);
+
+        return $client->must_change_password && ! $bypassMandatoryChange;
     }
 
     public function verify(Request $request, $token)
@@ -962,6 +1037,7 @@ class ClientAuthController extends Controller
 
     Auth::guard('client')->login($client);
     $request->session()->regenerate();
+    $request->session()->put('client_authenticated_via_verification', true);
     $request->session()->forget('client_authenticated_via_google');
 
     return redirect()->route('seafarers.continue');
@@ -969,5 +1045,69 @@ class ClientAuthController extends Controller
     
 }
 
+    public function viewResume(Request $request)
+    {
+        $client = Auth::guard('client')->user();
+
+        return $this->resumeViewerResponse(
+            $client,
+            route('seafarers.resume.file'),
+            route('seafarers.resume.download'),
+            route('seafarers.dashboard') . '?section=profile'
+        );
+    }
+
+    public function inlineResume(Request $request)
+    {
+        $client = Auth::guard('client')->user();
+
+        return $this->resumeFileResponse($client, false);
+    }
+
+    public function downloadResume(Request $request)
+    {
+        $client = Auth::guard('client')->user();
+
+        return $this->resumeFileResponse($client, true);
+    }
+
+    private function resumeViewerResponse(Client $client = null, string $fileUrl, string $downloadUrl, string $backUrl)
+    {
+        $attachment = $this->resumeAttachmentOrFail($client);
+        $extension = strtolower(pathinfo($attachment, PATHINFO_EXTENSION));
+
+        return Inertia::render('ResumeViewer', [
+            'title' => 'Resume Attachment',
+            'fileName' => basename($attachment),
+            'fileType' => $extension,
+            'canPreview' => in_array($extension, ['pdf', 'jpg', 'jpeg', 'png'], true),
+            'fileUrl' => $fileUrl,
+            'downloadUrl' => $downloadUrl,
+            'backUrl' => $backUrl,
+        ]);
+    }
+
+    private function resumeFileResponse(Client $client = null, bool $download = false)
+    {
+        $attachment = $this->resumeAttachmentOrFail($client);
+        $path = Storage::disk('public')->path($attachment);
+        $fileName = basename($attachment);
+
+        if ($download) {
+            return response()->download($path, $fileName);
+        }
+
+        return response()->file($path, [
+            'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+        ]);
+    }
+
+    private function resumeAttachmentOrFail(Client $client = null): string
+    {
+        abort_unless($client && $client->resume_attachment, 404);
+        abort_unless(Storage::disk('public')->exists($client->resume_attachment), 404);
+
+        return $client->resume_attachment;
+    }
 
 }

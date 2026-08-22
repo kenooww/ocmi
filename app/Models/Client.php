@@ -25,7 +25,7 @@ class Client extends Authenticatable
         'current_position' => 'Current position',
         'position_applied_for' => 'Position applied for',
         'educational_attainment' => 'Educational attainment',
-        'body_weight_bmi' => 'Body weight & BMI',
+        'body_weight_bmi' => 'Body weight (lbs)',
         'height_cm' => 'Height',
         'coverall_shoe_size' => 'Coverall & shoe size',
         'current_home_address' => 'Current home address',
@@ -34,10 +34,13 @@ class Client extends Authenticatable
         'nearest_airport' => 'Nearest airport',
         'next_of_kin' => 'Next of kin',
         'relationship' => 'Relationship',
-        'emergency_contact' => 'Emergency contact',
+        'contact_person' => 'Emergency contact person',
+        'emergency_contact' => 'Emergency contact number',
         'sss_no' => 'SSS number',
         'pagibig_no' => 'Pag-IBIG number',
         'philhealth_no' => 'PhilHealth number',
+        'resume_attachment' => 'Resume attachment',
+        'privacy_act_accepted' => 'Privacy act consent',
     ];
 
     protected $fillable = [
@@ -48,8 +51,8 @@ class Client extends Authenticatable
         'current_position','position_applied_for','educational_attainment','last_salary','e_registration_number',
         'body_weight_bmi','height_cm','coverall_shoe_size',
         'current_home_address','personal_mobile_no','whatsapp_number','fax_no','email_address','nearest_airport',
-        'next_of_kin','relationship','emergency_contact',
-        'sss_no','pagibig_no','philhealth_no','avatar'
+        'next_of_kin','relationship','contact_person','emergency_contact',
+        'sss_no','pagibig_no','philhealth_no','avatar','resume_attachment','privacy_act_accepted','privacy_act_accepted_at'
     ];
 
     protected $casts = [
@@ -57,6 +60,8 @@ class Client extends Authenticatable
         'date_of_birth' => 'date',
         'email_verified_at' => 'datetime',
         'must_change_password' => 'boolean',
+        'privacy_act_accepted' => 'boolean',
+        'privacy_act_accepted_at' => 'datetime',
     ];
 
     protected $hidden = ['password', 'verification_token'];

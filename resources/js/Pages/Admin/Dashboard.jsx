@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { ArrowRight, Ship, UserRound, UsersRound } from 'lucide-react';
 import AdminTabs from '@/Components/Admin/AdminTabs';
 
@@ -72,6 +72,9 @@ function RecentList({ title, href, items, type }) {
 }
 
 export default function Dashboard({ stats = {}, recentUsers = [], recentSeafarers = [] }) {
+    const { auth } = usePage().props;
+    const isStaff = auth?.user?.role === 'staff';
+
     return (
         <AdminTabs activeTab="dashboard" title="Dashboard">
             <div className="mx-auto max-w-6xl">
@@ -83,14 +86,18 @@ export default function Dashboard({ stats = {}, recentUsers = [], recentSeafarer
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <StatCard label="Total Users" value={stats.users ?? 0} icon={UserRound} tone="bg-blue-50 text-blue-700" />
+                <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${isStaff ? '' : 'lg:grid-cols-3'}`}>
+                    {!isStaff && (
+                        <StatCard label="Total Users" value={stats.users ?? 0} icon={UserRound} tone="bg-blue-50 text-blue-700" />
+                    )}
                     <StatCard label="Total Seafarers" value={stats.seafarers ?? 0} icon={Ship} tone="bg-[#E1EBE6] text-[#1F6F5C]" />
                     <StatCard label="New Seafarers Today" value={stats.recentSeafarers ?? 0} icon={UsersRound} tone="bg-[#F5EBDA] text-[#8A642C]" />
                 </div>
 
-                <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-                    <RecentList title="Recent Users" href={route('admin.users.index')} items={recentUsers} type="user" />
+                <div className={`mt-6 grid grid-cols-1 gap-6 ${isStaff ? '' : 'lg:grid-cols-2'}`}>
+                    {!isStaff && (
+                        <RecentList title="Recent Users" href={route('admin.users.index')} items={recentUsers} type="user" />
+                    )}
                     <RecentList title="Recent Seafarers" href={route('admin.seafarers.index')} items={recentSeafarers} type="seafarer" />
                 </div>
             </div>
