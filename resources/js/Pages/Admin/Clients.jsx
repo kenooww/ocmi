@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Link, router, useForm } from '@inertiajs/react';
-import { Eye, FileText, Plus, Printer, Search, Ship, Trash2, Upload, X } from 'lucide-react';
+import { Link, router, useForm, usePage } from '@inertiajs/react';
+import { ClipboardCheck, Eye, FileText, Plus, Printer, Search, Ship, Trash2, Upload, X } from 'lucide-react';
 import AdminTabs from '@/Components/Admin/AdminTabs';
 
 function Pagination({ meta }) {
@@ -50,50 +50,85 @@ function initialsFor(name) {
         .toUpperCase();
 }
 
+function fullNameFor(client) {
+    return [client?.first_name, client?.middle_name, client?.last_name].filter(Boolean).join(' ') || client?.name || 'Seafarer';
+}
+
 const PRINTOUT_FORMS = [
     {
         key: 'complete',
-        title: 'Complete seafarer packet',
+        title: 'Alpha Omega Application Form',
         description: 'Personal data, documents, certificates, sea service, and deck officer experience.',
     },
-    {
-        key: 'personal',
-        title: 'Personal data',
-        description: 'Profile details, dependents, and travel documents.',
-    },
-    {
-        key: 'certificates',
-        title: 'Certificates and references',
-        description: 'Competency, proficiency, vaccinations, flag documents, and employer references.',
-    },
-    {
-        key: 'sea_service',
-        title: 'Sea service',
-        description: 'Sea service table and candidate signature section.',
-    },
-    {
-        key: 'deck_officer',
-        title: 'Deck officer experience',
-        description: 'Deck officer vessel and operation experience table.',
-    },
+    // {
+    //     key: 'personal',
+    //     title: 'Personal data',
+    //     description: 'Profile details, dependents, and travel documents.',
+    // },
+    // {
+    //     key: 'certificates',
+    //     title: 'Certificates and references',
+    //     description: 'Competency, proficiency, vaccinations, flag documents, and employer references.',
+    // },
+    // {
+    //     key: 'sea_service',
+    //     title: 'Sea service',
+    //     description: 'Sea service table and candidate signature section.',
+    // },
+    // {
+    //     key: 'deck_officer',
+    //     title: 'Deck officer experience',
+    //     description: 'Deck officer vessel and operation experience table.',
+    // },
     {
         key: 'zmi',
-        title: 'ZMI application form',
+        title: 'ZMI Application Form',
         description: 'ZMI applicant details, certificates, offshore training, references, sea service, and deck experience.',
     },
     {
         key: 'flex_fleet',
-        title: 'Flex Fleet application form',
+        title: 'Flex Fleet Application Form',
         description: 'Flex Fleet personal particulars, documents, certificate courses, and sea service.',
     },
     {
         key: 'dynamic',
-        title: 'Dynamic application form',
+        title: 'Dynamic Application Form',
         description: 'Dynamic personal particulars, documents, certificate courses, and sea service.',
     },
 ];
 
+const APPLICATION_STATUS_OPTIONS = [
+    'PENDING/ONHOLD',
+    'TO REPORT',
+    'FOR REEVAL/FOR APPROVAL',
+    'FAILED',
+];
+
+function applicationStatusClass(status) {
+    const normalized = String(status || '').toUpperCase();
+
+    if (normalized === 'FAILED') {
+        return 'bg-red-100 text-red-700 ring-1 ring-red-200';
+    }
+
+    if (normalized === 'TO REPORT') {
+        return 'bg-green-100 text-green-700 ring-1 ring-green-200';
+    }
+
+    if (normalized === 'FOR REEVAL/FOR APPROVAL') {
+        return 'bg-blue-100 text-blue-700 ring-1 ring-blue-200';
+    }
+
+    if (normalized === 'PENDING/ONHOLD') {
+        return 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-200';
+    }
+
+    return 'bg-slate-100 text-slate-700 ring-1 ring-slate-200';
+}
+
 export default function Clients({ clients, filters = {} }) {
+    const { auth } = usePage().props;
+    const adminName = auth?.user?.name || auth?.user?.email || 'Current admin';
     const { data, setData, post, delete: destroy, reset, errors, clearErrors, processing } = useForm({
         name: '',
         email: '',
@@ -103,11 +138,25 @@ export default function Clients({ clients, filters = {} }) {
         avatar: null,
         _method: '',
     });
+    const {
+        data: applicationData,
+        setData: setApplicationData,
+        put: putApplicationStatus,
+        reset: resetApplicationData,
+        errors: applicationErrors,
+        clearErrors: clearApplicationErrors,
+        processing: applicationProcessing,
+    } = useForm({
+        application_status: 'PENDING/ONHOLD',
+        remarks: '',
+    });
     const [search, setSearch] = useState(filters.search ?? '');
     const [editId, setEditId] = useState(null);
     const [preview, setPreview] = useState(null);
     const [seafarerModalOpen, setSeafarerModalOpen] = useState(false);
     const [printClient, setPrintClient] = useState(null);
+    const [applicationClient, setApplicationClient] = useState(null);
+    const [applicationTab, setApplicationTab] = useState('update');
 
     const clearPreview = () => {
         if (preview && preview.startsWith('blob:')) {
@@ -197,6 +246,36 @@ export default function Clients({ clients, filters = {} }) {
         setPrintClient(null);
     };
 
+    const openApplicationModal = (client) => {
+        clearApplicationErrors();
+        setApplicationClient(client);
+        setApplicationTab('update');
+        setApplicationData({
+            application_status: client.application_status || 'PENDING/ONHOLD',
+            remarks: '',
+        });
+    };
+
+    const closeApplicationModal = () => {
+        setApplicationClient(null);
+        setApplicationTab('update');
+        resetApplicationData();
+        clearApplicationErrors();
+    };
+
+    const submitApplicationStatus = (e) => {
+        e.preventDefault();
+
+        if (!applicationClient) {
+            return;
+        }
+
+        putApplicationStatus(route('admin.seafarers.application-status.update', applicationClient.id), {
+            preserveScroll: true,
+            onSuccess: closeApplicationModal,
+        });
+    };
+
     useEffect(() => {
         return () => {
             if (preview && preview.startsWith('blob:')) {
@@ -252,7 +331,7 @@ export default function Clients({ clients, filters = {} }) {
                     <div className="flex flex-col gap-3 border-b border-slate-200 p-5 lg:flex-row lg:items-center lg:justify-between">
                         <div>
                             <h3 className="text-lg font-semibold text-slate-900">Seafarer Listing</h3>
-                            <p className="mt-1 text-sm text-slate-500">Search seafarers by name, email, phone, or address.</p>
+                            <p className="mt-1 text-sm text-slate-500">Search by seafarer, job type, WhatsApp, processed by, or status.</p>
                         </div>
                         <form onSubmit={handleSearch} className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
                             <div className="relative w-full sm:w-80">
@@ -261,7 +340,7 @@ export default function Clients({ clients, filters = {} }) {
                                     type="search"
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
-                                    placeholder="Search seafarers"
+                                    placeholder="Search visible columns"
                                     className="w-full rounded border border-slate-300 py-2.5 pl-10 pr-10 text-sm text-slate-800 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B]"
                                 />
                                 {search && (
@@ -285,12 +364,14 @@ export default function Clients({ clients, filters = {} }) {
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className="w-full min-w-[780px] border-collapse">
+                        <table className="w-full min-w-[1040px] border-collapse">
                             <thead>
                                 <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                                     <th className="px-5 py-3">Seafarer</th>
-                                    <th className="px-5 py-3">Contact</th>
-                                    <th className="px-5 py-3">Address</th>
+                                    <th className="px-5 py-3">Type of Job</th>
+                                    <th className="px-5 py-3">WhatsApp</th>
+                                    <th className="px-5 py-3">Processed By</th>
+                                    <th className="px-5 py-3">Application Status</th>
                                     <th className="px-5 py-3 text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -320,12 +401,19 @@ export default function Clients({ clients, filters = {} }) {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-5 py-4">
-                                                <div className="text-slate-700">{client.email}</div>
-                                                <div className="mt-1 text-slate-500">{client.phone || 'No phone'}</div>
+                                            <td className="px-5 py-4 text-slate-600">
+                                                {client.type_of_job || 'Not set'}
                                             </td>
-                                            <td className="max-w-xs px-5 py-4 text-slate-600">
-                                                <span className="line-clamp-2">{client.address || 'No address'}</span>
+                                            <td className="px-5 py-4 text-slate-600">
+                                                {client.whatsapp_number || 'Not set'}
+                                            </td>
+                                            <td className="px-5 py-4 text-slate-600">
+                                                {client.processed_by || 'Not set'}
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <span className={`inline-flex rounded px-2 py-1 text-xs font-medium ${applicationStatusClass(client.application_status)}`}>
+                                                    {client.application_status || 'Not set'}
+                                                </span>
                                             </td>
                                             <td className="px-5 py-4">
                                                 <div className="flex justify-end gap-2">
@@ -346,6 +434,14 @@ export default function Clients({ clients, filters = {} }) {
                                                     </button>
                                                     <button
                                                         type="button"
+                                                        onClick={() => openApplicationModal(client)}
+                                                        className="inline-flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700"
+                                                        aria-label={`Update application status for ${client.name}`}
+                                                    >
+                                                        <ClipboardCheck size={16} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
                                                         onClick={() => confirm('Delete seafarer record?') && destroy(route('admin.seafarers.destroy', client.id), { preserveScroll: true })}
                                                         className="inline-flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
                                                         aria-label={`Delete ${client.name}`}
@@ -358,7 +454,7 @@ export default function Clients({ clients, filters = {} }) {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="4" className="px-5 py-12 text-center text-sm text-slate-500">
+                                        <td colSpan="6" className="px-5 py-12 text-center text-sm text-slate-500">
                                             No seafarers found.
                                         </td>
                                     </tr>
@@ -392,7 +488,7 @@ export default function Clients({ clients, filters = {} }) {
                                 </div>
                                 <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
                                     <Upload size={16} />
-                                    Upload Avatar
+                                    Upload Photo
                                     <input name="avatar" type="file" accept="image/*" onChange={handleAvatarChange} className="sr-only" />
                                 </label>
                                 {errors.avatar && <div className="text-xs text-red-600">{errors.avatar}</div>}
@@ -461,6 +557,133 @@ export default function Clients({ clients, filters = {} }) {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {applicationClient && (
+                <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
+                    <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded bg-white shadow-xl">
+                        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
+                            <div>
+                                <h3 className="text-lg font-semibold text-slate-900">Update Application</h3>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    {fullNameFor(applicationClient)}
+                                </p>
+                            </div>
+                            <button type="button" onClick={closeApplicationModal} className="text-slate-400 hover:text-slate-600" aria-label="Close update application">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="border-b border-slate-200 px-6 pt-4">
+                            <div className="flex gap-2">
+                                {[
+                                    ['update', 'Update'],
+                                    ['logs', 'Approval Logs'],
+                                ].map(([key, label]) => (
+                                    <button
+                                        key={key}
+                                        type="button"
+                                        onClick={() => setApplicationTab(key)}
+                                        className={`border-b-2 px-3 py-2 text-sm font-medium transition ${
+                                            applicationTab === key
+                                                ? 'border-[#1F6F5C] text-[#1F6F5C]'
+                                                : 'border-transparent text-slate-500 hover:text-slate-800'
+                                        }`}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {applicationTab === 'update' ? (
+                            <form onSubmit={submitApplicationStatus} className="space-y-5 overflow-y-auto px-6 py-5">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700">Application Status</label>
+                                    <select
+                                        value={applicationData.application_status}
+                                        onChange={(e) => setApplicationData('application_status', e.target.value)}
+                                        className="mt-1 w-full rounded border border-slate-300 p-2.5 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B]"
+                                    >
+                                        {APPLICATION_STATUS_OPTIONS.map((status) => (
+                                            <option key={status} value={status}>{status}</option>
+                                        ))}
+                                    </select>
+                                    {applicationErrors.application_status && <div className="mt-1 text-xs text-red-600">{applicationErrors.application_status}</div>}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700">Processed By</label>
+                                    <input
+                                        type="text"
+                                        value={adminName}
+                                        readOnly
+                                        className="mt-1 w-full rounded border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-700 shadow-sm"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700">Additional Information</label>
+                                    <textarea
+                                        value={applicationData.remarks}
+                                        onChange={(e) => setApplicationData('remarks', e.target.value)}
+                                        rows="4"
+                                        className="mt-1 w-full rounded border border-slate-300 p-2.5 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B]"
+                                    />
+                                    {applicationErrors.remarks && <div className="mt-1 text-xs text-red-600">{applicationErrors.remarks}</div>}
+                                </div>
+
+                                <div className="flex justify-end gap-2 border-t border-slate-200 pt-5">
+                                    <button type="button" onClick={closeApplicationModal} className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                        Cancel
+                                    </button>
+                                    <button type="submit" disabled={applicationProcessing} className="rounded bg-[#0A2436] px-4 py-2 text-sm font-semibold text-white hover:bg-[#12364F] disabled:opacity-60">
+                                        Save
+                                    </button>
+                                </div>
+                            </form>
+                        ) : (
+                            <div className="print-form-scroll min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-5">
+                                {(applicationClient.application_status_logs || []).length > 0 ? (
+                                    applicationClient.application_status_logs.map((log) => (
+                                        <div key={log.id} className="rounded border border-slate-200 p-4">
+                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                                <div>
+                                                    <span className={`inline-flex rounded px-2 py-1 text-xs font-medium ${applicationStatusClass(log.status)}`}>
+                                                        {log.status || 'No status'}
+                                                    </span>
+                                                    <p className="mt-1 text-xs text-slate-500">
+                                                        Previous: {log.previous_status || 'None'}
+                                                    </p>
+                                                </div>
+                                                <span className="text-xs text-slate-500">{log.created_at || 'No date'}</span>
+                                            </div>
+                                            <div className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+                                                <div>
+                                                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Processed By</p>
+                                                    <p className="mt-1 text-slate-700">{log.processed_by || 'Not set'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Additional Information</p>
+                                                    <p className="mt-1 whitespace-pre-line text-slate-700">{log.remarks || 'None'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="rounded border border-dashed border-slate-300 px-4 py-10 text-center text-sm text-slate-500">
+                                        No approval logs yet.
+                                    </div>
+                                )}
+                                <div className="flex justify-end border-t border-slate-200 pt-5">
+                                    <button type="button" onClick={closeApplicationModal} className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

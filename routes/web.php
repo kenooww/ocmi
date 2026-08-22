@@ -8,6 +8,11 @@ use Inertia\Inertia;
 // Admin login (serve Breeze login at /admin/login)
 Route::middleware('guest')->get('/admin/login', [AuthenticatedSessionController::class, 'create'])->name('admin.login');
 Route::middleware('guest')->post('/admin/login', [AuthenticatedSessionController::class, 'store'])->name('admin.login.submit');
+Route::get('/admin', function () {
+    return auth()->check()
+        ? redirect()->route('admin.dashboard.index')
+        : redirect()->route('admin.login');
+})->name('admin.entry');
 
 // Dashboard route used by Laravel Breeze after admin login.
 Route::middleware(['auth'])->get('admin/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
@@ -29,6 +34,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('/seafarers', [AdminController::class, 'clientsIndex'])->name('seafarers.index');
     Route::post('/seafarers', [AdminController::class, 'storeClient'])->name('seafarers.store');
     Route::get('/seafarers/{client}/print-preview', [AdminController::class, 'printPreview'])->name('seafarers.print-preview');
+    Route::put('/seafarers/{client}/application-status', [AdminController::class, 'updateApplicationStatus'])->name('seafarers.application-status.update');
     Route::get('/seafarers/{client}', [AdminController::class, 'showClient'])->name('seafarers.show');
     Route::put('/seafarers/{client}', [AdminController::class, 'updateClient'])->name('seafarers.update');
     Route::delete('/seafarers/{client}', [AdminController::class, 'deleteClient'])->name('seafarers.destroy');
@@ -37,6 +43,11 @@ Route::post('/logout', [AdminController::class, 'logout'])->name('logout');
 
 
 // Client Portal Login & Dashboard
+Route::get('/seafarers', function () {
+    return auth('client')->check()
+        ? redirect()->route('seafarers.dashboard')
+        : redirect()->route('seafarers.login');
+})->name('seafarers.entry');
 Route::get('/seafarers/login', [ClientAuthController::class, 'showLogin'])->name('seafarers.login');
 Route::get('/seafarers/register', [ClientAuthController::class, 'showGoogleRegister'])->name('seafarers.register');
 Route::get('/seafarers/register/google', [ClientAuthController::class, 'googleRedirect'])->name('seafarers.register.google');
@@ -59,7 +70,11 @@ Route::get('/seafarers/test-verification', function (Request $request) {
 
     $client = App\Models\Client::firstOrCreate(
         ['email' => $email],
-        ['name' => 'Test User', 'password' => bcrypt(\Illuminate\Support\Str::random(24))]
+        [
+            'name' => 'Test User',
+            'password' => bcrypt(\Illuminate\Support\Str::random(24)),
+            'application_status' => App\Models\Client::DEFAULT_APPLICATION_STATUS,
+        ]
     );
 
     $client->verification_token = \Illuminate\Support\Str::random(40);
@@ -78,7 +93,10 @@ Route::get('/seafarers/register/google/callback-debug', function () {
 });
 
 Route::middleware(['auth:client'])->prefix('seafarers')->name('seafarers.')->group(function () {
+    Route::get('/password/mandatory', [ClientAuthController::class, 'showMandatoryPassword'])->name('password.mandatory');
+    Route::put('/password/mandatory', [ClientAuthController::class, 'updateMandatoryPassword'])->name('password.mandatory.update');
     Route::get('/dashboard', [ClientAuthController::class, 'dashboard'])->name('dashboard');
+    Route::put('/password', [ClientAuthController::class, 'updatePassword'])->name('password.update');
     Route::post('/logout', [ClientAuthController::class, 'logout'])->name('logout');
 });
 

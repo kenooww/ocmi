@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from '@inertiajs/react';
-import { ArrowLeft, CalendarDays, ChevronDown, FileText, Mail, Phone, Ship } from 'lucide-react';
+import { ArrowLeft, CalendarDays, ChevronDown, FileText, Mail, Phone, Printer, Ship, X } from 'lucide-react';
 import AdminTabs from '@/Components/Admin/AdminTabs';
 import Profile from '@/Pages/Client/Sections/Profile';
 
@@ -23,6 +23,49 @@ const TRAVEL_DOCUMENT_TYPES = [
     { key: 'visa', label: 'Available Visa (If Any)' },
     { key: 'seamans_book', label: "Seaman's Book" },
     { key: 'seafarers_identification_document', label: 'Seafarers Identification Document (SID)' },
+];
+
+const PRINTOUT_FORMS = [
+    {
+        key: 'complete',
+        title: 'Complete Alpha Omega Application Form',
+        description: 'Personal data, documents, certificates, sea service, and deck officer experience.',
+    },
+    // {
+    //     key: 'personal',
+    //     title: 'Personal data',
+    //     description: 'Profile details, dependents, and travel documents.',
+    // },
+    // {
+    //     key: 'certificates',
+    //     title: 'Certificates and references',
+    //     description: 'Competency, proficiency, vaccinations, flag documents, and employer references.',
+    // },
+    // {
+    //     key: 'sea_service',
+    //     title: 'Sea service',
+    //     description: 'Sea service table and candidate signature section.',
+    // },
+    // {
+    //     key: 'deck_officer',
+    //     title: 'Deck officer experience',
+    //     description: 'Deck officer vessel and operation experience table.',
+    // },
+    {
+        key: 'zmi',
+        title: 'ZMI Application Form',
+        description: 'ZMI applicant details, certificates, offshore training, references, sea service, and deck experience.',
+    },
+    {
+        key: 'flex_fleet',
+        title: 'Flex Fleet Application Form',
+        description: 'Flex Fleet personal particulars, documents, certificate courses, and sea service.',
+    },
+    {
+        key: 'dynamic',
+        title: 'Dynamic Application Form',
+        description: 'Dynamic personal particulars, documents, certificate courses, and sea service.',
+    },
 ];
 
 const GROUPS = [
@@ -470,6 +513,7 @@ function EmptyTabPanel({ title }) {
 
 export default function ClientDetails({ client }) {
     const fullName = fullNameFor(client);
+    const [printModalOpen, setPrintModalOpen] = useState(false);
 
     const dependentColumns = [
         { key: 'name', label: 'Name' },
@@ -517,6 +561,31 @@ export default function ClientDetails({ client }) {
 
     return (
         <AdminTabs activeTab="clients" title="Seafarer Details">
+            <style>{`
+                .print-form-scroll {
+                    scrollbar-width: thin;
+                    scrollbar-color: #94a3b8 #f1f5f9;
+                }
+
+                .print-form-scroll::-webkit-scrollbar {
+                    width: 10px;
+                }
+
+                .print-form-scroll::-webkit-scrollbar-track {
+                    background: #f1f5f9;
+                    border-radius: 999px;
+                }
+
+                .print-form-scroll::-webkit-scrollbar-thumb {
+                    background: linear-gradient(180deg, #94a3b8, #64748b);
+                    border: 2px solid #f1f5f9;
+                    border-radius: 999px;
+                }
+
+                .print-form-scroll::-webkit-scrollbar-thumb:hover {
+                    background: linear-gradient(180deg, #64748b, #475569);
+                }
+            `}</style>
             <div className="mx-auto max-w-6xl">
                 <div className="mb-5">
                     <Link
@@ -533,8 +602,59 @@ export default function ClientDetails({ client }) {
                     updateRouteName="admin.seafarers.update"
                     updateRouteParams={client.id}
                     methodOverride="PUT"
+                    headerActions={(
+                        <button
+                            type="button"
+                            onClick={() => setPrintModalOpen(true)}
+                            className="inline-flex items-center justify-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                        >
+                            <Printer size={16} />
+                            Print Forms
+                        </button>
+                    )}
                 />
             </div>
+
+            {printModalOpen && (
+                <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
+                    <div className="flex max-h-[92vh] w-full max-w-xl flex-col overflow-hidden rounded bg-white shadow-xl">
+                        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
+                            <div>
+                                <h3 className="text-lg font-semibold text-slate-900">Print Forms</h3>
+                                <p className="mt-1 text-sm text-slate-500">{fullName}</p>
+                            </div>
+                            <button type="button" onClick={() => setPrintModalOpen(false)} className="text-slate-400 hover:text-slate-600" aria-label="Close print forms">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="print-form-scroll min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-5">
+                            {PRINTOUT_FORMS.map((form) => (
+                                <Link
+                                    key={form.key}
+                                    href={route('admin.seafarers.print-preview', client.id) + `?form=${form.key}`}
+                                    className="flex items-start gap-3 rounded border border-slate-200 p-4 transition hover:border-blue-200 hover:bg-blue-50"
+                                >
+                                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-[#E1EBE6] text-[#1F6F5C]">
+                                        <FileText size={18} />
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block text-sm font-semibold text-slate-900">{form.title}</span>
+                                        <span className="mt-1 block text-sm leading-5 text-slate-500">{form.description}</span>
+                                    </span>
+                                    <Printer className="mt-1 shrink-0 text-slate-400" size={17} />
+                                </Link>
+                            ))}
+                        </div>
+
+                        <div className="flex shrink-0 justify-end border-t border-slate-200 px-6 py-4">
+                            <button type="button" onClick={() => setPrintModalOpen(false)} className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AdminTabs>
     );
 }

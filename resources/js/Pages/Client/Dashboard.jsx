@@ -5,6 +5,7 @@ import DashboardMain from './Sections/DashboardMain';
 import NewApplication from './Sections/NewApplication';
 import History from './Sections/History';
 import Profile from './Sections/Profile';
+import SettingsSection from './Sections/Settings';
 
 const PALETTE = {
   navy: "#0F3049",
@@ -125,6 +126,7 @@ function StatusStamp({ status }) {
 const NAV_ITEMS = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { key: "profile", label: "Profile", icon: User },
+  { key: "settings", label: "Settings", icon: Settings },
 ];
 
 function Sidebar({ active, setActive, mobileOpen, setMobileOpen }) {
@@ -223,7 +225,7 @@ function fullNameFor(client) {
   return [client?.first_name, client?.middle_name, client?.last_name].filter(Boolean).join(" ") || client?.name || "Seafarer";
 }
 
-function Topbar({ title, setMobileOpen, client, goProfile }) {
+function Topbar({ title, setMobileOpen, client, goProfile, goSettings }) {
   const displayName = fullNameFor(client);
   const initials = initialsFor(displayName);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -295,12 +297,12 @@ function Topbar({ title, setMobileOpen, client, goProfile }) {
                   type="button"
                   onClick={() => {
                     setProfileOpen(false);
-                    goProfile();
+                    goSettings();
                   }}
                   className="flex w-full items-center gap-3 rounded px-2 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
                 >
                   <Settings size={16} className="text-slate-500" />
-                  Profile preferences
+                  Settings
                 </button>
               </div>
             </div>
@@ -458,6 +460,7 @@ export default function SeafarerPortal({ client }) {
     new: "New application",
     history: "Application history",
     profile: "Profile",
+    settings: "Settings",
   };
 
   return (
@@ -469,7 +472,7 @@ export default function SeafarerPortal({ client }) {
       <Sidebar active={active} setActive={setActive} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <Topbar title={titles[active]} setMobileOpen={setMobileOpen} client={client} goProfile={() => setActive('profile')} />
+        <Topbar title={titles[active]} setMobileOpen={setMobileOpen} client={client} goProfile={() => setActive('profile')} goSettings={() => setActive('settings')} />
 
         {active === 'dashboard' && (
           <DashboardMain
@@ -482,6 +485,7 @@ export default function SeafarerPortal({ client }) {
         {/* {active === 'new' && <NewApplication onSubmit={handleNewApplication} confirmedId={confirmedId} />}
         {active === 'history' && <History applications={applications} />} */}
         {active === 'profile' && <Profile client={client} />}
+        {active === 'settings' && <SettingsSection />}
       </div>
     </div>
   );
