@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useForm } from '@inertiajs/react';
-import { CalendarDays, ChevronDown, FileText, Mail, Phone, Plus, Trash2, Upload, X } from 'lucide-react';
+import { CalendarDays, ChevronDown, FileText, Mail, Phone, Plus, Printer, Trash2, Upload, X } from 'lucide-react';
 
 const FIELD_KEYS = [
-  'avatar', 'first_name', 'middle_name', 'last_name', 'gender', 'status', 'type_of_job', 'date_applied', 'nationality',
+  'avatar', 'resume_attachment', 'privacy_act_accepted', 'first_name', 'middle_name', 'last_name', 'gender', 'status', 'type_of_job', 'date_applied', 'nationality',
   'place_of_birth', 'date_of_birth', 'mothers_maiden_name', 'fathers_name', 'religion',
   'current_position', 'position_applied_for', 'educational_attainment', 'last_salary', 'e_registration_number',
   'body_weight_bmi', 'height_cm', 'coverall_shoe_size',
   'current_home_address', 'personal_mobile_no', 'whatsapp_number', 'fax_no', 'email_address', 'nearest_airport',
-  'next_of_kin', 'relationship', 'emergency_contact',
+  'next_of_kin', 'relationship', 'contact_person', 'emergency_contact',
   'sss_no', 'pagibig_no', 'philhealth_no',
 ];
 
@@ -30,7 +30,7 @@ const GENDER_OPTIONS = [
   'Female',
 ];
 
-const EMPTY_DEPENDENT = { name: '', date_of_birth: '', relationship: '', dependent: '', beneficiary: '', attachment: null };
+const EMPTY_DEPENDENT = { name: '', date_of_birth: '', relationship: '', dependent: '', beneficiary: '', address: '', attachment: null };
 const EMPTY_CERTIFICATE = { name: '', certificate_number: '', place_of_issue: '', date_of_issue: '', date_of_expiry: '', attachment: null };
 const EMPTY_NUMBERED_DOCUMENT = { name: '', number: '', place_of_issue: '', date_of_issue: '', date_of_expiry: '', attachment: null };
 const EMPTY_FLAG_DOCUMENT = { name: '', number: '', place_of_issue: '', date_of_issue: '', date_of_expiry: '' };
@@ -98,6 +98,7 @@ const GROUPS = [
       ['Last name', 'last_name'],
       ['Gender', 'gender', 'select', GENDER_OPTIONS],
       ['Status', 'status', 'select', STATUS_OPTIONS],
+      ['Position applied for', 'position_applied_for'],
       ['Type of job', 'type_of_job', 'select', TYPE_OF_JOB_OPTIONS],
       ['Date applied', 'date_applied', 'date'],
       ['Nationality', 'nationality'],
@@ -117,7 +118,6 @@ const GROUPS = [
     title: 'Position & Background',
     fields: [
       ['Current position', 'current_position'],
-      ['Position applied for', 'position_applied_for'],
       ['Educational attainment', 'educational_attainment'],
       ['Last salary', 'last_salary'],
       ['E-registration number', 'e_registration_number'],
@@ -126,7 +126,7 @@ const GROUPS = [
   {
     title: 'Physical Details',
     fields: [
-      ['Body weight & BMI', 'body_weight_bmi'],
+      ['Body weight (lbs)', 'body_weight_bmi'],
       ['Height (cm)', 'height_cm', 'number'],
       ['Coverall & shoe size', 'coverall_shoe_size'],
     ],
@@ -147,7 +147,8 @@ const GROUPS = [
     fields: [
       ['Next of kin', 'next_of_kin'],
       ['Relationship', 'relationship'],
-      ['Emergency contact person / number', 'emergency_contact'],
+      ['Emergency contact person', 'contact_person'],
+      ['Emergency contact number', 'emergency_contact'],
     ],
   },
   {
@@ -194,6 +195,55 @@ function buildTravelDocuments(documents = []) {
     date_of_expiry: documentMap.get(type.key)?.date_of_expiry ?? '',
     attachment: documentMap.get(type.key)?.attachment ?? '',
   }));
+}
+
+function parseDateInput(value) {
+  if (!value) {
+    return null;
+  }
+
+  const [year, month, day] = value.split('-').map((part) => Number(part));
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function addUtcMonths(date, months) {
+  const next = new Date(date.getTime());
+  const originalDay = next.getUTCDate();
+
+  next.setUTCDate(1);
+  next.setUTCMonth(next.getUTCMonth() + months);
+  const lastDay = new Date(Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 0)).getUTCDate();
+  next.setUTCDate(Math.min(originalDay, lastDay));
+
+  return next;
+}
+
+function calculateSeaServiceDuration(fromDate, toDate) {
+  const from = parseDateInput(fromDate);
+  const to = parseDateInput(toDate);
+
+  if (!from || !to || to < from) {
+    return { duration_months: '', duration_days: '' };
+  }
+
+  let months = (to.getUTCFullYear() - from.getUTCFullYear()) * 12 + (to.getUTCMonth() - from.getUTCMonth());
+  let monthAnchor = addUtcMonths(from, months);
+
+  if (monthAnchor > to) {
+    months -= 1;
+    monthAnchor = addUtcMonths(from, months);
+  }
+
+  const days = Math.floor((to.getTime() - monthAnchor.getTime()) / 86400000);
+
+  return {
+    duration_months: String(Math.max(months, 0)),
+    duration_days: String(Math.max(days, 0)),
+  };
 }
 
 function FieldRow({ label, name, value, editing, data, setData, error, type = 'text', options = [] }) {
@@ -335,7 +385,73 @@ function TabBar({ active, onChange }) {
   );
 }
 
-function RepeatableList({ items, editing, columns, onChange, onAdd, onRemove, emptyLabel, errorsPrefix, errors }) {
+function attachmentUrl(path) {
+  return `/storage/${path}`;
+}
+
+function printAttachment(path) {
+  if (!path) {
+    return;
+  }
+
+  const url = attachmentUrl(path);
+  const printWindow = window.open('', '_blank');
+
+  if (!printWindow) {
+    window.open(url, '_blank');
+    return;
+  }
+
+  const iframe = printWindow.document.createElement('iframe');
+  iframe.src = url;
+  iframe.title = 'Print attachment';
+  iframe.style.position = 'fixed';
+  iframe.style.inset = '0';
+  iframe.style.width = '100%';
+  iframe.style.height = '100%';
+  iframe.style.border = '0';
+  iframe.onload = () => {
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    } catch (error) {
+      printWindow.location.href = url;
+    }
+  };
+
+  printWindow.document.body.style.margin = '0';
+  printWindow.document.body.appendChild(iframe);
+}
+
+function AttachmentActions({ path, label = 'View attachment', className = '' }) {
+  if (!path || typeof path !== 'string') {
+    return null;
+  }
+
+  return (
+    <div className={`flex flex-wrap items-center gap-2 ${className}`}>
+      <a
+        href={attachmentUrl(path)}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex items-center gap-2 font-medium text-[#1F6F5C] hover:text-[#155446]"
+      >
+        <FileText size={15} />
+        {label}
+      </a>
+      <button
+        type="button"
+        onClick={() => printAttachment(path)}
+        className="inline-flex items-center gap-1 rounded border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+      >
+        <Printer size={14} />
+        Print
+      </button>
+    </div>
+  );
+}
+
+function RepeatableList({ items, editing, columns, onChange, onAdd, onRemove, emptyLabel, errorsPrefix, errors, printableAttachments = false }) {
   if (!editing) {
     if (!items || items.length === 0) {
       return (
@@ -362,15 +478,19 @@ function RepeatableList({ items, editing, columns, onChange, onAdd, onRemove, em
                   {columns.map((column) => (
                     <td key={column.key} className="px-5 py-4 text-slate-700">
                       {column.type === 'file' && item[column.key] ? (
-                        <a
-                          href={`/storage/${item[column.key]}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-2 font-medium text-[#1F6F5C] hover:text-[#155446]"
-                        >
-                          <FileText size={15} />
-                          View attachment
-                        </a>
+                        printableAttachments ? (
+                          <AttachmentActions path={item[column.key]} />
+                        ) : (
+                          <a
+                            href={attachmentUrl(item[column.key])}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-2 font-medium text-[#1F6F5C] hover:text-[#155446]"
+                          >
+                            <FileText size={15} />
+                            View attachment
+                          </a>
+                        )
                       ) : (
                         item[column.key] || 'Not provided'
                       )}
@@ -416,15 +536,19 @@ function RepeatableList({ items, editing, columns, onChange, onAdd, onRemove, em
                         />
                       </label>
                       {item[column.key] && typeof item[column.key] === 'string' && (
-                        <a
-                          href={`/storage/${item[column.key]}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-2 flex items-center gap-2 text-sm font-medium text-[#1F6F5C] hover:text-[#155446]"
-                        >
-                          <FileText size={15} />
-                          Current attachment
-                        </a>
+                        printableAttachments ? (
+                          <AttachmentActions path={item[column.key]} label="Current attachment" className="mt-2 text-sm" />
+                        ) : (
+                          <a
+                            href={attachmentUrl(item[column.key])}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 flex items-center gap-2 text-sm font-medium text-[#1F6F5C] hover:text-[#155446]"
+                          >
+                            <FileText size={15} />
+                            Current attachment
+                          </a>
+                        )
                       )}
                       {item[column.key] && typeof item[column.key] !== 'string' && (
                         <p className="mt-2 text-sm text-slate-600">{item[column.key].name}</p>
@@ -506,15 +630,7 @@ function TravelDocumentsTable({ items, editing, onChange, errors }) {
                                   />
                                 </label>
                                 {item[column.key] && typeof item[column.key] === 'string' && (
-                                  <a
-                                    href={`/storage/${item[column.key]}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="mt-2 flex items-center gap-2 text-sm font-medium text-[#1F6F5C] hover:text-[#155446]"
-                                  >
-                                    <FileText size={15} />
-                                    Current attachment
-                                  </a>
+                                  <AttachmentActions path={item[column.key]} label="Current attachment" className="mt-2 text-sm" />
                                 )}
                                 {item[column.key] && typeof item[column.key] !== 'string' && (
                                   <p className="mt-2 text-sm text-slate-600">{item[column.key].name}</p>
@@ -533,15 +649,7 @@ function TravelDocumentsTable({ items, editing, onChange, errors }) {
                             {errors?.[errKey] && <p className="mt-1 text-xs text-red-600">{errors[errKey]}</p>}
                           </>
                         ) : column.type === 'file' && item[column.key] ? (
-                          <a
-                            href={`/storage/${item[column.key]}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-2 font-medium text-[#1F6F5C] hover:text-[#155446]"
-                          >
-                            <FileText size={15} />
-                            View attachment
-                          </a>
+                          <AttachmentActions path={item[column.key]} />
                         ) : (
                           item[column.key] || 'Not provided'
                         )}
@@ -562,8 +670,8 @@ function SeaServiceTable({ items, editing, onChange, onAdd, onRemove, errors }) 
   const columns = [
     { key: 'from_date', label: 'From', type: 'date', className: 'min-w-[170px]' },
     { key: 'to_date', label: 'To', type: 'date', className: 'min-w-[170px]' },
-    { key: 'duration_months', label: 'Mos.', type: 'number', className: 'min-w-[90px]' },
-    { key: 'duration_days', label: 'Days', type: 'number', className: 'min-w-[90px]' },
+    { key: 'duration_months', label: 'Mos.', type: 'number', readOnly: true, className: 'min-w-[90px]' },
+    { key: 'duration_days', label: 'Days', type: 'number', readOnly: true, className: 'min-w-[90px]' },
     { key: 'position', label: 'Position', className: 'min-w-[170px]' },
     { key: 'vessel_name', label: 'Vessel Name', className: 'min-w-[180px]' },
     { key: 'type_imo_number', label: 'Type / IMO #', className: 'min-w-[150px]' },
@@ -633,9 +741,10 @@ function SeaServiceTable({ items, editing, onChange, onAdd, onRemove, errors }) 
                                 type={column.type || 'text'}
                                 value={item[column.key] ?? ''}
                                 onChange={(e) => onChange(index, column.key, e.target.value)}
+                                readOnly={column.readOnly}
                                 className={`w-full rounded border p-2 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${
                                   errors?.[errKey] ? 'border-red-300' : 'border-slate-300'
-                                }`}
+                                } ${column.readOnly ? 'bg-slate-100 text-slate-600' : ''}`}
                               />
                             )}
                             {errors?.[errKey] && <p className="mt-1 text-xs text-red-600">{errors[errKey]}</p>}
@@ -829,6 +938,12 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
   const fullName = fullNameFor(client);
   const profileTitle = editing ? fullNameFor(data) : fullName;
   const avatarPreview = data.avatar && typeof data.avatar !== 'string' ? URL.createObjectURL(data.avatar) : null;
+  const requiresPrivacyConsent = updateRouteName === 'seafarers.update-profile';
+  const resumeViewUrl = client?.resume_attachment
+    ? (updateRouteName.startsWith('admin.')
+        ? route('admin.seafarers.resume.view', updateRouteParams)
+        : route('seafarers.resume.view'))
+    : null;
 
   function startEditing() {
     reset();
@@ -843,9 +958,10 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
   function save(e) {
     e.preventDefault();
 
-    transform(({ avatar, ...payload }) => ({
+    transform(({ avatar, resume_attachment, ...payload }) => ({
       ...payload,
       ...(avatar instanceof File ? { avatar } : {}),
+      ...(resume_attachment instanceof File ? { resume_attachment } : {}),
       ...(methodOverride ? { _method: methodOverride } : {}),
     }));
 
@@ -893,6 +1009,18 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
     setData(section, next);
   }
 
+  function updateSeaService(index, key, value) {
+    const next = [...data.sea_service];
+    const row = { ...next[index], [key]: value };
+
+    if (key === 'from_date' || key === 'to_date') {
+      Object.assign(row, calculateSeaServiceDuration(row.from_date, row.to_date));
+    }
+
+    next[index] = row;
+    setData('sea_service', next);
+  }
+
   function addRow(section, emptyRow) {
     setData(section, [...data[section], { ...emptyRow }]);
   }
@@ -907,6 +1035,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
     { key: 'relationship', label: 'Relationship' },
     { key: 'dependent', label: 'Dependent/s' },
     { key: 'beneficiary', label: 'Beneficiaries' },
+    { key: 'address', label: 'Address' },
     { key: 'attachment', label: 'Attachment', type: 'file' },
   ];
 
@@ -981,6 +1110,17 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
                   <CalendarDays size={16} className="text-slate-400" />
                   <span>Applied {(editing ? data.date_applied : client?.date_applied) || client?.created_at_human || 'Not provided'}</span>
                 </div>
+                {resumeViewUrl && (
+                  <a
+                    href={resumeViewUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 text-[#1F6F5C] transition hover:text-[#155444]"
+                  >
+                    <FileText size={16} className="text-slate-400" />
+                    <span>View resume</span>
+                  </a>
+                )}
               </div>
 
               {!editing ? (
@@ -1001,6 +1141,11 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
                     Upload Photo
                     <input name="avatar" type="file" accept="image/*" onChange={(e) => setData('avatar', e.target.files[0] ?? null)} className="sr-only" />
                   </label>
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                    <FileText size={16} />
+                    Upload Resume
+                    <input name="resume_attachment" type="file" accept=".pdf,.doc,.docx,image/*" onChange={(e) => setData('resume_attachment', e.target.files[0] ?? null)} className="sr-only" />
+                  </label>
                   <button
                     type="button"
                     onClick={cancelEditing}
@@ -1020,6 +1165,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
                 </div>
               )}
               {errors.avatar && <p className="text-xs text-red-600">{errors.avatar}</p>}
+              {errors.resume_attachment && <p className="text-xs text-red-600">{errors.resume_attachment}</p>}
             </div>
           </div>
         </div>
@@ -1077,6 +1223,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             emptyLabel="No certifications added yet"
             errorsPrefix="certifications"
             errors={errors}
+            printableAttachments
           />
         )}
 
@@ -1091,6 +1238,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             emptyLabel="No certificate of proficiency added yet"
             errorsPrefix="proficiency"
             errors={errors}
+            printableAttachments
           />
         )}
         {activeTab === 'vaccinations' && (
@@ -1104,6 +1252,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             emptyLabel="No vaccinations added yet"
             errorsPrefix="vaccinations"
             errors={errors}
+            printableAttachments
           />
         )}
         {activeTab === 'flag_documents' && (
@@ -1130,6 +1279,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             emptyLabel="No other certificates added yet"
             errorsPrefix="other_certificates"
             errors={errors}
+            printableAttachments
           />
         )}
         {activeTab === 'employment_history' && (
@@ -1149,7 +1299,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
           <SeaServiceTable
             items={editing ? data.sea_service : (client?.sea_service || [])}
             editing={editing}
-            onChange={(index, key, value) => updateRows('sea_service', index, key, value)}
+            onChange={updateSeaService}
             onAdd={() => addRow('sea_service', EMPTY_SEA_SERVICE)}
             onRemove={(index) => removeRow('sea_service', index)}
             errors={errors}
@@ -1165,6 +1315,30 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             errors={errors}
           />
         )}
+
+        <div className="mt-5 rounded border border-slate-200 bg-white p-5 shadow-sm">
+          <label className={`flex items-start gap-3 text-sm ${editing ? 'text-slate-800' : 'text-slate-600'}`}>
+            <input
+              type="checkbox"
+              checked={Boolean(editing ? data.privacy_act_accepted : client?.privacy_act_accepted)}
+              onChange={(e) => setData('privacy_act_accepted', e.target.checked)}
+              disabled
+              required={editing && requiresPrivacyConsent}
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-[#1F6F5C] focus:ring-[#1F6F5C] disabled:opacity-70"
+            />
+            <span>
+              I have read, understood, and agree that the personal information and documents I provided may be collected,
+              processed, stored, verified, and used for recruitment, employment processing, and record management in
+              accordance with the Data Privacy Act.
+            </span>
+          </label>
+          {client?.privacy_act_accepted_at && (
+            <p className="mt-2 text-xs text-slate-500">
+              Accepted on {client.privacy_act_accepted_at_human || client.privacy_act_accepted_at}
+            </p>
+          )}
+          {errors.privacy_act_accepted && <p className="mt-2 text-xs text-red-600">{errors.privacy_act_accepted}</p>}
+        </div>
       </form>
     </div>
   );

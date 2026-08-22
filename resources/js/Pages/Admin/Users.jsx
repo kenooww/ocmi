@@ -44,6 +44,7 @@ export default function Users({ users, filters = {} }) {
     const { data, setData, post, transform, delete: destroy, reset, errors, clearErrors, processing } = useForm({
         name: '',
         email: '',
+        role: 'staff',
         password: '',
         avatar: null,
     });
@@ -101,7 +102,7 @@ export default function Users({ users, filters = {} }) {
         clearErrors();
         clearAvatarPreview();
         setEditId(user.id);
-        setData({ name: user.name, email: user.email, password: '', avatar: null });
+        setData({ name: user.name, email: user.email, role: user.role || 'staff', password: '', avatar: null });
         setAvatarPreview(user.avatar ? `/storage/${user.avatar}` : null);
         setUserModalOpen(true);
     };
@@ -162,7 +163,7 @@ export default function Users({ users, filters = {} }) {
                     <div className="flex flex-col gap-3 border-b border-slate-200 p-5 lg:flex-row lg:items-center lg:justify-between">
                         <div>
                             <h3 className="text-lg font-semibold text-slate-900">Users Listing</h3>
-                            <p className="mt-1 text-sm text-slate-500">Search users by name or email.</p>
+                            <p className="mt-1 text-sm text-slate-500">Search users by name, email, or role.</p>
                         </div>
                         <form onSubmit={handleSearch} className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
                             <div className="relative w-full sm:w-80">
@@ -200,6 +201,7 @@ export default function Users({ users, filters = {} }) {
                                 <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                                     <th className="px-5 py-3">Name</th>
                                     <th className="px-5 py-3">Email</th>
+                                    <th className="px-5 py-3">Role</th>
                                     <th className="px-5 py-3 text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -220,6 +222,15 @@ export default function Users({ users, filters = {} }) {
                                                 </div>
                                             </td>
                                             <td className="px-5 py-4 text-slate-600">{user.email}</td>
+                                            <td className="px-5 py-4">
+                                                <span className={`inline-flex rounded px-2 py-1 text-xs font-semibold uppercase ${
+                                                    user.role === 'admin'
+                                                        ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100'
+                                                        : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
+                                                }`}>
+                                                    {user.role || 'staff'}
+                                                </span>
+                                            </td>
                                             <td className="px-5 py-4">
                                                 <div className="flex justify-end gap-2">
                                                     <button
@@ -252,7 +263,7 @@ export default function Users({ users, filters = {} }) {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="3" className="px-5 py-12 text-center text-sm text-slate-500">
+                                        <td colSpan="4" className="px-5 py-12 text-center text-sm text-slate-500">
                                             No users found.
                                         </td>
                                     </tr>
@@ -310,6 +321,18 @@ export default function Users({ users, filters = {} }) {
                                     className="mt-1 w-full rounded border border-slate-300 p-2.5 text-sm shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B]"
                                 />
                                 {errors.email && <div className="mt-1 text-xs text-red-600">{errors.email}</div>}
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">Role</label>
+                                <select
+                                    value={data.role}
+                                    onChange={(e) => setData('role', e.target.value)}
+                                    className="mt-1 w-full rounded border border-slate-300 p-2.5 text-sm shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B]"
+                                >
+                                    <option value="staff">Staff</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                                {errors.role && <div className="mt-1 text-xs text-red-600">{errors.role}</div>}
                             </div>
                             {!editId && (
                                 <div>

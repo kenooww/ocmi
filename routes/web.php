@@ -22,18 +22,24 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard.index');
     Route::get('/preferences', [AdminController::class, 'preferences'])->name('preferences.edit');
     Route::put('/preferences', [AdminController::class, 'updatePreferences'])->name('preferences.update');
-    Route::get('/company-settings', [AdminController::class, 'companySettings'])->name('company-settings.edit');
-    Route::put('/company-settings', [AdminController::class, 'updateCompanySettings'])->name('company-settings.update');
     Route::post('/logout', [AdminController::class, 'logout'])->name('logout');
-    Route::get('/users', [AdminController::class, 'usersIndex'])->name('users.index');
-    Route::post('/users', [AdminController::class, 'storeUser'])->name('users.store');
-    Route::put('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
-    Route::put('/users/{user}/password', [AdminController::class, 'resetUserPassword'])->name('users.password');
-    Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('users.destroy');
+
+    Route::middleware('admin.role')->group(function () {
+        Route::get('/company-settings', [AdminController::class, 'companySettings'])->name('company-settings.edit');
+        Route::put('/company-settings', [AdminController::class, 'updateCompanySettings'])->name('company-settings.update');
+        Route::get('/users', [AdminController::class, 'usersIndex'])->name('users.index');
+        Route::post('/users', [AdminController::class, 'storeUser'])->name('users.store');
+        Route::put('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
+        Route::put('/users/{user}/password', [AdminController::class, 'resetUserPassword'])->name('users.password');
+        Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('users.destroy');
+    });
 
     Route::get('/seafarers', [AdminController::class, 'clientsIndex'])->name('seafarers.index');
     Route::post('/seafarers', [AdminController::class, 'storeClient'])->name('seafarers.store');
     Route::get('/seafarers/{client}/print-preview', [AdminController::class, 'printPreview'])->name('seafarers.print-preview');
+    Route::get('/seafarers/{client}/resume', [AdminController::class, 'viewClientResume'])->name('seafarers.resume.view');
+    Route::get('/seafarers/{client}/resume/file', [AdminController::class, 'inlineClientResume'])->name('seafarers.resume.file');
+    Route::get('/seafarers/{client}/resume/download', [AdminController::class, 'downloadClientResume'])->name('seafarers.resume.download');
     Route::put('/seafarers/{client}/application-status', [AdminController::class, 'updateApplicationStatus'])->name('seafarers.application-status.update');
     Route::get('/seafarers/{client}', [AdminController::class, 'showClient'])->name('seafarers.show');
     Route::put('/seafarers/{client}', [AdminController::class, 'updateClient'])->name('seafarers.update');
@@ -96,6 +102,9 @@ Route::middleware(['auth:client'])->prefix('seafarers')->name('seafarers.')->gro
     Route::get('/password/mandatory', [ClientAuthController::class, 'showMandatoryPassword'])->name('password.mandatory');
     Route::put('/password/mandatory', [ClientAuthController::class, 'updateMandatoryPassword'])->name('password.mandatory.update');
     Route::get('/dashboard', [ClientAuthController::class, 'dashboard'])->name('dashboard');
+    Route::get('/resume', [ClientAuthController::class, 'viewResume'])->name('resume.view');
+    Route::get('/resume/file', [ClientAuthController::class, 'inlineResume'])->name('resume.file');
+    Route::get('/resume/download', [ClientAuthController::class, 'downloadResume'])->name('resume.download');
     Route::put('/password', [ClientAuthController::class, 'updatePassword'])->name('password.update');
     Route::post('/logout', [ClientAuthController::class, 'logout'])->name('logout');
 });

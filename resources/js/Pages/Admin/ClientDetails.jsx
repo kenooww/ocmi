@@ -102,7 +102,7 @@ const GROUPS = [
     {
         title: 'Physical Details',
         fields: [
-            ['Body weight & BMI', 'body_weight_bmi'],
+            ['Body weight (lbs)', 'body_weight_bmi'],
             ['Height (cm)', 'height_cm'],
             ['Coverall & shoe size', 'coverall_shoe_size'],
         ],
@@ -122,7 +122,8 @@ const GROUPS = [
         fields: [
             ['Next of kin', 'next_of_kin'],
             ['Relationship', 'relationship'],
-            ['Emergency contact person / number', 'emergency_contact'],
+            ['Emergency contact person', 'contact_person'],
+            ['Emergency contact number', 'emergency_contact'],
         ],
     },
     {
@@ -521,6 +522,7 @@ export default function ClientDetails({ client }) {
         { key: 'relationship', label: 'Relationship' },
         { key: 'dependent', label: 'Dependent/s' },
         { key: 'beneficiary', label: 'Beneficiaries' },
+        { key: 'address', label: 'Address' },
         { key: 'attachment', label: 'Attachment', type: 'file' },
     ];
 

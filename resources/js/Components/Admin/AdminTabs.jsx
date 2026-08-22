@@ -26,15 +26,16 @@ function initialsFor(name) {
 export default function AdminTabs({ activeTab, title, children }) {
     const { auth, companySettings } = usePage().props;
     const user = auth?.user;
+    const isStaff = user?.role === 'staff';
     const company = companySettings || {};
     const [profileOpen, setProfileOpen] = useState(false);
 
     const tabs = [
         { key: 'dashboard', label: 'Dashboard', href: route('admin.dashboard.index'), icon: LayoutDashboard },
-        { key: 'users', label: 'Users', href: route('admin.users.index'), icon: UserRound },
+        { key: 'users', label: 'Users', href: route('admin.users.index'), icon: UserRound, adminOnly: true },
         { key: 'clients', label: 'Seafarers', href: route('admin.seafarers.index'), icon: Ship },
-        { key: 'company-settings', label: 'Company Settings', href: route('admin.company-settings.edit'), icon: Settings },
-    ];
+        { key: 'company-settings', label: 'Company Settings', href: route('admin.company-settings.edit'), icon: Settings, adminOnly: true },
+    ].filter((tab) => !tab.adminOnly || !isStaff);
 
     const avatarUrl = user?.avatar ? `/storage/${user.avatar}` : null;
     const logoUrl = company.logo ? `/storage/${company.logo}` : null;

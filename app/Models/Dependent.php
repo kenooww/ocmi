@@ -16,6 +16,7 @@ class Dependent extends Model
         'relationship',
         'dependent',
         'beneficiary',
+        'address',
         'attachment',
     ];
 
