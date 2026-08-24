@@ -37,6 +37,7 @@ export default function AdminTabs({ activeTab, title, children }) {
         { key: 'dashboard', label: 'Dashboard', href: route('admin.dashboard.index'), icon: LayoutDashboard },
         { key: 'users', label: 'Users', href: route('admin.users.index'), icon: UserRound, adminOnly: true },
         { key: 'clients', label: 'Seafarers', href: route('admin.seafarers.index'), icon: Ship },
+        { key: 'ranks', label: 'Ranks', href: route('admin.ranks.index'), icon: Award },
         {
             key: 'certificates',
             label: 'Certificates',

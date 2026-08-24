@@ -78,6 +78,9 @@ function fieldStyle(err) {
 }
 
 function Field({ data, errors, setData, label, name, type = 'text', placeholder, required = false, options = [] }) {
+    const optionValue = (option) => typeof option === 'string' ? option : option.value;
+    const optionLabel = (option) => typeof option === 'string' ? option : option.label;
+
     return (
         <div>
             <label className="block text-sm mb-1" style={{ color: PALETTE.ink }}>
@@ -95,7 +98,7 @@ function Field({ data, errors, setData, label, name, type = 'text', placeholder,
                 >
                     <option value="">Select {label.toLowerCase()}</option>
                     {options.map((option) => (
-                        <option key={option} value={option}>{option}</option>
+                        <option key={optionValue(option)} value={optionValue(option)}>{optionLabel(option)}</option>
                     ))}
                 </select>
             ) : (
@@ -132,6 +135,8 @@ function SectionTitle({ children }) {
 export default function ContinueProfile({ client }) {
     const { props } = usePage();
     const company = props?.companySettings || {};
+    const rankOptions = props?.rankOptions || [];
+    const rankFieldType = rankOptions.length > 0 ? 'select' : 'text';
     const logoUrl = company.logo ? `/storage/${company.logo}` : null;
     const notice = props?.flash?.notice ?? null;
     const [modalOpen, setModalOpen] = useState(false);
@@ -420,7 +425,7 @@ export default function ContinueProfile({ client }) {
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <Field {...fieldProps} label="Gender" name="gender" type="select" options={GENDER_OPTIONS} />
                             <Field {...fieldProps} label="Status" name="status" type="select" options={STATUS_OPTIONS} />
-                            <Field {...fieldProps} label="Position applied for" name="position_applied_for" required />
+                            <Field {...fieldProps} label="Position applied for" name="position_applied_for" type={rankFieldType} options={rankOptions} required />
                             <Field {...fieldProps} label="Type of job" name="type_of_job" type="select" options={TYPE_OF_JOB_OPTIONS} />
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -440,7 +445,7 @@ export default function ContinueProfile({ client }) {
 
                         <SectionTitle>Position &amp; background</SectionTitle>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <Field {...fieldProps} label="Current position" name="current_position" required />
+                            <Field {...fieldProps} label="Current position" name="current_position" type={rankFieldType} options={rankOptions} required />
                             <Field {...fieldProps} label="Educational attainment" name="educational_attainment" required />
                             <Field {...fieldProps} label="Last salary" name="last_salary" />
                             <Field {...fieldProps} label="Expected salary" name="expected_salary" />
