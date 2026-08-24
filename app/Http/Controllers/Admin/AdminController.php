@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\CompanySetting;
 use App\Models\ApplicationStatusLog;
 use App\Models\OffshoreTraining;
-use App\Models\Rank;
 use App\Models\StcwCertificate;
 use App\Models\User;
 use App\Models\Client;
@@ -262,51 +261,6 @@ class AdminController extends Controller
         return back()->with('success', 'Offshore training deleted successfully.');
     }
 
-    public function ranks(Request $request)
-    {
-        $search = trim((string) $request->query('search', ''));
-
-        return Inertia::render('Admin/CertificateSettings', [
-            'activeType' => 'rank',
-            'title' => 'Rank',
-            'description' => 'Manage seafarer rank names.',
-            'certificates' => Rank::query()
-                ->when($search !== '', fn ($query) => $query->where('rank_name', 'like', "%{$search}%"))
-                ->latest()
-                ->paginate(10)
-                ->withQueryString(),
-            'filters' => [
-                'search' => $search,
-            ],
-            'routeBase' => 'admin.ranks',
-            'nameField' => 'rank_name',
-            'itemLabel' => 'Rank',
-        ]);
-    }
-
-    public function storeRank(Request $request)
-    {
-        Rank::create($this->rankPayload($request));
-
-        return back()->with('success', 'Rank added successfully.');
-    }
-
-    public function updateRank(Request $request, Rank $rank)
-    {
-        $rank->update($this->rankPayload($request, $rank->id));
-
-        return back()->with('success', 'Rank updated successfully.');
-    }
-
-    public function deleteRank(Rank $rank)
-    {
-        abort_unless(Auth::user()?->role === 'admin', 403);
-
-        $rank->delete();
-
-        return back()->with('success', 'Rank deleted successfully.');
-    }
-
     private function validateCertificateName(Request $request, string $table, ?int $ignoreId = null): array
     {
         return $request->validate([
@@ -317,26 +271,6 @@ class AdminController extends Controller
                 Rule::unique($table, 'certification_name')->ignore($ignoreId),
             ],
         ]);
-    }
-
-    private function validateRankName(Request $request, ?int $ignoreId = null): array
-    {
-        return $request->validate([
-            'rank_name' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('ranks', 'rank_name')->ignore($ignoreId),
-            ],
-        ]);
-    }
-
-    private function rankPayload(Request $request, ?int $ignoreId = null): array
-    {
-        $data = $this->validateRankName($request, $ignoreId);
-        $data['rank_name'] = $this->titleCaseFormValue('rank_name', $data['rank_name']);
-
-        return $data;
     }
 
     // --- USER MANAGEMENT ---

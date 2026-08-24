@@ -3,7 +3,7 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { Pencil, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import AdminTabs from '@/Components/Admin/AdminTabs';
 
-function Pagination({ meta, itemLabel = 'Certification' }) {
+function Pagination({ meta }) {
     if (!meta || meta.total === 0) {
         return null;
     }
@@ -15,7 +15,7 @@ function Pagination({ meta, itemLabel = 'Certification' }) {
             <p className="text-sm text-slate-500">
                 Showing <span className="font-medium text-slate-700">{meta.from ?? 0}</span> to{' '}
                 <span className="font-medium text-slate-700">{meta.to ?? 0}</span> of{' '}
-                <span className="font-medium text-slate-700">{meta.total}</span> {itemLabel.toLowerCase()} names
+                <span className="font-medium text-slate-700">{meta.total}</span> certification names
             </p>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -40,12 +40,12 @@ function Pagination({ meta, itemLabel = 'Certification' }) {
     );
 }
 
-export default function CertificateSettings({ activeType, title, description, certificates = {}, filters = {}, routeBase, nameField = 'certification_name', itemLabel = 'Certification' }) {
+export default function CertificateSettings({ activeType, title, description, certificates = {}, filters = {}, routeBase }) {
     const { auth } = usePage().props;
-    const activeTab = activeType === 'rank' ? 'ranks' : (activeType === 'offshore' ? 'certificates-offshore' : 'certificates-stcw');
+    const activeTab = activeType === 'offshore' ? 'certificates-offshore' : 'certificates-stcw';
     const isStaff = auth?.user?.role === 'staff';
     const { data, setData, post, processing, errors, reset } = useForm({
-        [nameField]: '',
+        certification_name: '',
     });
     const rows = certificates?.data || [];
     const [editing, setEditing] = useState(null);
@@ -58,7 +58,7 @@ export default function CertificateSettings({ activeType, title, description, ce
         post(route(`${routeBase}.store`), {
             preserveScroll: true,
             onSuccess: () => {
-                reset(nameField);
+                reset('certification_name');
                 setCreateOpen(false);
             },
         });
@@ -66,7 +66,7 @@ export default function CertificateSettings({ activeType, title, description, ce
 
     const startEdit = (certificate) => {
         setEditing(certificate.id);
-        setEditName(certificate[nameField] || '');
+        setEditName(certificate.certification_name || '');
     };
 
     const cancelEdit = () => {
@@ -76,7 +76,7 @@ export default function CertificateSettings({ activeType, title, description, ce
 
     const saveEdit = (certificate) => {
         router.put(route(`${routeBase}.update`, certificate.id), {
-            [nameField]: editName,
+            certification_name: editName,
         }, {
             preserveScroll: true,
             onSuccess: cancelEdit,
@@ -84,7 +84,7 @@ export default function CertificateSettings({ activeType, title, description, ce
     };
 
     const remove = (certificate) => {
-        if (!confirm(`Delete "${certificate[nameField]}"?`)) {
+        if (!confirm(`Delete "${certificate.certification_name}"?`)) {
             return;
         }
 
@@ -124,7 +124,7 @@ export default function CertificateSettings({ activeType, title, description, ce
                         className="inline-flex items-center justify-center gap-2 rounded bg-[#0A2436] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#12364F]"
                     >
                         <Plus size={17} />
-                        Add {itemLabel}
+                        Add Certification
                     </button>
                 </div>
 
@@ -141,7 +141,7 @@ export default function CertificateSettings({ activeType, title, description, ce
                                     type="search"
                                     value={search}
                                     onChange={(event) => setSearch(event.target.value)}
-                                    placeholder={`Search ${itemLabel.toLowerCase()} name`}
+                                    placeholder="Search certification name"
                                     className="w-full rounded border border-slate-300 py-2.5 pl-10 pr-10 text-sm text-slate-800 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B]"
                                 />
                                 {search && (
@@ -173,7 +173,7 @@ export default function CertificateSettings({ activeType, title, description, ce
                             </colgroup>
                             <thead>
                                 <tr className="border-b border-slate-200 bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                                    <th className="px-3 py-3 leading-tight">{itemLabel} Name</th>
+                                    <th className="px-3 py-3 leading-tight">Certification Name</th>
                                     <th className="px-3 py-3 leading-tight">Created</th>
                                     <th className="px-3 py-3 text-right leading-tight">Actions</th>
                                 </tr>
@@ -181,7 +181,7 @@ export default function CertificateSettings({ activeType, title, description, ce
                             <tbody className="divide-y divide-slate-100">
                                 {rows.length === 0 ? (
                                     <tr>
-                                        <td colSpan={3} className="px-3 py-12 text-center text-sm text-slate-500">No {itemLabel.toLowerCase()} names added yet.</td>
+                                        <td colSpan={3} className="px-3 py-12 text-center text-sm text-slate-500">No certification names added yet.</td>
                                     </tr>
                                 ) : rows.map((certificate) => (
                                     <tr key={certificate.id} className="text-sm transition hover:bg-slate-50">
@@ -194,7 +194,7 @@ export default function CertificateSettings({ activeType, title, description, ce
                                                     className="w-full rounded border border-slate-300 p-2 text-sm shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B]"
                                                 />
                                             ) : (
-                                                certificate[nameField]
+                                                certificate.certification_name
                                             )}
                                         </td>
                                         <td className="break-words px-3 py-4 leading-snug text-slate-600">{certificate.created_at ? new Date(certificate.created_at).toLocaleDateString() : 'Not set'}</td>
@@ -228,7 +228,7 @@ export default function CertificateSettings({ activeType, title, description, ce
                             </tbody>
                         </table>
                     </div>
-                    <Pagination meta={certificates} itemLabel={itemLabel} />
+                    <Pagination meta={certificates} />
                 </section>
             </div>
 
@@ -238,12 +238,12 @@ export default function CertificateSettings({ activeType, title, description, ce
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                             <div>
                                 <p className="text-xs font-semibold uppercase tracking-wide text-[#8A642C]">New record</p>
-                                <h3 className="mt-1 text-lg font-semibold text-slate-900">Add {itemLabel} Name</h3>
+                                <h3 className="mt-1 text-lg font-semibold text-slate-900">Add Certification Name</h3>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => {
-                                    reset(nameField);
+                                    reset('certification_name');
                                     setCreateOpen(false);
                                 }}
                                 className="inline-flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 transition hover:bg-slate-50"
@@ -255,22 +255,22 @@ export default function CertificateSettings({ activeType, title, description, ce
 
                         <form onSubmit={submit} className="space-y-5 px-6 py-5">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700">{itemLabel} Name</label>
+                                <label className="block text-sm font-medium text-slate-700">Certification Name</label>
                                 <input
                                     type="text"
-                                    value={data[nameField]}
-                                    onChange={(event) => setData(nameField, event.target.value)}
+                                    value={data.certification_name}
+                                    onChange={(event) => setData('certification_name', event.target.value)}
                                     className="mt-1 w-full rounded border border-slate-300 p-2.5 text-sm shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B]"
                                     autoFocus
                                 />
-                                {errors[nameField] && <p className="mt-1 text-sm text-red-600">{errors[nameField]}</p>}
+                                {errors.certification_name && <p className="mt-1 text-sm text-red-600">{errors.certification_name}</p>}
                             </div>
 
                             <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:justify-end">
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        reset(nameField);
+                                        reset('certification_name');
                                         setCreateOpen(false);
                                     }}
                                     className="inline-flex items-center justify-center gap-2 rounded border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
