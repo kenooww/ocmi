@@ -90,8 +90,8 @@ export default function Dashboard({ stats = {}, recentUsers = [], recentSeafarer
                     {!isStaff && (
                         <StatCard label="Total Users" value={stats.users ?? 0} icon={UserRound} tone="bg-blue-50 text-blue-700" />
                     )}
-                    <StatCard label="Total Seafarers" value={stats.seafarers ?? 0} icon={Ship} tone="bg-[#E1EBE6] text-[#1F6F5C]" />
-                    <StatCard label="New Seafarers Today" value={stats.recentSeafarers ?? 0} icon={UsersRound} tone="bg-[#F5EBDA] text-[#8A642C]" />
+                    <StatCard label="Accepted Seafarers" value={stats.seafarers ?? 0} icon={Ship} tone="bg-[#E1EBE6] text-[#1F6F5C]" />
+                    <StatCard label="Accepted Today" value={stats.recentSeafarers ?? 0} icon={UsersRound} tone="bg-[#F5EBDA] text-[#8A642C]" />
                 </div>
 
                 <div className={`mt-6 grid grid-cols-1 gap-6 ${isStaff ? '' : 'lg:grid-cols-2'}`}>

@@ -16,6 +16,11 @@ class CompanySetting extends Model
         'email',
         'website',
         'logo',
+        'seafarer_maintenance_enabled',
+    ];
+
+    protected $casts = [
+        'seafarer_maintenance_enabled' => 'boolean',
     ];
 
     public static function defaults(): array
@@ -29,6 +34,7 @@ class CompanySetting extends Model
             'email' => '',
             'website' => '',
             'logo' => null,
+            'seafarer_maintenance_enabled' => false,
         ];
     }
 
@@ -43,6 +49,8 @@ class CompanySetting extends Model
 
     public function publicData(): array
     {
-        return array_merge(self::defaults(), $this->only(array_keys(self::defaults())));
+        return array_merge(self::defaults(), $this->only(array_keys(self::defaults())), [
+            'seafarer_maintenance_enabled' => (bool) $this->seafarer_maintenance_enabled,
+        ]);
     }
 }
