@@ -55,40 +55,40 @@ function StatCard({ label, value }) {
 }
 
 const COMPLETENESS_FIELDS = [
-  { key: 'avatar', label: 'Profile photo' },
-  { key: 'first_name', label: 'First name' },
-  { key: 'last_name', label: 'Last name' },
-  { key: 'date_applied', label: 'Date applied' },
-  { key: 'place_of_birth', label: 'Place of birth' },
-  { key: 'date_of_birth', label: 'Date of birth' },
-  { key: 'nationality', label: 'Nationality' },
-  { key: 'current_position', label: 'Current position' },
-  { key: 'position_applied_for', label: 'Position applied for' },
-  { key: 'current_home_address', label: 'Home address' },
-  { key: 'personal_mobile_no', label: 'Mobile number' },
-  { key: 'email_address', fallback: 'email', label: 'Email address' },
-  { key: 'next_of_kin', label: 'Next of kin' },
-  { key: 'contact_person', label: 'Emergency contact person' },
-  { key: 'emergency_contact', label: 'Emergency contact number' },
-  { key: 'sss_no', label: 'SSS number' },
-  { key: 'pagibig_no', label: 'Pag-IBIG number' },
-  { key: 'philhealth_no', label: 'PhilHealth number' },
+  { key: 'avatar', label: 'Profile photo', group: 'Personal' },
+  { key: 'first_name', label: 'First name', group: 'Personal' },
+  { key: 'last_name', label: 'Last name', group: 'Personal' },
+  { key: 'date_applied', label: 'Date applied', group: 'Personal' },
+  { key: 'place_of_birth', label: 'Place of birth', group: 'Personal' },
+  { key: 'date_of_birth', label: 'Date of birth', group: 'Personal' },
+  { key: 'nationality', label: 'Nationality', group: 'Personal' },
+  { key: 'current_position', label: 'Current position', group: 'Position' },
+  { key: 'position_applied_for', label: 'Position applied for', group: 'Position' },
+  { key: 'current_home_address', label: 'Home address', group: 'Contact' },
+  { key: 'personal_mobile_no', label: 'Mobile number', group: 'Contact' },
+  { key: 'email_address', fallback: 'email', label: 'Email address', group: 'Contact' },
+  { key: 'next_of_kin', label: 'Next of kin', group: 'Emergency' },
+  { key: 'contact_person', label: 'Emergency contact person', group: 'Emergency' },
+  { key: 'emergency_contact', label: 'Emergency contact number', group: 'Emergency' },
+  { key: 'sss_no', label: 'SSS number', group: 'Government IDs' },
+  { key: 'pagibig_no', label: 'Pag-IBIG number', group: 'Government IDs' },
+  { key: 'philhealth_no', label: 'PhilHealth number', group: 'Government IDs' },
 ];
 
 const COMPLETENESS_SECTIONS = [
-  { key: 'dependents', label: 'Dependents' },
-  { key: 'travel_documents', label: 'Travel documents' },
-  { key: 'certifications', label: 'Certificate of competency' },
-  { key: 'gmdss_certificates', label: 'GMDSS certificate' },
-  { key: 'proficiency', label: 'Certificate of proficiency' },
-  { key: 'vaccinations', label: 'Vaccinations' },
-  { key: 'flag_documents', label: 'Flag documents' },
-  { key: 'other_certificates', label: 'Other certificates' },
-  { key: 'additional_stcw_certificates', label: 'Additional STCW certificate' },
-  { key: 'offshore_training_certificates', label: 'Offshore training certificate' },
-  { key: 'employment_history', label: 'Employment history', minDetails: 2 },
-  { key: 'sea_service', label: 'Sea service' },
-  { key: 'deck_officer_experience', label: 'Deck officer experience' },
+  { key: 'dependents', label: 'Dependents', group: 'Tables' },
+  { key: 'travel_documents', label: 'Travel documents', group: 'Tables' },
+  { key: 'certifications', label: 'Certificate of competency', group: 'Tables' },
+  { key: 'gmdss_certificates', label: 'GMDSS certificate', group: 'Tables' },
+  { key: 'proficiency', label: 'Certificate of proficiency', group: 'Tables' },
+  { key: 'vaccinations', label: 'Vaccinations', group: 'Tables' },
+  { key: 'flag_documents', label: 'Flag documents', group: 'Tables' },
+  { key: 'other_certificates', label: 'Other certificates', group: 'Tables' },
+  { key: 'additional_stcw_certificates', label: 'Additional STCW certificate', group: 'Tables' },
+  { key: 'offshore_training_certificates', label: 'Offshore training certificate', group: 'Tables' },
+  { key: 'employment_history', label: 'Employment history', group: 'Tables', minDetails: 2 },
+  { key: 'sea_service', label: 'Sea service', group: 'Tables' },
+  { key: 'deck_officer_experience', label: 'Deck officer experience', group: 'Tables' },
 ];
 
 function hasValue(value) {
@@ -133,6 +133,7 @@ function getCompleteness(client) {
   const checks = [
     ...COMPLETENESS_FIELDS.map((field) => ({
       label: field.label,
+      group: field.group,
       complete: hasValue(client?.[field.key]) || (field.fallback ? hasValue(client?.[field.fallback]) : false),
     })),
     ...COMPLETENESS_SECTIONS.map((section) => {
@@ -143,6 +144,7 @@ function getCompleteness(client) {
 
       return {
         label: section.label,
+        group: section.group,
         complete,
         missingLabel: section.minDetails
           ? `${section.label} incomplete (${filledDetails}/${section.minDetails} details)`
@@ -240,6 +242,43 @@ function CompletenessCard({ client, goProfile }) {
               </span>
             )}
           </div>
+        </div>
+      </div>
+
+      <div className="mt-5 overflow-hidden rounded border border-slate-200">
+        <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+          <h3 className="text-sm font-semibold text-slate-800">Completeness table</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 bg-white text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-4 py-3">Section</th>
+                <th className="px-4 py-3">Item</th>
+                <th className="px-4 py-3 text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {completeness.checks.map((check) => (
+                <tr key={`${check.group}-${check.label}`} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 text-slate-500">{check.group}</td>
+                  <td className="px-4 py-3 font-medium text-slate-800">{check.label}</td>
+                  <td className="px-4 py-3 text-right">
+                    <span
+                      className="inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-semibold"
+                      style={{
+                        color: check.complete ? PALETTE.green : PALETTE.rust,
+                        backgroundColor: check.complete ? PALETTE.greenBg : PALETTE.rustBg,
+                      }}
+                    >
+                      {check.complete ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                      {check.complete ? 'Complete' : 'Missing'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
