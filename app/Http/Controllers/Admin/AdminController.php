@@ -65,18 +65,18 @@ class AdminController extends Controller
 
     public function dashboard()
     {
-        $verifiedSeafarers = Client::whereNotNull('email_verified_at');
+        $visibleSeafarers = $this->visibleSeafarersQuery();
 
         return Inertia::render('Admin/Dashboard', [
             'stats' => [
                 'users' => User::count(),
-                'seafarers' => (clone $verifiedSeafarers)->count(),
-                'recentSeafarers' => (clone $verifiedSeafarers)->whereDate('created_at', now()->toDateString())->count(),
+                'seafarers' => (clone $visibleSeafarers)->count(),
+                'recentSeafarers' => (clone $visibleSeafarers)->whereDate('created_at', now()->toDateString())->count(),
             ],
             'recentUsers' => User::latest()
                 ->take(5)
                 ->get(['id', 'name', 'email', 'created_at']),
-            'recentSeafarers' => (clone $verifiedSeafarers)
+            'recentSeafarers' => (clone $visibleSeafarers)
                 ->latest()
                 ->take(5)
                 ->get(['id', 'name', 'email', 'phone', 'avatar', 'created_at']),
@@ -147,6 +147,7 @@ class AdminController extends Controller
             'company_email' => 'nullable|email|max:255',
             'company_website' => 'nullable|string|max:255',
             'company_logo' => 'nullable|image|max:2048',
+            'seafarer_maintenance_enabled' => 'sometimes|boolean',
         ]);
 
         $company = CompanySetting::current();
@@ -158,6 +159,7 @@ class AdminController extends Controller
             'phone' => $data['company_phone'] ?? '',
             'email' => $data['company_email'] ?? '',
             'website' => $data['company_website'] ?? '',
+            'seafarer_maintenance_enabled' => $request->boolean('seafarer_maintenance_enabled'),
         ];
 
         if ($request->hasFile('company_logo')) {
@@ -369,9 +371,8 @@ class AdminController extends Controller
         $search = trim((string) $request->query('search', ''));
 
         return Inertia::render('Admin/Clients', [
-            'clients' => Client::query()
+            'clients' => $this->visibleSeafarersQuery()
                 ->with(['applicationStatusLogs' => fn ($query) => $query->latest()])
-                ->whereNotNull('email_verified_at')
                 ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
                     $query
                         ->where('name', 'like', "%{$search}%")
@@ -420,6 +421,13 @@ class AdminController extends Controller
                 'search' => $search,
             ],
         ]);
+    }
+
+    private function visibleSeafarersQuery()
+    {
+        return Client::query()
+            ->whereNotNull('email_verified_at')
+            ->where('privacy_act_accepted', true);
     }
 
     public function showClient(Client $client)
@@ -564,11 +572,11 @@ class AdminController extends Controller
         ]);
 
         $data = [
-            'name' => $request->name,
+            'name' => $this->titleCaseFormValue('name', $request->name),
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'phone' => $request->phone,
-            'address' => $request->address,
+            'address' => $this->titleCaseFormValue('address', $request->address),
             'application_status' => Client::DEFAULT_APPLICATION_STATUS,
         ];
 
@@ -801,6 +809,7 @@ class AdminController extends Controller
         $seaServiceRows = $data['sea_service'] ?? [];
         $deckOfficerExperienceRows = $data['deck_officer_experience'] ?? [];
         unset($data['dependents'], $data['travel_documents'], $data['certifications'], $data['proficiency'], $data['gmdss_certificates'], $data['vaccinations'], $data['flag_documents'], $data['other_certificates'], $data['additional_stcw_certificates'], $data['offshore_training_certificates'], $data['employment_history'], $data['sea_service'], $data['deck_officer_experience']);
+        $data = $this->titleCaseFormData($data);
 
         if ($request->hasFile('avatar')) {
             $path = $request->file('avatar')->store('avatars', 'public');
@@ -889,6 +898,90 @@ class AdminController extends Controller
         return back()->with('success', 'Application status updated successfully.');
     }
 
+    private function titleCaseFormData(array $data): array
+    {
+        foreach ($data as $field => $value) {
+            $data[$field] = $this->titleCaseFormValue($field, $value);
+        }
+
+        return $data;
+    }
+
+    private function titleCaseFormValue(string $field, $value)
+    {
+        if (! is_string($value) || $this->shouldKeepFormValueCase($field)) {
+            return $value;
+        }
+
+        $value = trim($value);
+
+        if ($value === '') {
+            return $value;
+        }
+
+        return ucwords(strtolower($value), " \t\r\n\f\v-/(");
+    }
+
+    private function shouldKeepFormValueCase(string $field): bool
+    {
+        $exactFields = [
+            'email',
+            'email_address',
+            'password',
+            'current_password',
+            'password_confirmation',
+            'document_type',
+            'gender',
+            'status',
+            'type_of_job',
+            'avatar',
+            'resume_attachment',
+            'attachment',
+            'date_applied',
+            'date_of_birth',
+            'marriage_date',
+            'date_of_issue',
+            'date_of_expiry',
+            'revalidation_date',
+            'endorsement_expiry_date',
+            'from_date',
+            'to_date',
+            'duration_months',
+            'duration_days',
+            'height_cm',
+            'phone',
+            'personal_mobile_no',
+            'telephone_numbers',
+            'whatsapp_number',
+            'fax_no',
+            'emergency_contact',
+            'contact_person_number',
+            'certificate_number',
+            'endorsement_number',
+            'number',
+            'sss_no',
+            'pagibig_no',
+            'epf_no',
+            'socso_no',
+            'philhealth_no',
+            'wife_ic_no',
+            'wife_income_tax_no',
+            'e_registration_number',
+            'type_imo_number',
+            'grt',
+            'main_engine_kw',
+            'blood',
+        ];
+
+        if (in_array($field, $exactFields, true)) {
+            return true;
+        }
+
+        return substr($field, -3) === '_no'
+            || substr($field, -7) === '_number'
+            || substr($field, 0, 5) === 'date_';
+    }
+
     private function syncDependents(Client $client, array $rows, Request $request): void
     {
         $existingRows = $client->dependents()->get()->keyBy('id');
@@ -908,12 +1001,12 @@ class AdminController extends Controller
             }
 
             $payload = [
-                'name' => $row['name'] ?? '',
+                'name' => $this->titleCaseFormValue('name', $row['name'] ?? ''),
                 'date_of_birth' => ($row['date_of_birth'] ?? null) ?: null,
-                'relationship' => $row['relationship'] ?? '',
-                'dependent' => $row['dependent'] ?? '',
-                'beneficiary' => $row['beneficiary'] ?? '',
-                'address' => $row['address'] ?? '',
+                'relationship' => $this->titleCaseFormValue('relationship', $row['relationship'] ?? ''),
+                'dependent' => $this->titleCaseFormValue('dependent', $row['dependent'] ?? ''),
+                'beneficiary' => $this->titleCaseFormValue('beneficiary', $row['beneficiary'] ?? ''),
+                'address' => $this->titleCaseFormValue('address', $row['address'] ?? ''),
                 'attachment' => $attachment,
             ];
 
@@ -961,7 +1054,7 @@ class AdminController extends Controller
 
             $payload = [
                 'number' => $row['number'] ?? '',
-                'place_of_issue' => $row['place_of_issue'] ?? '',
+                'place_of_issue' => $this->titleCaseFormValue('place_of_issue', $row['place_of_issue'] ?? ''),
                 'date_of_issue' => ($row['date_of_issue'] ?? null) ?: null,
                 'date_of_expiry' => ($row['date_of_expiry'] ?? null) ?: null,
                 'attachment' => $attachment,
@@ -1003,7 +1096,7 @@ class AdminController extends Controller
                     continue;
                 }
 
-                $payload[$field] = $value ?? '';
+                $payload[$field] = $this->titleCaseFormValue($field, $value ?? '');
             }
 
             $attachment = $existingRow ? $existingRow->attachment : null;

@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth' => \App\Http\Middleware\Authenticate::class,
             'admin.role' => \App\Http\Middleware\EnsureAdminRole::class,
+            'seafarer.live' => \App\Http\Middleware\EnsureSeafarerPortalIsLive::class,
         ]);
 
         $middleware->web(append: [

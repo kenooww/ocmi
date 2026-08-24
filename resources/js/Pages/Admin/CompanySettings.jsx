@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import { Building2, Camera, Globe, Mail, MapPin, Phone, Save } from 'lucide-react';
+import { Building2, Camera, Globe, Mail, MapPin, Phone, Power, Save } from 'lucide-react';
 import AdminTabs from '@/Components/Admin/AdminTabs';
 
 export default function CompanySettings({ companySettings }) {
@@ -13,6 +13,7 @@ export default function CompanySettings({ companySettings }) {
         company_email: companySettings?.email || '',
         company_website: companySettings?.website || '',
         company_logo: null,
+        seafarer_maintenance_enabled: Boolean(companySettings?.seafarer_maintenance_enabled),
     });
     const [logoPreview, setLogoPreview] = useState(companySettings?.logo ? `/storage/${companySettings.logo}` : null);
 
@@ -24,7 +25,11 @@ export default function CompanySettings({ companySettings }) {
 
     const handleSubmit = (event) => {
         event.preventDefault();
-        transform((formData) => ({ ...formData, _method: 'put' }));
+        transform((formData) => ({
+            ...formData,
+            seafarer_maintenance_enabled: formData.seafarer_maintenance_enabled ? 1 : 0,
+            _method: 'put',
+        }));
         post('/admin/company-settings', {
             forceFormData: true,
             preserveScroll: true,
@@ -114,6 +119,37 @@ export default function CompanySettings({ companySettings }) {
                                     {errors.company_website && <p className="mt-1 text-sm text-red-600">{errors.company_website}</p>}
                                 </div>
                             </div>
+                        </div>
+                    </section>
+
+                    <section className="rounded border border-slate-200 bg-white shadow-sm">
+                        <div className="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex items-start gap-3">
+                                <span className={`mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${data.seafarer_maintenance_enabled ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                    <Power size={18} />
+                                </span>
+                                <div>
+                                    <h3 className="text-base font-semibold text-slate-900">Seafarer Portal Maintenance</h3>
+                                    <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
+                                        When enabled, only the seafarer portal shows a maintenance page. Admin pages stay available.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <label className="inline-flex shrink-0 cursor-pointer items-center gap-3">
+                                <input
+                                    type="checkbox"
+                                    checked={data.seafarer_maintenance_enabled}
+                                    onChange={(event) => setData('seafarer_maintenance_enabled', event.target.checked)}
+                                    className="sr-only"
+                                />
+                                <span className={`relative h-7 w-12 rounded-full transition ${data.seafarer_maintenance_enabled ? 'bg-[#B8863B]' : 'bg-slate-300'}`}>
+                                    <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${data.seafarer_maintenance_enabled ? 'left-6' : 'left-1'}`} />
+                                </span>
+                                <span className="w-24 text-sm font-semibold text-slate-700">
+                                    {data.seafarer_maintenance_enabled ? 'Turned on' : 'Turned off'}
+                                </span>
+                            </label>
                         </div>
                     </section>
 

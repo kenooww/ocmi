@@ -2,6 +2,7 @@
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\ClientAuthController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -58,65 +59,66 @@ Route::post('/logout', [AdminController::class, 'logout'])->name('logout');
 
 
 // Client Portal Login & Dashboard
-Route::get('/seafarers', function () {
-    return auth('client')->check()
-        ? redirect()->route('seafarers.dashboard')
-        : redirect()->route('seafarers.login');
-})->name('seafarers.entry');
-Route::get('/seafarers/login', [ClientAuthController::class, 'showLogin'])->name('seafarers.login');
-Route::get('/seafarers/register', [ClientAuthController::class, 'showGoogleRegister'])->name('seafarers.register');
-Route::get('/seafarers/register/google', [ClientAuthController::class, 'googleRedirect'])->name('seafarers.register.google');
-Route::get('/seafarers/register/google/callback', [ClientAuthController::class, 'googleCallback'])->name('seafarers.register.google.callback');
-Route::get('/seafarers/verify/{token}', [ClientAuthController::class, 'verify'])->name('seafarers.verify');
-Route::get('/seafarers/continue', [ClientAuthController::class, 'showContinueProfile'])->name('seafarers.continue');
-Route::post('/seafarers/continue', [ClientAuthController::class, 'continueProfile'])->name('seafarers.update-profile');
-Route::post('/seafarers/verification/resend', [ClientAuthController::class, 'resendVerification'])->name('seafarers.verification.resend');
+Route::middleware('seafarer.live')->group(function () {
+    Route::get('/seafarers', function () {
+        return auth('client')->check()
+            ? redirect()->route('seafarers.dashboard')
+            : redirect()->route('seafarers.login');
+    })->name('seafarers.entry');
+    Route::get('/seafarers/login', [ClientAuthController::class, 'showLogin'])->name('seafarers.login');
+    Route::get('/seafarers/register', [ClientAuthController::class, 'showGoogleRegister'])->name('seafarers.register');
+    Route::get('/seafarers/register/google', [ClientAuthController::class, 'googleRedirect'])->name('seafarers.register.google');
+    Route::get('/seafarers/register/google/callback', [ClientAuthController::class, 'googleCallback'])->name('seafarers.register.google.callback');
+    Route::get('/seafarers/verify/{token}', [ClientAuthController::class, 'verify'])->name('seafarers.verify');
+    Route::get('/seafarers/continue', [ClientAuthController::class, 'showContinueProfile'])->name('seafarers.continue');
+    Route::post('/seafarers/continue', [ClientAuthController::class, 'continueProfile'])->name('seafarers.update-profile');
+    Route::post('/seafarers/verification/resend', [ClientAuthController::class, 'resendVerification'])->name('seafarers.verification.resend');
 
-Route::patch('/seafarers/continue', [ClientAuthController::class, 'continueProfile']);
-Route::put('/seafarers/continue', [ClientAuthController::class, 'continueProfile']);
+    Route::patch('/seafarers/continue', [ClientAuthController::class, 'continueProfile']);
+    Route::put('/seafarers/continue', [ClientAuthController::class, 'continueProfile']);
 
-// Temporary test route to send a verification email to any address (use ?email=you@example.com)
-use Illuminate\Http\Request;
-Route::get('/seafarers/test-verification', function (Request $request) {
-    $email = $request->query('email');
-    if (! $email) {
-        return response('Provide ?email=you@example.com', 400);
-    }
+    // Temporary test route to send a verification email to any address (use ?email=you@example.com)
+    Route::get('/seafarers/test-verification', function (Request $request) {
+        $email = $request->query('email');
+        if (! $email) {
+            return response('Provide ?email=you@example.com', 400);
+        }
 
-    $client = App\Models\Client::firstOrCreate(
-        ['email' => $email],
-        [
-            'name' => 'Test User',
-            'password' => bcrypt(\Illuminate\Support\Str::random(24)),
-            'application_status' => App\Models\Client::DEFAULT_APPLICATION_STATUS,
-        ]
-    );
+        $client = App\Models\Client::firstOrCreate(
+            ['email' => $email],
+            [
+                'name' => 'Test User',
+                'password' => bcrypt(\Illuminate\Support\Str::random(24)),
+                'application_status' => App\Models\Client::DEFAULT_APPLICATION_STATUS,
+            ]
+        );
 
-    $client->verification_token = \Illuminate\Support\Str::random(40);
-    $client->save();
+        $client->verification_token = \Illuminate\Support\Str::random(40);
+        $client->save();
 
-    $link = route('seafarers.verify', $client->verification_token);
-    App\Jobs\SendClientVerificationEmail::dispatch($client, $link);
+        $link = route('seafarers.verify', $client->verification_token);
+        App\Jobs\SendClientVerificationEmail::dispatch($client, $link);
 
-    return response('Verification email sent to ' . $email);
-});
-Route::post('/seafarers/login', [ClientAuthController::class, 'login']);
+        return response('Verification email sent to ' . $email);
+    });
+    Route::post('/seafarers/login', [ClientAuthController::class, 'login']);
 
-Route::get('/seafarers/register/google/callback-debug', function () {
-    \Log::info('Callback hit: '.request()->fullUrl());
-    return 'ok';
-});
+    Route::get('/seafarers/register/google/callback-debug', function () {
+        \Log::info('Callback hit: '.request()->fullUrl());
+        return 'ok';
+    });
 
-Route::middleware(['auth:client'])->prefix('seafarers')->name('seafarers.')->group(function () {
-    Route::get('/password/mandatory', [ClientAuthController::class, 'showMandatoryPassword'])->name('password.mandatory');
-    Route::put('/password/mandatory', [ClientAuthController::class, 'updateMandatoryPassword'])->name('password.mandatory.update');
-    Route::get('/dashboard', [ClientAuthController::class, 'dashboard'])->name('dashboard');
-    Route::get('/resume', [ClientAuthController::class, 'viewResume'])->name('resume.view');
-    Route::get('/resume/file', [ClientAuthController::class, 'inlineResume'])->name('resume.file');
-    Route::get('/resume/download', [ClientAuthController::class, 'downloadResume'])->name('resume.download');
-    Route::get('/attachments/{folder}/download', [ClientAuthController::class, 'downloadAttachmentsFolder'])->name('attachments.download');
-    Route::put('/password', [ClientAuthController::class, 'updatePassword'])->name('password.update');
-    Route::post('/logout', [ClientAuthController::class, 'logout'])->name('logout');
+    Route::middleware(['auth:client'])->prefix('seafarers')->name('seafarers.')->group(function () {
+        Route::get('/password/mandatory', [ClientAuthController::class, 'showMandatoryPassword'])->name('password.mandatory');
+        Route::put('/password/mandatory', [ClientAuthController::class, 'updateMandatoryPassword'])->name('password.mandatory.update');
+        Route::get('/dashboard', [ClientAuthController::class, 'dashboard'])->name('dashboard');
+        Route::get('/resume', [ClientAuthController::class, 'viewResume'])->name('resume.view');
+        Route::get('/resume/file', [ClientAuthController::class, 'inlineResume'])->name('resume.file');
+        Route::get('/resume/download', [ClientAuthController::class, 'downloadResume'])->name('resume.download');
+        Route::get('/attachments/{folder}/download', [ClientAuthController::class, 'downloadAttachmentsFolder'])->name('attachments.download');
+        Route::put('/password', [ClientAuthController::class, 'updatePassword'])->name('password.update');
+        Route::post('/logout', [ClientAuthController::class, 'logout'])->name('logout');
+    });
 });
 
 

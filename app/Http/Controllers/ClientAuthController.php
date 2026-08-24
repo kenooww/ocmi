@@ -537,6 +537,7 @@ class ClientAuthController extends Controller
         unset($data['employment_history']);
         unset($data['sea_service']);
         unset($data['deck_officer_experience']);
+        $data = $this->titleCaseFormData($data);
 
         $existingDependents = $client->dependents()->get()->keyBy('id');
         $keptDependentIds = [];
@@ -572,12 +573,12 @@ class ClientAuthController extends Controller
             $savedDependent = $client->dependents()->updateOrCreate(
                 ['id' => $dependentId],
                 [
-                    'name' => $dependent['name'] ?? '',
+                    'name' => $this->titleCaseFormValue('name', $dependent['name'] ?? ''),
                     'date_of_birth' => $dependent['date_of_birth'] ?: null,
-                    'relationship' => $dependent['relationship'] ?? '',
-                    'dependent' => $dependent['dependent'] ?? '',
-                    'beneficiary' => $dependent['beneficiary'] ?? '',
-                    'address' => $dependent['address'] ?? '',
+                    'relationship' => $this->titleCaseFormValue('relationship', $dependent['relationship'] ?? ''),
+                    'dependent' => $this->titleCaseFormValue('dependent', $dependent['dependent'] ?? ''),
+                    'beneficiary' => $this->titleCaseFormValue('beneficiary', $dependent['beneficiary'] ?? ''),
+                    'address' => $this->titleCaseFormValue('address', $dependent['address'] ?? ''),
                     'attachment' => $attachment,
                 ]
             );
@@ -638,7 +639,7 @@ class ClientAuthController extends Controller
                 ['document_type' => $documentType],
                 [
                     'number' => $travelDocument['number'] ?? '',
-                    'place_of_issue' => $travelDocument['place_of_issue'] ?? '',
+                    'place_of_issue' => $this->titleCaseFormValue('place_of_issue', $travelDocument['place_of_issue'] ?? ''),
                     'date_of_issue' => ($travelDocument['date_of_issue'] ?? null) ?: null,
                     'date_of_expiry' => ($travelDocument['date_of_expiry'] ?? null) ?: null,
                     'attachment' => $attachment,
@@ -777,6 +778,7 @@ class ClientAuthController extends Controller
         $data['privacy_act_accepted'] = true;
         $data['privacy_act_accepted_at'] = $client->privacy_act_accepted_at ?: now();
 
+        $data = $this->titleCaseFormData($data);
         $data['email_address'] = $this->normalizeEmail($data['email_address'] ?? null) ?: $data['email_address'];
         $client->update($data);
       
@@ -876,6 +878,90 @@ class ClientAuthController extends Controller
         return $email === '' ? null : strtolower($email);
     }
 
+    private function titleCaseFormData(array $data): array
+    {
+        foreach ($data as $field => $value) {
+            $data[$field] = $this->titleCaseFormValue($field, $value);
+        }
+
+        return $data;
+    }
+
+    private function titleCaseFormValue(string $field, $value)
+    {
+        if (! is_string($value) || $this->shouldKeepFormValueCase($field)) {
+            return $value;
+        }
+
+        $value = trim($value);
+
+        if ($value === '') {
+            return $value;
+        }
+
+        return ucwords(strtolower($value), " \t\r\n\f\v-/(");
+    }
+
+    private function shouldKeepFormValueCase(string $field): bool
+    {
+        $exactFields = [
+            'email',
+            'email_address',
+            'password',
+            'current_password',
+            'password_confirmation',
+            'document_type',
+            'gender',
+            'status',
+            'type_of_job',
+            'avatar',
+            'resume_attachment',
+            'attachment',
+            'date_applied',
+            'date_of_birth',
+            'marriage_date',
+            'date_of_issue',
+            'date_of_expiry',
+            'revalidation_date',
+            'endorsement_expiry_date',
+            'from_date',
+            'to_date',
+            'duration_months',
+            'duration_days',
+            'height_cm',
+            'phone',
+            'personal_mobile_no',
+            'telephone_numbers',
+            'whatsapp_number',
+            'fax_no',
+            'emergency_contact',
+            'contact_person_number',
+            'certificate_number',
+            'endorsement_number',
+            'number',
+            'sss_no',
+            'pagibig_no',
+            'epf_no',
+            'socso_no',
+            'philhealth_no',
+            'wife_ic_no',
+            'wife_income_tax_no',
+            'e_registration_number',
+            'type_imo_number',
+            'grt',
+            'main_engine_kw',
+            'blood',
+        ];
+
+        if (in_array($field, $exactFields, true)) {
+            return true;
+        }
+
+        return substr($field, -3) === '_no'
+            || substr($field, -7) === '_number'
+            || substr($field, 0, 5) === 'date_';
+    }
+
     private function storeAttachmentWithOriginalName($file, string $folder): string
     {
         $originalName = basename($file->getClientOriginalName() ?: 'attachment');
@@ -920,7 +1006,7 @@ class ClientAuthController extends Controller
                     continue;
                 }
 
-                $payload[$field] = $value ?? '';
+                $payload[$field] = $this->titleCaseFormValue($field, $value ?? '');
             }
 
             $attachment = $existingRow ? $existingRow->attachment : null;
@@ -1082,6 +1168,12 @@ class ClientAuthController extends Controller
 
     private function redirectToDashboard()
     {
+        $client = Auth::guard('client')->user();
+
+        if ($client && ! $client->hasCompletedContinueProfile()) {
+            return redirect()->route('seafarers.continue');
+        }
+
         if (RouteFacade::has('seafarers.dashboard')) {
             return redirect()->route('seafarers.dashboard', ['section' => 'dashboard']);
         }
