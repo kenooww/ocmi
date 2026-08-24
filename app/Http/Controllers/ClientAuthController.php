@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Route as RouteFacade;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use App\Services\GoogleOauthService;
+use App\Services\ClientAttachmentArchiveService;
 use App\Mail\ClientVerificationMail;
 use App\Jobs\SendClientVerificationEmail;
 use App\Models\Client;
@@ -67,9 +68,12 @@ class ClientAuthController extends Controller
             'travelDocuments',
             'certificateCompetencies',
             'certificateProficiencies',
+            'gmdssCertificates',
             'vaccinations',
             'flagDocuments',
             'otherCertificates',
+            'additionalStcwCertificates',
+            'offshoreTrainingCertificates',
             'employmentHistories',
             'seaServices',
             'deckOfficerExperiences',
@@ -252,9 +256,12 @@ class ClientAuthController extends Controller
                 'travelDocuments',
                 'certificateCompetencies',
                 'certificateProficiencies',
+                'gmdssCertificates',
                 'vaccinations',
                 'flagDocuments',
                 'otherCertificates',
+                'additionalStcwCertificates',
+                'offshoreTrainingCertificates',
                 'employmentHistories',
                 'seaServices',
                 'deckOfficerExperiences',
@@ -365,7 +372,7 @@ class ClientAuthController extends Controller
             'travel_documents.*.place_of_issue' => 'nullable|string|max:255',
             'travel_documents.*.date_of_issue' => 'nullable|date',
             'travel_documents.*.date_of_expiry' => 'nullable|date',
-            'travel_documents.*.attachment' => 'nullable',
+            'travel_documents.*.attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
 
             // Certificates and histories
             'certifications' => 'nullable|array',
@@ -390,6 +397,15 @@ class ClientAuthController extends Controller
             'proficiency.*.date_of_expiry' => 'nullable|date',
             'proficiency.*.attachment' => 'nullable',
 
+            'gmdss_certificates' => 'nullable|array',
+            'gmdss_certificates.*.id' => ['nullable', 'integer', Rule::exists('client_gmdss_certificates', 'id')->where('client_id', $client->id)],
+            'gmdss_certificates.*.name' => 'nullable|string|max:255',
+            'gmdss_certificates.*.certificate_number' => 'nullable|string|max:255',
+            'gmdss_certificates.*.endorsement_number' => 'nullable|string|max:255',
+            'gmdss_certificates.*.date_of_expiry' => 'nullable|date',
+            'gmdss_certificates.*.endorsement_expiry_date' => 'nullable|date',
+            'gmdss_certificates.*.attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
+
             'vaccinations' => 'nullable|array',
             'vaccinations.*.id' => ['nullable', 'integer', Rule::exists('client_vaccinations', 'id')->where('client_id', $client->id)],
             'vaccinations.*.name' => 'nullable|string|max:255',
@@ -406,6 +422,7 @@ class ClientAuthController extends Controller
             'flag_documents.*.place_of_issue' => 'nullable|string|max:255',
             'flag_documents.*.date_of_issue' => 'nullable|date',
             'flag_documents.*.date_of_expiry' => 'nullable|date',
+            'flag_documents.*.attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
 
             'other_certificates' => 'nullable|array',
             'other_certificates.*.id' => ['nullable', 'integer', Rule::exists('client_other_certificates', 'id')->where('client_id', $client->id)],
@@ -415,6 +432,22 @@ class ClientAuthController extends Controller
             'other_certificates.*.date_of_issue' => 'nullable|date',
             'other_certificates.*.date_of_expiry' => 'nullable|date',
             'other_certificates.*.attachment' => 'nullable',
+
+            'additional_stcw_certificates' => 'nullable|array',
+            'additional_stcw_certificates.*.id' => ['nullable', 'integer', Rule::exists('client_additional_stcw_certificates', 'id')->where('client_id', $client->id)],
+            'additional_stcw_certificates.*.name' => 'nullable|string|max:255',
+            'additional_stcw_certificates.*.place_of_issue' => 'nullable|string|max:255',
+            'additional_stcw_certificates.*.date_of_issue' => 'nullable|date',
+            'additional_stcw_certificates.*.date_of_expiry' => 'nullable|date',
+            'additional_stcw_certificates.*.attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
+
+            'offshore_training_certificates' => 'nullable|array',
+            'offshore_training_certificates.*.id' => ['nullable', 'integer', Rule::exists('client_offshore_training_certificates', 'id')->where('client_id', $client->id)],
+            'offshore_training_certificates.*.name' => 'nullable|string|max:255',
+            'offshore_training_certificates.*.place_of_issue' => 'nullable|string|max:255',
+            'offshore_training_certificates.*.date_of_issue' => 'nullable|date',
+            'offshore_training_certificates.*.date_of_expiry' => 'nullable|date',
+            'offshore_training_certificates.*.attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
 
             'employment_history' => 'nullable|array',
             'employment_history.*.id' => ['nullable', 'integer', Rule::exists('client_employment_histories', 'id')->where('client_id', $client->id)],
@@ -482,9 +515,12 @@ class ClientAuthController extends Controller
         $travelDocumentRows = $data['travel_documents'] ?? [];
         $certificationRows = $data['certifications'] ?? [];
         $proficiencyRows = $data['proficiency'] ?? [];
+        $gmdssCertificateRows = $data['gmdss_certificates'] ?? [];
         $vaccinationRows = $data['vaccinations'] ?? [];
         $flagDocumentRows = $data['flag_documents'] ?? [];
         $otherCertificateRows = $data['other_certificates'] ?? [];
+        $additionalStcwCertificateRows = $data['additional_stcw_certificates'] ?? [];
+        $offshoreTrainingCertificateRows = $data['offshore_training_certificates'] ?? [];
         $employmentHistoryRows = $data['employment_history'] ?? [];
         $seaServiceRows = $data['sea_service'] ?? [];
         $deckOfficerExperienceRows = $data['deck_officer_experience'] ?? [];
@@ -492,9 +528,12 @@ class ClientAuthController extends Controller
         unset($data['travel_documents']);
         unset($data['certifications']);
         unset($data['proficiency']);
+        unset($data['gmdss_certificates']);
         unset($data['vaccinations']);
         unset($data['flag_documents']);
         unset($data['other_certificates']);
+        unset($data['additional_stcw_certificates']);
+        unset($data['offshore_training_certificates']);
         unset($data['employment_history']);
         unset($data['sea_service']);
         unset($data['deck_officer_experience']);
@@ -625,6 +664,13 @@ class ClientAuthController extends Controller
             'date_of_issue',
             'date_of_expiry',
         ], 'proficiency-attachments', 'proficiency');
+        $this->syncRows($client, 'gmdssCertificates', $gmdssCertificateRows, [
+            'name',
+            'certificate_number',
+            'endorsement_number',
+            'date_of_expiry',
+            'endorsement_expiry_date',
+        ], 'gmdss-certificate-attachments', 'gmdss_certificates');
         $this->syncRows($client, 'vaccinations', $vaccinationRows, [
             'name',
             'number',
@@ -638,7 +684,7 @@ class ClientAuthController extends Controller
             'place_of_issue',
             'date_of_issue',
             'date_of_expiry',
-        ]);
+        ], 'flag-document-attachments', 'flag_documents');
         $this->syncRows($client, 'otherCertificates', $otherCertificateRows, [
             'name',
             'number',
@@ -646,6 +692,18 @@ class ClientAuthController extends Controller
             'date_of_issue',
             'date_of_expiry',
         ], 'other-certificate-attachments', 'other_certificates');
+        $this->syncRows($client, 'additionalStcwCertificates', $additionalStcwCertificateRows, [
+            'name',
+            'date_of_issue',
+            'date_of_expiry',
+            'place_of_issue',
+        ], 'additional-stcw-certificate-attachments', 'additional_stcw_certificates');
+        $this->syncRows($client, 'offshoreTrainingCertificates', $offshoreTrainingCertificateRows, [
+            'name',
+            'date_of_issue',
+            'date_of_expiry',
+            'place_of_issue',
+        ], 'offshore-training-certificate-attachments', 'offshore_training_certificates');
         $this->syncRows($client, 'employmentHistories', $employmentHistoryRows, [
             'company',
             'contact_person_name',
@@ -750,9 +808,12 @@ class ClientAuthController extends Controller
     {
         $clientData['certifications'] = $this->formatRows($client->certificateCompetencies);
         $clientData['proficiency'] = $this->formatRows($client->certificateProficiencies);
+        $clientData['gmdss_certificates'] = $this->formatRows($client->gmdssCertificates);
         $clientData['vaccinations'] = $this->formatRows($client->vaccinations);
         $clientData['flag_documents'] = $this->formatRows($client->flagDocuments);
         $clientData['other_certificates'] = $this->formatRows($client->otherCertificates);
+        $clientData['additional_stcw_certificates'] = $this->formatRows($client->additionalStcwCertificates);
+        $clientData['offshore_training_certificates'] = $this->formatRows($client->offshoreTrainingCertificates);
         $clientData['employment_history'] = $this->formatRows($client->employmentHistories);
         $clientData['sea_service'] = $this->formatRows($client->seaServices);
         $clientData['deck_officer_experience'] = $this->formatRows($client->deckOfficerExperiences);
@@ -1061,6 +1122,13 @@ class ClientAuthController extends Controller
         $client = Auth::guard('client')->user();
 
         return $this->resumeFileResponse($client, true);
+    }
+
+    public function downloadAttachmentsFolder(string $folder, ClientAttachmentArchiveService $archives)
+    {
+        $client = Auth::guard('client')->user();
+
+        return $archives->download($client, $folder);
     }
 
     private function resumeViewerResponse(Client $client = null, string $fileUrl, string $downloadUrl, string $backUrl)

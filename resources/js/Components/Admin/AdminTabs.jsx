@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
-import { Anchor, Bell, LayoutDashboard, LogOut, Menu, Settings, Ship, UserRound, X } from 'lucide-react';
+import { Anchor, Award, Bell, ChevronDown, LayoutDashboard, LogOut, Menu, Settings, Ship, UserRound, X } from 'lucide-react';
 
 const PALETTE = {
     navyDeep: '#0A2436',
@@ -29,11 +29,24 @@ export default function AdminTabs({ activeTab, title, children }) {
     const isStaff = user?.role === 'staff';
     const company = companySettings || {};
     const [profileOpen, setProfileOpen] = useState(false);
+    const [openMenus, setOpenMenus] = useState({
+        certificates: activeTab === 'certificates' || activeTab.startsWith('certificates-'),
+    });
 
     const tabs = [
         { key: 'dashboard', label: 'Dashboard', href: route('admin.dashboard.index'), icon: LayoutDashboard },
         { key: 'users', label: 'Users', href: route('admin.users.index'), icon: UserRound, adminOnly: true },
         { key: 'clients', label: 'Seafarers', href: route('admin.seafarers.index'), icon: Ship },
+        {
+            key: 'certificates',
+            label: 'Certificates',
+            href: route('admin.certificates.stcw.index'),
+            icon: Award,
+            children: [
+                { key: 'certificates-stcw', label: 'STCW Certificate', href: route('admin.certificates.stcw.index') },
+                { key: 'certificates-offshore', label: 'Offshore Training', href: route('admin.certificates.offshore-training.index') },
+            ],
+        },
         { key: 'company-settings', label: 'Company Settings', href: route('admin.company-settings.edit'), icon: Settings, adminOnly: true },
     ].filter((tab) => !tab.adminOnly || !isStaff);
 
@@ -44,6 +57,10 @@ export default function AdminTabs({ activeTab, title, children }) {
     const handleLogout = () => {
         setProfileOpen(false);
         router.post('/admin/logout');
+    };
+
+    const toggleMenu = (key) => {
+        setOpenMenus((menus) => ({ ...menus, [key]: !menus[key] }));
     };
 
     return (
@@ -88,21 +105,61 @@ export default function AdminTabs({ activeTab, title, children }) {
                 <nav className="flex-1 px-3 mt-2 space-y-1">
                     {tabs.map((tab) => {
                         const Icon = tab.icon;
-                        const isActive = activeTab === tab.key;
+                        const isActive = activeTab === tab.key || tab.children?.some((child) => child.key === activeTab);
+                        const menuOpen = tab.children ? (openMenus[tab.key] ?? isActive) : false;
 
                         return (
-                            <Link
-                                key={tab.key}
-                                href={tab.href}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded text-sm"
-                                style={{
-                                    backgroundColor: isActive ? 'rgba(184,134,59,0.16)' : 'transparent',
-                                    color: isActive ? '#F5EBDA' : '#B7C4C9',
-                                }}
-                            >
-                                <Icon size={17} color={isActive ? PALETTE.brass : '#7F929A'} />
-                                {tab.label}
-                            </Link>
+                            <div key={tab.key}>
+                                {tab.children ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleMenu(tab.key)}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded text-sm transition"
+                                        style={{
+                                            backgroundColor: isActive ? 'rgba(184,134,59,0.16)' : 'transparent',
+                                            color: isActive ? '#F5EBDA' : '#B7C4C9',
+                                        }}
+                                        aria-expanded={menuOpen}
+                                    >
+                                        <Icon size={17} color={isActive ? PALETTE.brass : '#7F929A'} />
+                                        <span className="flex-1 text-left">{tab.label}</span>
+                                        <ChevronDown size={14} color={isActive ? PALETTE.brass : '#7F929A'} className={`transition-transform duration-200 ${menuOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+                                ) : (
+                                    <Link
+                                        href={tab.href}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded text-sm transition"
+                                        style={{
+                                            backgroundColor: isActive ? 'rgba(184,134,59,0.16)' : 'transparent',
+                                            color: isActive ? '#F5EBDA' : '#B7C4C9',
+                                        }}
+                                    >
+                                        <Icon size={17} color={isActive ? PALETTE.brass : '#7F929A'} />
+                                        <span className="flex-1">{tab.label}</span>
+                                    </Link>
+                                )}
+                                {tab.children && (
+                                    <div className={`ml-8 overflow-hidden border-l border-white/10 pl-3 transition-all duration-200 ease-out ${menuOpen ? 'mt-1 max-h-28 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                        {tab.children.map((child) => {
+                                            const childActive = activeTab === child.key;
+
+                                            return (
+                                                <Link
+                                                    key={child.key}
+                                                    href={child.href}
+                                                    className="block rounded px-3 py-2 text-sm"
+                                                    style={{
+                                                        backgroundColor: childActive ? 'rgba(31,111,92,0.28)' : 'transparent',
+                                                        color: childActive ? '#F4F1E8' : '#9DB0B8',
+                                                    }}
+                                                >
+                                                    {child.label}
+                                                </Link>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
                         );
                     })}
                 </nav>

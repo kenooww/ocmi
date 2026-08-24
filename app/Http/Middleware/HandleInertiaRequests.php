@@ -3,6 +3,8 @@
 namespace App\Http\Middleware;
 
 use App\Models\CompanySetting;
+use App\Models\OffshoreTraining;
+use App\Models\StcwCertificate;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -42,6 +44,24 @@ class HandleInertiaRequests extends Middleware
                 ] : null,
             ],
             'companySettings' => fn () => CompanySetting::current()->publicData(),
+            'certificateOptions' => fn () => [
+                'stcw' => StcwCertificate::latest()
+                    ->get(['id', 'certification_name', 'created_at'])
+                    ->map(fn ($certificate) => [
+                        'value' => $certificate->certification_name,
+                        'label' => $certificate->certification_name,
+                        'created_at' => optional($certificate->created_at)->toISOString(),
+                    ])
+                    ->values(),
+                'offshore' => OffshoreTraining::latest()
+                    ->get(['id', 'certification_name', 'created_at'])
+                    ->map(fn ($certificate) => [
+                        'value' => $certificate->certification_name,
+                        'label' => $certificate->certification_name,
+                        'created_at' => optional($certificate->created_at)->toISOString(),
+                    ])
+                    ->values(),
+            ],
         ];
     }
 }

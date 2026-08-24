@@ -5,23 +5,23 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class FlagDocument extends Model
+class GmdssCertificate extends Model
 {
-    protected $table = 'client_flag_documents';
+    protected $table = 'client_gmdss_certificates';
 
     protected $fillable = [
         'client_id',
         'name',
-        'number',
-        'place_of_issue',
-        'date_of_issue',
+        'certificate_number',
+        'endorsement_number',
         'date_of_expiry',
+        'endorsement_expiry_date',
         'attachment',
     ];
 
     protected $casts = [
-        'date_of_issue' => 'date',
         'date_of_expiry' => 'date',
+        'endorsement_expiry_date' => 'date',
     ];
 
     public function client(): BelongsTo

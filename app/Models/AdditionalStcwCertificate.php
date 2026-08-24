@@ -5,14 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class FlagDocument extends Model
+class AdditionalStcwCertificate extends Model
 {
-    protected $table = 'client_flag_documents';
+    protected $table = 'client_additional_stcw_certificates';
 
     protected $fillable = [
         'client_id',
         'name',
-        'number',
         'place_of_issue',
         'date_of_issue',
         'date_of_expiry',

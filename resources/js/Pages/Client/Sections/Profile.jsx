@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useForm } from '@inertiajs/react';
-import { CalendarDays, ChevronDown, FileText, Mail, Phone, Plus, Printer, Trash2, Upload, X } from 'lucide-react';
+import { useForm, usePage } from '@inertiajs/react';
+import { CalendarDays, ChevronDown, Download, FileText, Mail, Phone, Plus, Printer, Trash2, Upload, X } from 'lucide-react';
 
 const FIELD_KEYS = [
   'avatar', 'resume_attachment', 'privacy_act_accepted', 'first_name', 'middle_name', 'last_name', 'gender', 'status', 'type_of_job', 'date_applied', 'nationality',
@@ -44,7 +44,8 @@ const EMPTY_CERTIFICATE = {
   attachment: null,
 };
 const EMPTY_NUMBERED_DOCUMENT = { name: '', number: '', place_of_issue: '', date_of_issue: '', date_of_expiry: '', attachment: null };
-const EMPTY_FLAG_DOCUMENT = { name: '', number: '', place_of_issue: '', date_of_issue: '', date_of_expiry: '' };
+const EMPTY_FLAG_DOCUMENT = { name: '', number: '', place_of_issue: '', date_of_issue: '', date_of_expiry: '', attachment: null };
+const EMPTY_GMDSS_CERTIFICATE = { name: '', certificate_number: '', endorsement_number: '', date_of_expiry: '', endorsement_expiry_date: '', attachment: null };
 const EMPTY_EMPLOYMENT_HISTORY = { company: '', contact_person_name: '', designation: '', contact_person_number: '', country: '', attachment: null };
 const EMPTY_SEA_SERVICE = {
   from_date: '',
@@ -91,10 +92,13 @@ const TABS = [
   { key: 'dependents', label: 'Dependents' },
   { key: 'travel_documents', label: 'Travel Documents' },
   { key: 'certifications', label: 'Certificate of Competency' },
+  { key: 'gmdss_certificates', label: 'GMDSS Certificate' },
   { key: 'proficiency', label: 'Certificate of Proficiency' },
   { key: 'vaccinations', label: 'Vaccinations' },
   { key: 'flag_documents', label: 'Flag Documents' },
   { key: 'other_certificates', label: 'Other Certificates' },
+  { key: 'additional_stcw_certificates', label: 'Additional STCW Certificate' },
+  { key: 'offshore_training_certificates', label: 'Offshore Training Certificate' },
   { key: 'employment_history', label: 'Employment History' },
   { key: 'sea_service', label: 'Sea Service' },
   { key: 'deck_officer_experience', label: 'Deck Officer Experience' },
@@ -480,6 +484,49 @@ function AttachmentActions({ path, label = 'View attachment', className = '' }) 
   );
 }
 
+function attachmentCount(items = []) {
+  return (items || []).filter((item) => item?.attachment && typeof item.attachment === 'string').length;
+}
+
+function totalAttachmentCount(client) {
+  const sections = [
+    client?.resume_attachment ? [{ attachment: client.resume_attachment }] : [],
+    client?.dependents || [],
+    buildTravelDocuments(client?.travel_documents),
+    client?.certifications || [],
+    client?.proficiency || [],
+    client?.gmdss_certificates || [],
+    client?.vaccinations || [],
+    client?.flag_documents || [],
+    client?.other_certificates || [],
+    client?.additional_stcw_certificates || [],
+    client?.offshore_training_certificates || [],
+    client?.employment_history || [],
+  ];
+
+  return sections.reduce((total, items) => total + attachmentCount(items), 0);
+}
+
+function AttachmentFolderDownload({ count, folder, routeName, routeParams }) {
+  if (!count || !folder || !routeName) {
+    return null;
+  }
+
+  const params = Array.isArray(routeParams) ? routeParams : [routeParams];
+
+  return (
+    <div className="mb-3 flex justify-end">
+      <a
+        href={route(routeName, [...params, folder])}
+        className="inline-flex items-center gap-2 rounded border border-[#1F6F5C]/25 bg-white px-3 py-2 text-sm font-semibold text-[#1F6F5C] shadow-sm transition hover:border-[#1F6F5C]/45 hover:bg-[#E1EBE6]"
+      >
+        <Download size={16} />
+        Download all attachments
+      </a>
+    </div>
+  );
+}
+
 function RepeatableList({ items, editing, columns, onChange, onAdd, onRemove, emptyLabel, errorsPrefix, errors, printableAttachments = false }) {
   if (!editing) {
     if (!items || items.length === 0) {
@@ -560,6 +607,7 @@ function RepeatableList({ items, editing, columns, onChange, onAdd, onRemove, em
                         Choose file
                         <input
                           type="file"
+                          accept=".pdf,.doc,.docx,image/*"
                           onChange={(e) => onChange(index, column.key, e.target.files[0] ?? item[column.key] ?? null)}
                           className="sr-only"
                         />
@@ -583,6 +631,21 @@ function RepeatableList({ items, editing, columns, onChange, onAdd, onRemove, em
                         <p className="mt-2 text-sm text-slate-600">{item[column.key].name}</p>
                       )}
                     </>
+                  ) : column.type === 'select' ? (
+                    <select
+                      value={item[column.key] ?? ''}
+                      onChange={(e) => onChange(index, column.key, e.target.value)}
+                      className={`mt-1 w-full rounded border p-2.5 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${
+                        errors?.[errKey] ? 'border-red-300' : 'border-slate-300'
+                      }`}
+                    >
+                      <option value="">Select {column.label.toLowerCase()}</option>
+                      {(column.options || []).map((option) => (
+                        <option key={option.value ?? option} value={option.value ?? option}>
+                          {option.label ?? option}
+                        </option>
+                      ))}
+                    </select>
                   ) : (
                     <input
                       type={column.type || 'text'}
@@ -654,6 +717,7 @@ function TravelDocumentsTable({ items, editing, onChange, errors }) {
                                   Choose file
                                   <input
                                     type="file"
+                                    accept=".pdf,.doc,.docx,image/*"
                                     onChange={(e) => onChange(index, column.key, e.target.files[0] ?? item[column.key] ?? null)}
                                     className="sr-only"
                                   />
@@ -944,6 +1008,7 @@ function EmptyTabPanel({ title }) {
 }
 
 export default function Profile({ client, updateRouteName = 'seafarers.update-profile', updateRouteParams = [], methodOverride = null, headerActions = null }) {
+  const { certificateOptions = {} } = usePage().props;
   const [editing, setEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
 
@@ -954,10 +1019,13 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
   initialValues.dependents = client?.dependents?.length ? client.dependents : [];
   initialValues.travel_documents = buildTravelDocuments(client?.travel_documents);
   initialValues.certifications = client?.certifications?.length ? client.certifications : [];
+  initialValues.gmdss_certificates = client?.gmdss_certificates?.length ? client.gmdss_certificates : [];
   initialValues.proficiency = client?.proficiency?.length ? client.proficiency : [];
   initialValues.vaccinations = client?.vaccinations?.length ? client.vaccinations : [];
   initialValues.flag_documents = client?.flag_documents?.length ? client.flag_documents : [];
   initialValues.other_certificates = client?.other_certificates?.length ? client.other_certificates : [];
+  initialValues.additional_stcw_certificates = client?.additional_stcw_certificates?.length ? client.additional_stcw_certificates : [];
+  initialValues.offshore_training_certificates = client?.offshore_training_certificates?.length ? client.offshore_training_certificates : [];
   initialValues.employment_history = client?.employment_history?.length ? client.employment_history : [];
   initialValues.sea_service = client?.sea_service?.length ? client.sea_service : [];
   initialValues.deck_officer_experience = client?.deck_officer_experience?.length ? client.deck_officer_experience : [];
@@ -968,8 +1036,16 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
   const profileTitle = editing ? fullNameFor(data) : fullName;
   const avatarPreview = data.avatar && typeof data.avatar !== 'string' ? URL.createObjectURL(data.avatar) : null;
   const requiresPrivacyConsent = updateRouteName === 'seafarers.update-profile';
+  const isAdminProfile = updateRouteName.startsWith('admin.');
+  const attachmentDownloadRouteName = isAdminProfile
+    ? 'admin.seafarers.attachments.download'
+    : 'seafarers.attachments.download';
+  const attachmentDownloadRouteParams = isAdminProfile
+    ? (Array.isArray(updateRouteParams) ? updateRouteParams : [updateRouteParams])
+    : [];
+  const allAttachmentCount = totalAttachmentCount(client);
   const resumeViewUrl = client?.resume_attachment
-    ? (updateRouteName.startsWith('admin.')
+    ? (isAdminProfile
         ? route('admin.seafarers.resume.view', updateRouteParams)
         : route('seafarers.resume.view'))
     : null;
@@ -1090,6 +1166,15 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
     { key: 'attachment', label: 'Attachment', type: 'file' },
   ];
 
+  const gmdssCertificateColumns = [
+    { key: 'name', label: 'Name' },
+    { key: 'certificate_number', label: 'Certificate number' },
+    { key: 'endorsement_number', label: 'Endorsement number' },
+    { key: 'date_of_expiry', label: 'Expiry date', type: 'date' },
+    { key: 'endorsement_expiry_date', label: 'Endorsement expiry date', type: 'date' },
+    { key: 'attachment', label: 'Attachment', type: 'file' },
+  ];
+
   const numberedDocumentColumns = [
     { key: 'name', label: 'Name' },
     { key: 'number', label: 'Number' },
@@ -1105,6 +1190,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
     { key: 'place_of_issue', label: 'Place of issue' },
     { key: 'date_of_issue', label: 'Date of issue', type: 'date' },
     { key: 'date_of_expiry', label: 'Date of expiry', type: 'date' },
+    { key: 'attachment', label: 'Attachment', type: 'file' },
   ];
 
   const employmentHistoryColumns = [
@@ -1115,6 +1201,31 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
     { key: 'country', label: 'Country' },
     { key: 'attachment', label: 'Attachment', type: 'file' },
   ];
+
+  const additionalStcwCertificateColumns = [
+    { key: 'name', label: 'Certificate name', type: 'select', options: certificateOptions.stcw || [] },
+    { key: 'date_of_issue', label: 'Issue date', type: 'date' },
+    { key: 'date_of_expiry', label: 'Expiry date', type: 'date' },
+    { key: 'place_of_issue', label: 'Issued at' },
+    { key: 'attachment', label: 'Attachment', type: 'file' },
+  ];
+
+  const offshoreTrainingCertificateColumns = [
+    { key: 'name', label: 'Certificate name', type: 'select', options: certificateOptions.offshore || [] },
+    { key: 'date_of_issue', label: 'Issue date', type: 'date' },
+    { key: 'date_of_expiry', label: 'Expiry date', type: 'date' },
+    { key: 'place_of_issue', label: 'Issued at' },
+    { key: 'attachment', label: 'Attachment', type: 'file' },
+  ];
+
+  const attachmentFolderButton = (folder, items) => (
+    <AttachmentFolderDownload
+      count={attachmentCount(items)}
+      folder={folder}
+      routeName={attachmentDownloadRouteName}
+      routeParams={attachmentDownloadRouteParams}
+    />
+  );
 
   return (
     <div className="w-full px-4 py-5 sm:p-6">
@@ -1168,6 +1279,15 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               {!editing ? (
                 <div className="flex flex-wrap justify-end gap-2">
                   {headerActions}
+                  {allAttachmentCount > 0 && (
+                    <a
+                      href={route(attachmentDownloadRouteName, [...attachmentDownloadRouteParams, 'all'])}
+                      className="inline-flex items-center gap-2 rounded border border-[#1F6F5C]/25 bg-white px-4 py-2 text-sm font-semibold text-[#1F6F5C] shadow-sm transition hover:border-[#1F6F5C]/45 hover:bg-[#E1EBE6]"
+                    >
+                      <Download size={16} />
+                      Download all attachments
+                    </a>
+                  )}
                   <button
                     type="button"
                     onClick={startEditing}
@@ -1232,110 +1352,187 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
         )}
 
         {activeTab === 'dependents' && (
-          <RepeatableList
-            items={editing ? data.dependents : (client?.dependents || [])}
-            editing={editing}
-            columns={dependentColumns}
-            onChange={updateDependent}
-            onAdd={addDependent}
-            onRemove={removeDependent}
-            emptyLabel="No dependents added yet"
-            errorsPrefix="dependents"
-            errors={errors}
-          />
+          <>
+            {attachmentFolderButton('dependents', editing ? data.dependents : (client?.dependents || []))}
+            <RepeatableList
+              items={editing ? data.dependents : (client?.dependents || [])}
+              editing={editing}
+              columns={dependentColumns}
+              onChange={updateDependent}
+              onAdd={addDependent}
+              onRemove={removeDependent}
+              emptyLabel="No dependents added yet"
+              errorsPrefix="dependents"
+              errors={errors}
+            />
+          </>
         )}
 
         {activeTab === 'travel_documents' && (
-          <TravelDocumentsTable
-            items={editing ? data.travel_documents : buildTravelDocuments(client?.travel_documents)}
-            editing={editing}
-            onChange={updateTravelDocument}
-            errors={errors}
-          />
+          <>
+            {attachmentFolderButton('travel-documents', editing ? data.travel_documents : buildTravelDocuments(client?.travel_documents))}
+            <TravelDocumentsTable
+              items={editing ? data.travel_documents : buildTravelDocuments(client?.travel_documents)}
+              editing={editing}
+              onChange={updateTravelDocument}
+              errors={errors}
+            />
+          </>
         )}
 
         {activeTab === 'certifications' && (
-          <RepeatableList
-            items={editing ? data.certifications : (client?.certifications || [])}
-            editing={editing}
-            columns={competencyColumns}
-            onChange={updateCertification}
-            onAdd={addCertification}
-            onRemove={removeCertification}
-            emptyLabel="No certifications added yet"
-            errorsPrefix="certifications"
-            errors={errors}
-            printableAttachments
-          />
+          <>
+            {attachmentFolderButton('certificate-of-competency', editing ? data.certifications : (client?.certifications || []))}
+            <RepeatableList
+              items={editing ? data.certifications : (client?.certifications || [])}
+              editing={editing}
+              columns={competencyColumns}
+              onChange={updateCertification}
+              onAdd={addCertification}
+              onRemove={removeCertification}
+              emptyLabel="No certifications added yet"
+              errorsPrefix="certifications"
+              errors={errors}
+              printableAttachments
+            />
+          </>
         )}
 
         {activeTab === 'proficiency' && (
-          <RepeatableList
-            items={editing ? data.proficiency : (client?.proficiency || [])}
-            editing={editing}
-            columns={certificationColumns}
-            onChange={(index, key, value) => updateRows('proficiency', index, key, value)}
-            onAdd={() => addRow('proficiency', EMPTY_CERTIFICATE)}
-            onRemove={(index) => removeRow('proficiency', index)}
-            emptyLabel="No certificate of proficiency added yet"
-            errorsPrefix="proficiency"
-            errors={errors}
-            printableAttachments
-          />
+          <>
+            {attachmentFolderButton('certificate-of-proficiency', editing ? data.proficiency : (client?.proficiency || []))}
+            <RepeatableList
+              items={editing ? data.proficiency : (client?.proficiency || [])}
+              editing={editing}
+              columns={certificationColumns}
+              onChange={(index, key, value) => updateRows('proficiency', index, key, value)}
+              onAdd={() => addRow('proficiency', EMPTY_CERTIFICATE)}
+              onRemove={(index) => removeRow('proficiency', index)}
+              emptyLabel="No certificate of proficiency added yet"
+              errorsPrefix="proficiency"
+              errors={errors}
+              printableAttachments
+            />
+          </>
+        )}
+        {activeTab === 'gmdss_certificates' && (
+          <>
+            {attachmentFolderButton('gmdss-certificates', editing ? data.gmdss_certificates : (client?.gmdss_certificates || []))}
+            <RepeatableList
+              items={editing ? data.gmdss_certificates : (client?.gmdss_certificates || [])}
+              editing={editing}
+              columns={gmdssCertificateColumns}
+              onChange={(index, key, value) => updateRows('gmdss_certificates', index, key, value)}
+              onAdd={() => addRow('gmdss_certificates', EMPTY_GMDSS_CERTIFICATE)}
+              onRemove={(index) => removeRow('gmdss_certificates', index)}
+              emptyLabel="No GMDSS certificate added yet"
+              errorsPrefix="gmdss_certificates"
+              errors={errors}
+              printableAttachments
+            />
+          </>
         )}
         {activeTab === 'vaccinations' && (
-          <RepeatableList
-            items={editing ? data.vaccinations : (client?.vaccinations || [])}
-            editing={editing}
-            columns={numberedDocumentColumns}
-            onChange={(index, key, value) => updateRows('vaccinations', index, key, value)}
-            onAdd={() => addRow('vaccinations', EMPTY_NUMBERED_DOCUMENT)}
-            onRemove={(index) => removeRow('vaccinations', index)}
-            emptyLabel="No vaccinations added yet"
-            errorsPrefix="vaccinations"
-            errors={errors}
-            printableAttachments
-          />
+          <>
+            {attachmentFolderButton('vaccinations', editing ? data.vaccinations : (client?.vaccinations || []))}
+            <RepeatableList
+              items={editing ? data.vaccinations : (client?.vaccinations || [])}
+              editing={editing}
+              columns={numberedDocumentColumns}
+              onChange={(index, key, value) => updateRows('vaccinations', index, key, value)}
+              onAdd={() => addRow('vaccinations', EMPTY_NUMBERED_DOCUMENT)}
+              onRemove={(index) => removeRow('vaccinations', index)}
+              emptyLabel="No vaccinations added yet"
+              errorsPrefix="vaccinations"
+              errors={errors}
+              printableAttachments
+            />
+          </>
         )}
         {activeTab === 'flag_documents' && (
-          <RepeatableList
-            items={editing ? data.flag_documents : (client?.flag_documents || [])}
-            editing={editing}
-            columns={flagDocumentColumns}
-            onChange={(index, key, value) => updateRows('flag_documents', index, key, value)}
-            onAdd={() => addRow('flag_documents', EMPTY_FLAG_DOCUMENT)}
-            onRemove={(index) => removeRow('flag_documents', index)}
-            emptyLabel="No flag documents added yet"
-            errorsPrefix="flag_documents"
-            errors={errors}
-          />
+          <>
+            {attachmentFolderButton('flag-documents', editing ? data.flag_documents : (client?.flag_documents || []))}
+            <RepeatableList
+              items={editing ? data.flag_documents : (client?.flag_documents || [])}
+              editing={editing}
+              columns={flagDocumentColumns}
+              onChange={(index, key, value) => updateRows('flag_documents', index, key, value)}
+              onAdd={() => addRow('flag_documents', EMPTY_FLAG_DOCUMENT)}
+              onRemove={(index) => removeRow('flag_documents', index)}
+              emptyLabel="No flag documents added yet"
+              errorsPrefix="flag_documents"
+              errors={errors}
+              printableAttachments
+            />
+          </>
         )}
         {activeTab === 'other_certificates' && (
-          <RepeatableList
-            items={editing ? data.other_certificates : (client?.other_certificates || [])}
-            editing={editing}
-            columns={numberedDocumentColumns}
-            onChange={(index, key, value) => updateRows('other_certificates', index, key, value)}
-            onAdd={() => addRow('other_certificates', EMPTY_NUMBERED_DOCUMENT)}
-            onRemove={(index) => removeRow('other_certificates', index)}
-            emptyLabel="No other certificates added yet"
-            errorsPrefix="other_certificates"
-            errors={errors}
-            printableAttachments
-          />
+          <>
+            {attachmentFolderButton('other-certificates', editing ? data.other_certificates : (client?.other_certificates || []))}
+            <RepeatableList
+              items={editing ? data.other_certificates : (client?.other_certificates || [])}
+              editing={editing}
+              columns={numberedDocumentColumns}
+              onChange={(index, key, value) => updateRows('other_certificates', index, key, value)}
+              onAdd={() => addRow('other_certificates', EMPTY_NUMBERED_DOCUMENT)}
+              onRemove={(index) => removeRow('other_certificates', index)}
+              emptyLabel="No other certificates added yet"
+              errorsPrefix="other_certificates"
+              errors={errors}
+              printableAttachments
+            />
+          </>
+        )}
+        {activeTab === 'additional_stcw_certificates' && (
+          <>
+            {attachmentFolderButton('additional-stcw-certificates', editing ? data.additional_stcw_certificates : (client?.additional_stcw_certificates || []))}
+            <RepeatableList
+              items={editing ? data.additional_stcw_certificates : (client?.additional_stcw_certificates || [])}
+              editing={editing}
+              columns={additionalStcwCertificateColumns}
+              onChange={(index, key, value) => updateRows('additional_stcw_certificates', index, key, value)}
+              onAdd={() => addRow('additional_stcw_certificates', EMPTY_NUMBERED_DOCUMENT)}
+              onRemove={(index) => removeRow('additional_stcw_certificates', index)}
+              emptyLabel="No additional STCW certificates added yet"
+              errorsPrefix="additional_stcw_certificates"
+              errors={errors}
+              printableAttachments
+            />
+          </>
+        )}
+        {activeTab === 'offshore_training_certificates' && (
+          <>
+            {attachmentFolderButton('offshore-training-certificates', editing ? data.offshore_training_certificates : (client?.offshore_training_certificates || []))}
+            <RepeatableList
+              items={editing ? data.offshore_training_certificates : (client?.offshore_training_certificates || [])}
+              editing={editing}
+              columns={offshoreTrainingCertificateColumns}
+              onChange={(index, key, value) => updateRows('offshore_training_certificates', index, key, value)}
+              onAdd={() => addRow('offshore_training_certificates', EMPTY_NUMBERED_DOCUMENT)}
+              onRemove={(index) => removeRow('offshore_training_certificates', index)}
+              emptyLabel="No offshore training certificates added yet"
+              errorsPrefix="offshore_training_certificates"
+              errors={errors}
+              printableAttachments
+            />
+          </>
         )}
         {activeTab === 'employment_history' && (
-          <RepeatableList
-            items={editing ? data.employment_history : (client?.employment_history || [])}
-            editing={editing}
-            columns={employmentHistoryColumns}
-            onChange={(index, key, value) => updateRows('employment_history', index, key, value)}
-            onAdd={() => addRow('employment_history', EMPTY_EMPLOYMENT_HISTORY)}
-            onRemove={(index) => removeRow('employment_history', index)}
-            emptyLabel="No employment history added yet"
-            errorsPrefix="employment_history"
-            errors={errors}
-          />
+          <>
+            {attachmentFolderButton('employment-history', editing ? data.employment_history : (client?.employment_history || []))}
+            <RepeatableList
+              items={editing ? data.employment_history : (client?.employment_history || [])}
+              editing={editing}
+              columns={employmentHistoryColumns}
+              onChange={(index, key, value) => updateRows('employment_history', index, key, value)}
+              onAdd={() => addRow('employment_history', EMPTY_EMPLOYMENT_HISTORY)}
+              onRemove={(index) => removeRow('employment_history', index)}
+              emptyLabel="No employment history added yet"
+              errorsPrefix="employment_history"
+              errors={errors}
+              printableAttachments
+            />
+          </>
         )}
         {activeTab === 'sea_service' && (
           <SeaServiceTable
