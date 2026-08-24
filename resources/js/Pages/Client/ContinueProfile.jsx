@@ -31,6 +31,34 @@ const GENDER_OPTIONS = [
     'Female',
 ];
 
+const REQUIRED_FIELDS = [
+    ['First name', 'first_name'],
+    ['Last name', 'last_name'],
+    ['Position applied for', 'position_applied_for'],
+    ['Date applied', 'date_applied'],
+    ['Nationality', 'nationality'],
+    ['Place of birth', 'place_of_birth'],
+    ['Date of birth', 'date_of_birth'],
+    ["Mother's maiden name", 'mothers_maiden_name'],
+    ["Father's name", 'fathers_name'],
+    ['Current position', 'current_position'],
+    ['Educational attainment', 'educational_attainment'],
+    ['Body weight (lbs)', 'body_weight_bmi'],
+    ['Height (cm)', 'height_cm'],
+    ['Coverall & shoe size', 'coverall_shoe_size'],
+    ['Current home address', 'current_home_address'],
+    ['Personal mobile no.', 'personal_mobile_no'],
+    ['Email address', 'email_address'],
+    ['Nearest airport', 'nearest_airport'],
+    ['Next of kin', 'next_of_kin'],
+    ['Relationship', 'relationship'],
+    ['Emergency contact person', 'contact_person'],
+    ['Emergency contact number', 'emergency_contact'],
+    ['SSS No.', 'sss_no'],
+    ['Pag-IBIG No.', 'pagibig_no'],
+    ['PhilHealth No.', 'philhealth_no'],
+];
+
 function AnchorIcon() {
     return (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -180,6 +208,33 @@ export default function ContinueProfile({ client }) {
 
     function submit(e) {
         e.preventDefault();
+
+        const missingFields = REQUIRED_FIELDS.filter(([, name]) => !String(data[name] ?? '').trim());
+
+        if (!client?.resume_attachment && !(data.resume_attachment instanceof File)) {
+            missingFields.push(['Resume attachment', 'resume_attachment']);
+        }
+
+        if (!data.privacy_act_accepted) {
+            missingFields.push(['Data Privacy Act consent', 'privacy_act_accepted']);
+        }
+
+        if (missingFields.length > 0) {
+            const [, firstName] = missingFields[0];
+
+            setModalType('error');
+            setModalMessage(`Please complete the required fields:\n${missingFields.map(([label]) => `- ${label}`).join('\n')}`);
+            setModalOpen(true);
+
+            window.requestAnimationFrame(() => {
+                const firstField = document.getElementById(`field-${firstName}`) || document.querySelector(`[name="${firstName}"]`);
+                firstField?.focus?.();
+                firstField?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+            });
+
+            return;
+        }
+
         transform(({ avatar, resume_attachment, ...payload }) => ({
             ...payload,
             ...(avatar instanceof File ? { avatar } : {}),
@@ -316,7 +371,7 @@ export default function ContinueProfile({ client }) {
                         submitted is encrypted and used only for application and filing purposes.
                     </p>
 
-                    <form onSubmit={submit} className="space-y-4">
+                    <form onSubmit={submit} className="space-y-4" noValidate>
                         <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center">
                             <div>
                                 {avatarPreview ? (
@@ -346,6 +401,8 @@ export default function ContinueProfile({ client }) {
                                     </a>
                                 )}
                                 <input
+                                    id="field-resume_attachment"
+                                    name="resume_attachment"
                                     type="file"
                                     accept=".pdf,.doc,.docx,image/*"
                                     required={!client?.resume_attachment}
@@ -438,11 +495,11 @@ export default function ContinueProfile({ client }) {
 
                         <SectionTitle>Spouse details</SectionTitle>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <Field {...fieldProps} label="Wife name" name="wife_name" />
-                            <Field {...fieldProps} label="Wife I/C No" name="wife_ic_no" />
-                            <Field {...fieldProps} label="Wife's occupation" name="wife_occupation" />
+                            <Field {...fieldProps} label="Husband/Wife name" name="wife_name" />
+                            <Field {...fieldProps} label="Husband/Wife I/C No" name="wife_ic_no" />
+                            <Field {...fieldProps} label="Husband/Wife's occupation" name="wife_occupation" />
                             <Field {...fieldProps} label="Marriage date" name="marriage_date" type="date" />
-                            <Field {...fieldProps} label="Wife's income tax no" name="wife_income_tax_no" />
+                            <Field {...fieldProps} label="Husband/Wife's income tax no" name="wife_income_tax_no" />
                         </div>
 
                         <SectionTitle>Government IDs</SectionTitle>
@@ -461,6 +518,8 @@ export default function ContinueProfile({ client }) {
                         >
                             <label className="flex items-start gap-3 text-sm" style={{ color: PALETTE.ink }}>
                                 <input
+                                    id="field-privacy_act_accepted"
+                                    name="privacy_act_accepted"
                                     type="checkbox"
                                     checked={Boolean(data.privacy_act_accepted)}
                                     onChange={(e) => setData('privacy_act_accepted', e.target.checked)}
