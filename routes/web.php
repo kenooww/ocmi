@@ -23,6 +23,14 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('/preferences', [AdminController::class, 'preferences'])->name('preferences.edit');
     Route::put('/preferences', [AdminController::class, 'updatePreferences'])->name('preferences.update');
     Route::post('/logout', [AdminController::class, 'logout'])->name('logout');
+    Route::get('/certificates/stcw', [AdminController::class, 'stcwCertificates'])->name('certificates.stcw.index');
+    Route::post('/certificates/stcw', [AdminController::class, 'storeStcwCertificate'])->name('certificates.stcw.store');
+    Route::put('/certificates/stcw/{certificate}', [AdminController::class, 'updateStcwCertificate'])->name('certificates.stcw.update');
+    Route::delete('/certificates/stcw/{certificate}', [AdminController::class, 'deleteStcwCertificate'])->name('certificates.stcw.destroy');
+    Route::get('/certificates/offshore-training', [AdminController::class, 'offshoreTrainings'])->name('certificates.offshore-training.index');
+    Route::post('/certificates/offshore-training', [AdminController::class, 'storeOffshoreTraining'])->name('certificates.offshore-training.store');
+    Route::put('/certificates/offshore-training/{training}', [AdminController::class, 'updateOffshoreTraining'])->name('certificates.offshore-training.update');
+    Route::delete('/certificates/offshore-training/{training}', [AdminController::class, 'deleteOffshoreTraining'])->name('certificates.offshore-training.destroy');
 
     Route::middleware('admin.role')->group(function () {
         Route::get('/company-settings', [AdminController::class, 'companySettings'])->name('company-settings.edit');
@@ -40,6 +48,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('/seafarers/{client}/resume', [AdminController::class, 'viewClientResume'])->name('seafarers.resume.view');
     Route::get('/seafarers/{client}/resume/file', [AdminController::class, 'inlineClientResume'])->name('seafarers.resume.file');
     Route::get('/seafarers/{client}/resume/download', [AdminController::class, 'downloadClientResume'])->name('seafarers.resume.download');
+    Route::get('/seafarers/{client}/attachments/{folder}/download', [AdminController::class, 'downloadClientAttachmentsFolder'])->name('seafarers.attachments.download');
     Route::put('/seafarers/{client}/application-status', [AdminController::class, 'updateApplicationStatus'])->name('seafarers.application-status.update');
     Route::get('/seafarers/{client}', [AdminController::class, 'showClient'])->name('seafarers.show');
     Route::put('/seafarers/{client}', [AdminController::class, 'updateClient'])->name('seafarers.update');
@@ -105,6 +114,7 @@ Route::middleware(['auth:client'])->prefix('seafarers')->name('seafarers.')->gro
     Route::get('/resume', [ClientAuthController::class, 'viewResume'])->name('resume.view');
     Route::get('/resume/file', [ClientAuthController::class, 'inlineResume'])->name('resume.file');
     Route::get('/resume/download', [ClientAuthController::class, 'downloadResume'])->name('resume.download');
+    Route::get('/attachments/{folder}/download', [ClientAuthController::class, 'downloadAttachmentsFolder'])->name('attachments.download');
     Route::put('/password', [ClientAuthController::class, 'updatePassword'])->name('password.update');
     Route::post('/logout', [ClientAuthController::class, 'logout'])->name('logout');
 });

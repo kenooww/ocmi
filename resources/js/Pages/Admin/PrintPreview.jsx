@@ -31,12 +31,33 @@ function buildTravelDocuments(documents = []) {
         place_of_issue: documentMap.get(type.key)?.place_of_issue ?? '',
         date_of_issue: documentMap.get(type.key)?.date_of_issue ?? '',
         date_of_expiry: documentMap.get(type.key)?.date_of_expiry ?? '',
+        created_at: documentMap.get(type.key)?.created_at ?? '',
+        updated_at: documentMap.get(type.key)?.updated_at ?? '',
+        id: documentMap.get(type.key)?.id ?? null,
     }));
 }
 
+function sortRowsByCreatedDate(rows = []) {
+    return [...(rows || [])].sort((a, b) => {
+        const aTime = Date.parse(a?.created_at || '') || 0;
+        const bTime = Date.parse(b?.created_at || '') || 0;
+
+        if (!aTime && !bTime) {
+            return 0;
+        }
+
+        if (aTime !== bTime) {
+            return bTime - aTime;
+        }
+
+        return Number(b?.id || 0) - Number(a?.id || 0);
+    });
+}
+
 function rowsWithMinimum(rows = [], count = 4) {
-    const blankRows = Array.from({ length: Math.max(count - rows.length, 0) }, () => ({}));
-    return [...rows, ...blankRows];
+    const sortedRows = sortRowsByCreatedDate(rows);
+    const blankRows = Array.from({ length: Math.max(count - sortedRows.length, 0) }, () => ({}));
+    return [...sortedRows, ...blankRows];
 }
 
 function Header({ client, page }) {
@@ -229,6 +250,7 @@ function documentRowsFor(client) {
 function certificateRowsFor(client) {
     return [
         ...(client?.certifications || []),
+        ...(client?.gmdss_certificates || []),
         ...(client?.proficiency || []),
         ...(client?.vaccinations || []),
         ...(client?.flag_documents || []),
@@ -243,57 +265,53 @@ function findRowByName(rows, terms) {
     }) || {};
 }
 
-function flexFleetDocumentRows(client) {
-    const documents = documentRowsFor(client);
-    const certificates = certificateRowsFor(client);
-    const passport = findRowByName(documents, ['passport']);
-    const seamanBook = findRowByName(documents, ["seaman's book", 'seaman book']);
-    const coc = certificates[0] || {};
-    const coe = certificates[1] || {};
+function mostRecentRow(rows = []) {
+    return [...(rows || [])].sort((a, b) => {
+        const aTime = Date.parse(a?.created_at || a?.updated_at || '') || 0;
+        const bTime = Date.parse(b?.created_at || b?.updated_at || '') || 0;
 
+        if (aTime !== bTime) {
+            return bTime - aTime;
+        }
+
+        return Number(b?.id || 0) - Number(a?.id || 0);
+    })[0] || {};
+}
+
+function flexFleetDocumentRows(client) {
     return [
-        { ...passport, name: 'Passport' },
-        { ...seamanBook, name: 'Seaman Book' },
-        { name: 'COC', number: coc.certificate_number, place_of_issue: coc.place_of_issue, date_of_issue: coc.date_of_issue, date_of_expiry: coc.date_of_expiry },
-        { name: 'COE', number: coe.certificate_number, place_of_issue: coe.place_of_issue, date_of_issue: coe.date_of_issue, date_of_expiry: coe.date_of_expiry },
-        { name: 'Medical Certificate' },
-        { name: 'Marlins Test' },
-        { name: 'H2S' },
-        { name: 'Aramco Approval' },
+        ...buildTravelDocuments(client?.travel_documents).map((document) => ({
+            name: document.label,
+            number: document.number,
+            place_of_issue: document.place_of_issue,
+            date_of_issue: document.date_of_issue,
+            date_of_expiry: document.date_of_expiry,
+        })),
+        ...(client?.certifications || []).map((certificate) => ({
+            name: certificate.name || 'Certificate of Competency',
+            number: certificate.certificate_number,
+            place_of_issue: certificate.place_of_issue,
+            date_of_issue: certificate.date_of_issue,
+            date_of_expiry: certificate.date_of_expiry,
+        })),
+        ...(client?.proficiency || []).map((certificate) => ({
+            name: certificate.name || 'Certificate of Proficiency',
+            number: certificate.certificate_number,
+            place_of_issue: certificate.place_of_issue,
+            date_of_issue: certificate.date_of_issue,
+            date_of_expiry: certificate.date_of_expiry,
+        })),
     ];
 }
 
 function flexFleetCourseRows(client) {
-    const rows = certificateRowsFor(client);
-    const courseTitles = [
-        'Arpa Simulator',
-        'Advance Fire Fighting',
-        'Basic Safety Training',
-        'Bridge Resource Management',
-        'Electronic Charts (ECDIS)',
-        'Food Handling (Cook Cert.)',
-        'General Operator Certificate',
-        'ISM Code',
-        'Medical First Aid / Elementary Medical Care',
-        'Onboard Prof. Survival Craft & Rescue Boat',
-        'Prof. GOC for GMDSS',
-        'Radar Simulator',
-        'Ship Security Officer',
-        'Ship Security Awareness Training',
-        'Security Training for Seafarer with Designated Security Duties',
-    ];
-
-    return courseTitles.map((name) => {
-        const match = findRowByName(rows, [name]);
-
-        return {
-            name,
-            certificate_number: match.certificate_number,
-            place_of_issue: match.place_of_issue,
-            date_of_issue: match.date_of_issue,
-            date_of_expiry: match.date_of_expiry,
-        };
-    });
+    return (client?.other_certificates || []).map((certificate) => ({
+        name: certificate.name,
+        certificate_number: certificate.number || certificate.certificate_number,
+        place_of_issue: certificate.place_of_issue,
+        date_of_issue: certificate.date_of_issue,
+        date_of_expiry: certificate.date_of_expiry,
+    }));
 }
 
 function CheckBox({ label, checked = false }) {
@@ -394,6 +412,7 @@ function DynamicApplicationForm({ client }) {
     const nationalCoc = certifications[0] || {};
     const otherCoc = certifications[1] || {};
     const stcwRows = [
+        ...(client?.gmdss_certificates || []),
         ...(client?.proficiency || []),
         ...(client?.vaccinations || []),
     ];
@@ -525,19 +544,19 @@ function DynamicApplicationForm({ client }) {
 }
 
 function ZmiApplicationForm({ client }) {
-    const { companySettings } = usePage().props;
+    const { companySettings, certificateOptions = {} } = usePage().props;
     const company = companySettings || {};
     const fullName = fullNameFor(client);
     const documents = documentRowsFor(client);
     const passport = findRowByName(documents, ['passport']);
     const seamanBook = findRowByName(documents, ["seaman's book", 'seaman book']);
     const allCertificates = certificateRowsFor(client);
-    const coc = client?.certifications?.[0] || {};
-    const gmdss = findRowByName(allCertificates, ['gmdss']) || {};
+    const coc = mostRecentRow(client?.certifications || []);
+    const gmdss = mostRecentRow(client?.gmdss_certificates || []);
     const [legacyBoilerSuitSize, legacySafetyShoeSize] = splitCoverallAndShoe(client?.coverall_shoe_size);
     const boilerSuitSize = client?.boiler_suit_size || legacyBoilerSuitSize;
     const safetyShoeSize = client?.safety_shoe_size || legacySafetyShoeSize;
-    const stcwNames = [
+    const defaultStcwNames = [
         'Basic Safety Training',
         'Personal Survival Techniques',
         'Proficiency in Survival Crafts & Rescue Boats',
@@ -551,9 +570,23 @@ function ZmiApplicationForm({ client }) {
         'Bridge/Engine resource management',
         'DP Certificate / Maintenance',
     ];
-    const offshoreNames = ['BOSIET - OPITO', 'H2S - OPITO', 'HERTM - OPITO', 'HERTL - OPITO'];
-    const stcwRows = stcwNames.map((name) => ({ ...findRowByName(allCertificates, [name]), name }));
-    const offshoreRows = offshoreNames.map((name) => ({ ...findRowByName(allCertificates, [name]), name }));
+    const defaultOffshoreNames = ['BOSIET - OPITO', 'H2S - OPITO', 'HERTM - OPITO', 'HERTL - OPITO'];
+    const stcwNames = (certificateOptions.stcw || []).length
+        ? certificateOptions.stcw.map((option) => option.label || option.value).filter(Boolean)
+        : defaultStcwNames;
+    const offshoreNames = (certificateOptions.offshore || []).length
+        ? certificateOptions.offshore.map((option) => option.label || option.value).filter(Boolean)
+        : defaultOffshoreNames;
+    const additionalStcwRows = client?.additional_stcw_certificates || [];
+    const offshoreTrainingRows = client?.offshore_training_certificates || [];
+    const stcwSourceRows = [...allCertificates, ...additionalStcwRows];
+    const offshoreSourceRows = [...allCertificates, ...offshoreTrainingRows];
+    const namedStcwRows = stcwNames.map((name) => ({ ...findRowByName(stcwSourceRows, [name]), name }));
+    const extraStcwRows = additionalStcwRows.filter((row) => ! stcwNames.some((name) => String(row?.name || '').toLowerCase() === name.toLowerCase()));
+    const namedOffshoreRows = offshoreNames.map((name) => ({ ...findRowByName(offshoreSourceRows, [name]), name }));
+    const extraOffshoreRows = offshoreTrainingRows.filter((row) => ! offshoreNames.some((name) => String(row?.name || '').toLowerCase() === name.toLowerCase()));
+    const stcwRows = [...namedStcwRows, ...extraStcwRows];
+    const offshoreRows = [...namedOffshoreRows, ...extraOffshoreRows];
     const referenceRows = rowsWithMinimum(client?.employment_history || [], 2);
     const ZmiHeader = ({ page }) => (
         <div className="mb-3 grid grid-cols-[145px_1fr_265px] border-l border-t border-black text-xs text-slate-600">
@@ -638,7 +671,7 @@ function ZmiApplicationForm({ client }) {
                         <tr className="text-center text-[9px]"><td className="border border-black">(Surname)</td><td className="border border-black">(Given Name)</td><td className="border border-black">(Middle Name)</td></tr>
                         <tr><ZmiCell label="Rank Applied for" valueText={client?.position_applied_for} colSpan={3} /></tr>
                         <tr><ZmiCell label="Date of Application" valueText={client?.date_applied} colSpan={3} /></tr>
-                        <tr><ZmiCell label="Direct Application" colSpan={3}><CheckBox label="Yes" /><CheckBox label="No" /> <span className="text-[9px]">(if No, indicate below the agency name)</span></ZmiCell></tr>
+                        <tr><ZmiCell label="Direct Application" colSpan={3}><CheckBox label="Yes" /><CheckBox label="No" checked /> <span className="text-[9px]">(if No, indicate below the agency name)</span></ZmiCell></tr>
                         <tr><ZmiCell label="Agency Name" valueText={company.company_name || 'Alpha Omega Crewing Mgmt Inc.'} colSpan={3} /></tr>
                         <tr><ZmiCell label="Availability" valueText="Anytime" colSpan={3} /></tr>
                         <ZmiTitleRow>Basic Information</ZmiTitleRow>

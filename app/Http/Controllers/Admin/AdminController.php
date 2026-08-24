@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CompanySetting;
 use App\Models\ApplicationStatusLog;
+use App\Models\OffshoreTraining;
+use App\Models\StcwCertificate;
 use App\Models\User;
 use App\Models\Client;
 use App\Jobs\SendClientVerificationEmail;
+use App\Services\ClientAttachmentArchiveService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -168,6 +171,104 @@ class AdminController extends Controller
         $company->update($companyPayload);
 
         return back()->with('success', 'Company settings updated successfully.');
+    }
+
+    public function stcwCertificates(Request $request)
+    {
+        $search = trim((string) $request->query('search', ''));
+
+        return Inertia::render('Admin/CertificateSettings', [
+            'activeType' => 'stcw',
+            'title' => 'STCW Certificate',
+            'description' => 'Manage STCW certificate names.',
+            'certificates' => StcwCertificate::query()
+                ->when($search !== '', fn ($query) => $query->where('certification_name', 'like', "%{$search}%"))
+                ->latest()
+                ->paginate(10)
+                ->withQueryString(),
+            'filters' => [
+                'search' => $search,
+            ],
+            'routeBase' => 'admin.certificates.stcw',
+        ]);
+    }
+
+    public function storeStcwCertificate(Request $request)
+    {
+        StcwCertificate::create($this->validateCertificateName($request, 'stcw_certificates'));
+
+        return back()->with('success', 'STCW certificate added successfully.');
+    }
+
+    public function updateStcwCertificate(Request $request, StcwCertificate $certificate)
+    {
+        $certificate->update($this->validateCertificateName($request, 'stcw_certificates', $certificate->id));
+
+        return back()->with('success', 'STCW certificate updated successfully.');
+    }
+
+    public function deleteStcwCertificate(StcwCertificate $certificate)
+    {
+        abort_unless(Auth::user()?->role === 'admin', 403);
+
+        $certificate->delete();
+
+        return back()->with('success', 'STCW certificate deleted successfully.');
+    }
+
+    public function offshoreTrainings(Request $request)
+    {
+        $search = trim((string) $request->query('search', ''));
+
+        return Inertia::render('Admin/CertificateSettings', [
+            'activeType' => 'offshore',
+            'title' => 'Offshore Training',
+            'description' => 'Manage offshore training certification names.',
+            'certificates' => OffshoreTraining::query()
+                ->when($search !== '', fn ($query) => $query->where('certification_name', 'like', "%{$search}%"))
+                ->latest()
+                ->paginate(10)
+                ->withQueryString(),
+            'filters' => [
+                'search' => $search,
+            ],
+            'routeBase' => 'admin.certificates.offshore-training',
+        ]);
+    }
+
+    public function storeOffshoreTraining(Request $request)
+    {
+        OffshoreTraining::create($this->validateCertificateName($request, 'offshore_trainings'));
+
+        return back()->with('success', 'Offshore training added successfully.');
+    }
+
+    public function updateOffshoreTraining(Request $request, OffshoreTraining $training)
+    {
+        $training->update($this->validateCertificateName($request, 'offshore_trainings', $training->id));
+
+        return back()->with('success', 'Offshore training updated successfully.');
+    }
+
+    public function deleteOffshoreTraining(OffshoreTraining $training)
+    {
+        abort_unless(Auth::user()?->role === 'admin', 403);
+
+        $training->delete();
+
+        return back()->with('success', 'Offshore training deleted successfully.');
+    }
+
+    private function validateCertificateName(Request $request, string $table, ?int $ignoreId = null): array
+    {
+        return $request->validate([
+            'certification_name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique($table, 'certification_name')->ignore($ignoreId),
+            ],
+        ]);
     }
 
     // --- USER MANAGEMENT ---
@@ -350,9 +451,12 @@ class AdminController extends Controller
             'travelDocuments',
             'certificateCompetencies',
             'certificateProficiencies',
+            'gmdssCertificates',
             'vaccinations',
             'flagDocuments',
             'otherCertificates',
+            'additionalStcwCertificates',
+            'offshoreTrainingCertificates',
             'employmentHistories',
             'seaServices',
             'deckOfficerExperiences',
@@ -418,9 +522,12 @@ class AdminController extends Controller
     {
         $clientData['certifications'] = $this->formatRows($client->certificateCompetencies);
         $clientData['proficiency'] = $this->formatRows($client->certificateProficiencies);
+        $clientData['gmdss_certificates'] = $this->formatRows($client->gmdssCertificates);
         $clientData['vaccinations'] = $this->formatRows($client->vaccinations);
         $clientData['flag_documents'] = $this->formatRows($client->flagDocuments);
         $clientData['other_certificates'] = $this->formatRows($client->otherCertificates);
+        $clientData['additional_stcw_certificates'] = $this->formatRows($client->additionalStcwCertificates);
+        $clientData['offshore_training_certificates'] = $this->formatRows($client->offshoreTrainingCertificates);
         $clientData['employment_history'] = $this->formatRows($client->employmentHistories);
         $clientData['sea_service'] = $this->formatRows($client->seaServices);
         $clientData['deck_officer_experience'] = $this->formatRows($client->deckOfficerExperiences);
@@ -559,7 +666,7 @@ class AdminController extends Controller
             'travel_documents.*.place_of_issue' => 'nullable|string|max:255',
             'travel_documents.*.date_of_issue' => 'nullable|date',
             'travel_documents.*.date_of_expiry' => 'nullable|date',
-            'travel_documents.*.attachment' => 'nullable',
+            'travel_documents.*.attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
 
             'certifications' => 'nullable|array',
             'certifications.*.id' => ['nullable', 'integer', Rule::exists('client_certificate_competencies', 'id')->where('client_id', $client->id)],
@@ -583,6 +690,15 @@ class AdminController extends Controller
             'proficiency.*.date_of_expiry' => 'nullable|date',
             'proficiency.*.attachment' => 'nullable',
 
+            'gmdss_certificates' => 'nullable|array',
+            'gmdss_certificates.*.id' => ['nullable', 'integer', Rule::exists('client_gmdss_certificates', 'id')->where('client_id', $client->id)],
+            'gmdss_certificates.*.name' => 'nullable|string|max:255',
+            'gmdss_certificates.*.certificate_number' => 'nullable|string|max:255',
+            'gmdss_certificates.*.endorsement_number' => 'nullable|string|max:255',
+            'gmdss_certificates.*.date_of_expiry' => 'nullable|date',
+            'gmdss_certificates.*.endorsement_expiry_date' => 'nullable|date',
+            'gmdss_certificates.*.attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
+
             'vaccinations' => 'nullable|array',
             'vaccinations.*.id' => ['nullable', 'integer', Rule::exists('client_vaccinations', 'id')->where('client_id', $client->id)],
             'vaccinations.*.name' => 'nullable|string|max:255',
@@ -599,6 +715,7 @@ class AdminController extends Controller
             'flag_documents.*.place_of_issue' => 'nullable|string|max:255',
             'flag_documents.*.date_of_issue' => 'nullable|date',
             'flag_documents.*.date_of_expiry' => 'nullable|date',
+            'flag_documents.*.attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
 
             'other_certificates' => 'nullable|array',
             'other_certificates.*.id' => ['nullable', 'integer', Rule::exists('client_other_certificates', 'id')->where('client_id', $client->id)],
@@ -608,6 +725,22 @@ class AdminController extends Controller
             'other_certificates.*.date_of_issue' => 'nullable|date',
             'other_certificates.*.date_of_expiry' => 'nullable|date',
             'other_certificates.*.attachment' => 'nullable',
+
+            'additional_stcw_certificates' => 'nullable|array',
+            'additional_stcw_certificates.*.id' => ['nullable', 'integer', Rule::exists('client_additional_stcw_certificates', 'id')->where('client_id', $client->id)],
+            'additional_stcw_certificates.*.name' => 'nullable|string|max:255',
+            'additional_stcw_certificates.*.place_of_issue' => 'nullable|string|max:255',
+            'additional_stcw_certificates.*.date_of_issue' => 'nullable|date',
+            'additional_stcw_certificates.*.date_of_expiry' => 'nullable|date',
+            'additional_stcw_certificates.*.attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
+
+            'offshore_training_certificates' => 'nullable|array',
+            'offshore_training_certificates.*.id' => ['nullable', 'integer', Rule::exists('client_offshore_training_certificates', 'id')->where('client_id', $client->id)],
+            'offshore_training_certificates.*.name' => 'nullable|string|max:255',
+            'offshore_training_certificates.*.place_of_issue' => 'nullable|string|max:255',
+            'offshore_training_certificates.*.date_of_issue' => 'nullable|date',
+            'offshore_training_certificates.*.date_of_expiry' => 'nullable|date',
+            'offshore_training_certificates.*.attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
 
             'employment_history' => 'nullable|array',
             'employment_history.*.id' => ['nullable', 'integer', Rule::exists('client_employment_histories', 'id')->where('client_id', $client->id)],
@@ -658,13 +791,16 @@ class AdminController extends Controller
         $travelDocumentRows = $data['travel_documents'] ?? [];
         $certificationRows = $data['certifications'] ?? [];
         $proficiencyRows = $data['proficiency'] ?? [];
+        $gmdssCertificateRows = $data['gmdss_certificates'] ?? [];
         $vaccinationRows = $data['vaccinations'] ?? [];
         $flagDocumentRows = $data['flag_documents'] ?? [];
         $otherCertificateRows = $data['other_certificates'] ?? [];
+        $additionalStcwCertificateRows = $data['additional_stcw_certificates'] ?? [];
+        $offshoreTrainingCertificateRows = $data['offshore_training_certificates'] ?? [];
         $employmentHistoryRows = $data['employment_history'] ?? [];
         $seaServiceRows = $data['sea_service'] ?? [];
         $deckOfficerExperienceRows = $data['deck_officer_experience'] ?? [];
-        unset($data['dependents'], $data['travel_documents'], $data['certifications'], $data['proficiency'], $data['vaccinations'], $data['flag_documents'], $data['other_certificates'], $data['employment_history'], $data['sea_service'], $data['deck_officer_experience']);
+        unset($data['dependents'], $data['travel_documents'], $data['certifications'], $data['proficiency'], $data['gmdss_certificates'], $data['vaccinations'], $data['flag_documents'], $data['other_certificates'], $data['additional_stcw_certificates'], $data['offshore_training_certificates'], $data['employment_history'], $data['sea_service'], $data['deck_officer_experience']);
 
         if ($request->hasFile('avatar')) {
             $path = $request->file('avatar')->store('avatars', 'public');
@@ -710,9 +846,12 @@ class AdminController extends Controller
             'endorsement_expiry_date',
         ], 'competency-attachments', 'certifications');
         $this->syncRows($client, 'certificateProficiencies', $proficiencyRows, ['name', 'certificate_number', 'place_of_issue', 'date_of_issue', 'date_of_expiry'], 'proficiency-attachments', 'proficiency');
+        $this->syncRows($client, 'gmdssCertificates', $gmdssCertificateRows, ['name', 'certificate_number', 'endorsement_number', 'date_of_expiry', 'endorsement_expiry_date'], 'gmdss-certificate-attachments', 'gmdss_certificates');
         $this->syncRows($client, 'vaccinations', $vaccinationRows, ['name', 'number', 'place_of_issue', 'date_of_issue', 'date_of_expiry'], 'vaccination-attachments', 'vaccinations');
-        $this->syncRows($client, 'flagDocuments', $flagDocumentRows, ['name', 'number', 'place_of_issue', 'date_of_issue', 'date_of_expiry']);
+        $this->syncRows($client, 'flagDocuments', $flagDocumentRows, ['name', 'number', 'place_of_issue', 'date_of_issue', 'date_of_expiry'], 'flag-document-attachments', 'flag_documents');
         $this->syncRows($client, 'otherCertificates', $otherCertificateRows, ['name', 'number', 'place_of_issue', 'date_of_issue', 'date_of_expiry'], 'other-certificate-attachments', 'other_certificates');
+        $this->syncRows($client, 'additionalStcwCertificates', $additionalStcwCertificateRows, ['name', 'date_of_issue', 'date_of_expiry', 'place_of_issue'], 'additional-stcw-certificate-attachments', 'additional_stcw_certificates');
+        $this->syncRows($client, 'offshoreTrainingCertificates', $offshoreTrainingCertificateRows, ['name', 'date_of_issue', 'date_of_expiry', 'place_of_issue'], 'offshore-training-certificate-attachments', 'offshore_training_certificates');
         $this->syncRows($client, 'employmentHistories', $employmentHistoryRows, ['company', 'contact_person_name', 'designation', 'contact_person_number', 'country'], 'employment-history-attachments', 'employment_history');
         $seaServiceRows = $this->applySeaServiceDurations($seaServiceRows);
         $this->syncRows($client, 'seaServices', $seaServiceRows, ['from_date', 'to_date', 'duration_months', 'duration_days', 'position', 'vessel_name', 'type_imo_number', 'area_of_operation', 'flag', 'oilfield_yn', 'propulsion_type', 'grt', 'bollard_pull', 'main_engine_type_model', 'main_engine_kw', 'ship_owner_manager_contact']);
@@ -962,6 +1101,11 @@ class AdminController extends Controller
     public function downloadClientResume(Client $client)
     {
         return $this->resumeFileResponse($client, true);
+    }
+
+    public function downloadClientAttachmentsFolder(Client $client, string $folder, ClientAttachmentArchiveService $archives)
+    {
+        return $archives->download($client, $folder);
     }
 
     private function resumeViewerResponse(Client $client, string $fileUrl, string $downloadUrl, string $backUrl)

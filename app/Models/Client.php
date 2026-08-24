@@ -104,6 +104,11 @@ class Client extends Authenticatable
         return $this->hasMany(CertificateOfProficiency::class);
     }
 
+    public function gmdssCertificates(): HasMany
+    {
+        return $this->hasMany(GmdssCertificate::class);
+    }
+
     public function vaccinations(): HasMany
     {
         return $this->hasMany(Vaccination::class);
@@ -117,6 +122,16 @@ class Client extends Authenticatable
     public function otherCertificates(): HasMany
     {
         return $this->hasMany(OtherCertificate::class);
+    }
+
+    public function additionalStcwCertificates(): HasMany
+    {
+        return $this->hasMany(AdditionalStcwCertificate::class);
+    }
+
+    public function offshoreTrainingCertificates(): HasMany
+    {
+        return $this->hasMany(OffshoreTrainingCertificate::class);
     }
 
     public function employmentHistories(): HasMany
