@@ -280,9 +280,6 @@ function calculateSeaServiceDuration(fromDate, toDate) {
 }
 
 function FieldRow({ label, name, value, editing, data, setData, error, type = 'text', options = [] }) {
-  const optionValue = (option) => typeof option === 'string' ? option : option.value;
-  const optionLabel = (option) => typeof option === 'string' ? option : option.label;
-
   if (!editing) {
     return (
       <div className="border-b border-slate-100 py-3">
@@ -305,7 +302,7 @@ function FieldRow({ label, name, value, editing, data, setData, error, type = 't
         >
           <option value="">Select {label.toLowerCase()}</option>
           {options.map((option) => (
-            <option key={optionValue(option)} value={optionValue(option)}>{optionLabel(option)}</option>
+            <option key={option} value={option}>{option}</option>
           ))}
         </select>
       ) : (
@@ -323,30 +320,25 @@ function FieldRow({ label, name, value, editing, data, setData, error, type = 't
   );
 }
 
-function Section({ title, fields, client, editing, data, setData, errors, rankOptions = [] }) {
+function Section({ title, fields, client, editing, data, setData, errors }) {
   return (
     <section className="rounded border border-slate-200 bg-white p-5 shadow-sm">
       <h3 className="text-base font-semibold text-slate-900">{title}</h3>
       <div className="mt-3 grid grid-cols-1 gap-x-8 sm:grid-cols-2">
-        {fields.map(([label, key, type, options]) => {
-          const isRankField = ['current_position', 'position_applied_for'].includes(key);
-          const shouldUseRankSelect = isRankField && rankOptions.length > 0;
-
-          return (
-            <FieldRow
-              key={key}
-              label={label}
-              name={key}
-              value={displayValue(client, key)}
-              editing={editing}
-              data={data}
-              setData={setData}
-              error={errors[key]}
-              type={shouldUseRankSelect ? 'select' : type}
-              options={shouldUseRankSelect ? rankOptions : options}
-            />
-          );
-        })}
+        {fields.map(([label, key, type, options]) => (
+          <FieldRow
+            key={key}
+            label={label}
+            name={key}
+            value={displayValue(client, key)}
+            editing={editing}
+            data={data}
+            setData={setData}
+            error={errors[key]}
+            type={type}
+            options={options}
+          />
+        ))}
       </div>
     </section>
   );
@@ -996,7 +988,7 @@ function EmptyTabPanel({ title }) {
 }
 
 export default function Profile({ client, updateRouteName = 'seafarers.update-profile', updateRouteParams = [], methodOverride = null, headerActions = null }) {
-  const { certificateOptions = {}, rankOptions = [] } = usePage().props;
+  const { certificateOptions = {} } = usePage().props;
   const [editing, setEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
 
@@ -1348,7 +1340,6 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
                 data={data}
                 setData={setData}
                 errors={errors}
-                rankOptions={rankOptions}
               />
             ))}
           </div>

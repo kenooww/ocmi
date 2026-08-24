@@ -32,10 +32,6 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::post('/certificates/offshore-training', [AdminController::class, 'storeOffshoreTraining'])->name('certificates.offshore-training.store');
     Route::put('/certificates/offshore-training/{training}', [AdminController::class, 'updateOffshoreTraining'])->name('certificates.offshore-training.update');
     Route::delete('/certificates/offshore-training/{training}', [AdminController::class, 'deleteOffshoreTraining'])->name('certificates.offshore-training.destroy');
-    Route::get('/ranks', [AdminController::class, 'ranks'])->name('ranks.index');
-    Route::post('/ranks', [AdminController::class, 'storeRank'])->name('ranks.store');
-    Route::put('/ranks/{rank}', [AdminController::class, 'updateRank'])->name('ranks.update');
-    Route::delete('/ranks/{rank}', [AdminController::class, 'deleteRank'])->name('ranks.destroy');
 
     Route::middleware('admin.role')->group(function () {
         Route::get('/company-settings', [AdminController::class, 'companySettings'])->name('company-settings.edit');
