@@ -14,13 +14,11 @@ class ClientVerificationMail extends Mailable
 
     public $client;
     public $link;
-    public $temporaryPassword;
 
-    public function __construct(Client $client, $link, ?string $temporaryPassword = null)
+    public function __construct(Client $client, $link)
     {
         $this->client = $client;
         $this->link = $link;
-        $this->temporaryPassword = $temporaryPassword;
     }
 
     public function build()
@@ -33,7 +31,6 @@ class ClientVerificationMail extends Mailable
                         'link' => $this->link,
                         'client' => $this->client,
                         'company' => $company,
-                        'temporaryPassword' => $this->temporaryPassword,
                     ]);
     }
 }

@@ -13,15 +13,21 @@ class CertificateOfCompetency extends Model
         'client_id',
         'name',
         'certificate_number',
+        'stcw_regulation',
+        'endorsement_number',
         'place_of_issue',
         'date_of_issue',
         'date_of_expiry',
+        'revalidation_date',
+        'endorsement_expiry_date',
         'attachment',
     ];
 
     protected $casts = [
         'date_of_issue' => 'date',
         'date_of_expiry' => 'date',
+        'revalidation_date' => 'date',
+        'endorsement_expiry_date' => 'date',
     ];
 
     public function client(): BelongsTo

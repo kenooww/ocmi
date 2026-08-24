@@ -128,22 +128,27 @@ export default function ContinueProfile({ client }) {
         fathers_name: client?.fathers_name || '',
         nationality: client?.nationality || '',
         religion: client?.religion || '',
+        sector_sub_caste: client?.sector_sub_caste || '',
 
         // Position
         current_position: client?.current_position || '',
         position_applied_for: client?.position_applied_for || '',
         educational_attainment: client?.educational_attainment || '',
         last_salary: client?.last_salary || '',
+        expected_salary: client?.expected_salary || '',
         e_registration_number: client?.e_registration_number || '',
 
         // Physical details
         body_weight_bmi: client?.body_weight_bmi || '',
         height_cm: client?.height_cm || '',
         coverall_shoe_size: client?.coverall_shoe_size || '',
+        safety_shoe_size: client?.safety_shoe_size || '',
+        boiler_suit_size: client?.boiler_suit_size || '',
 
         // Contact & address
         current_home_address: client?.current_home_address || '',
         personal_mobile_no: client?.personal_mobile_no || '',
+        telephone_numbers: client?.telephone_numbers || '',
         whatsapp_number: client?.whatsapp_number || '',
         fax_no: client?.fax_no || '',
         email_address: client?.email_address || client?.email || '',
@@ -152,12 +157,20 @@ export default function ContinueProfile({ client }) {
         // Next of kin / emergency
         next_of_kin: client?.next_of_kin || '',
         relationship: client?.relationship || '',
+        wife_name: client?.wife_name || '',
+        wife_ic_no: client?.wife_ic_no || '',
+        wife_occupation: client?.wife_occupation || '',
+        marriage_date: client?.marriage_date || '',
+        wife_income_tax_no: client?.wife_income_tax_no || '',
         contact_person: client?.contact_person || '',
         emergency_contact: client?.emergency_contact || '',
 
         // Government IDs
         sss_no: client?.sss_no || '',
         pagibig_no: client?.pagibig_no || '',
+        epf_no: client?.epf_no || '',
+        socso_no: client?.socso_no || '',
+        blood: client?.blood || '',
         philhealth_no: client?.philhealth_no || '',
         // Avatar
         avatar: null,
@@ -365,6 +378,7 @@ export default function ContinueProfile({ client }) {
                             <Field {...fieldProps} label="Mother's maiden name" name="mothers_maiden_name" required />
                             <Field {...fieldProps} label="Father's name" name="fathers_name" required />
                             <Field {...fieldProps} label="Religion" name="religion" />
+                            <Field {...fieldProps} label="Sector / Sub caste" name="sector_sub_caste" />
                         </div>
 
                         <SectionTitle>Position &amp; background</SectionTitle>
@@ -372,6 +386,7 @@ export default function ContinueProfile({ client }) {
                             <Field {...fieldProps} label="Current position" name="current_position" required />
                             <Field {...fieldProps} label="Educational attainment" name="educational_attainment" required />
                             <Field {...fieldProps} label="Last salary" name="last_salary" />
+                            <Field {...fieldProps} label="Expected salary" name="expected_salary" />
                             <Field {...fieldProps} label="E-registration number" name="e_registration_number" />
                         </div>
 
@@ -380,6 +395,8 @@ export default function ContinueProfile({ client }) {
                             <Field {...fieldProps} label="Body weight (lbs)" name="body_weight_bmi" required />
                             <Field {...fieldProps} label="Height (cm)" name="height_cm" type="number" required />
                             <Field {...fieldProps} label="Coverall & shoe size" name="coverall_shoe_size" required />
+                            <Field {...fieldProps} label="Safety shoe size" name="safety_shoe_size" />
+                            <Field {...fieldProps} label="Boiler suit size" name="boiler_suit_size" />
                         </div>
 
                         <SectionTitle>Contact &amp; address</SectionTitle>
@@ -404,6 +421,7 @@ export default function ContinueProfile({ client }) {
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <Field {...fieldProps} label="Personal mobile no." name="personal_mobile_no" placeholder="(555) 010-0192" required />
+                            <Field {...fieldProps} label="Telephone numbers" name="telephone_numbers" />
                             <Field {...fieldProps} label="WhatsApp number" name="whatsapp_number" />
                             <Field {...fieldProps} label="Fax no." name="fax_no" />
                             <Field {...fieldProps} label="Email address" name="email_address" type="email" required />
@@ -418,10 +436,22 @@ export default function ContinueProfile({ client }) {
                             <Field {...fieldProps} label="Emergency contact number" name="emergency_contact" required />
                         </div>
 
+                        <SectionTitle>Spouse details</SectionTitle>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <Field {...fieldProps} label="Wife name" name="wife_name" />
+                            <Field {...fieldProps} label="Wife I/C No" name="wife_ic_no" />
+                            <Field {...fieldProps} label="Wife's occupation" name="wife_occupation" />
+                            <Field {...fieldProps} label="Marriage date" name="marriage_date" type="date" />
+                            <Field {...fieldProps} label="Wife's income tax no" name="wife_income_tax_no" />
+                        </div>
+
                         <SectionTitle>Government IDs</SectionTitle>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <Field {...fieldProps} label="SSS No." name="sss_no" required />
                             <Field {...fieldProps} label="Pag-IBIG No." name="pagibig_no" required />
+                            <Field {...fieldProps} label="EPF No" name="epf_no" />
+                            <Field {...fieldProps} label="SOCSO No" name="socso_no" />
+                            <Field {...fieldProps} label="Blood" name="blood" />
                             <Field {...fieldProps} label="PhilHealth No." name="philhealth_no" required />
                         </div>
 

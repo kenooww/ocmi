@@ -87,6 +87,7 @@ const GROUPS = [
             ["Mother's maiden name", 'mothers_maiden_name'],
             ["Father's name", 'fathers_name'],
             ['Religion', 'religion'],
+            ['Sector / Sub caste', 'sector_sub_caste'],
         ],
     },
     {
@@ -96,6 +97,7 @@ const GROUPS = [
             ['Position applied for', 'position_applied_for'],
             ['Educational attainment', 'educational_attainment'],
             ['Last salary', 'last_salary'],
+            ['Expected salary', 'expected_salary'],
             ['E-registration number', 'e_registration_number'],
         ],
     },
@@ -105,6 +107,8 @@ const GROUPS = [
             ['Body weight (lbs)', 'body_weight_bmi'],
             ['Height (cm)', 'height_cm'],
             ['Coverall & shoe size', 'coverall_shoe_size'],
+            ['Safety shoe size', 'safety_shoe_size'],
+            ['Boiler suit size', 'boiler_suit_size'],
         ],
     },
     {
@@ -112,6 +116,7 @@ const GROUPS = [
         fields: [
             ['Home address', 'current_home_address'],
             ['Personal mobile no.', 'personal_mobile_no'],
+            ['Telephone numbers', 'telephone_numbers'],
             ['Fax no.', 'fax_no'],
             ['Email address', 'email_address'],
             ['Nearest airport', 'nearest_airport'],
@@ -127,10 +132,23 @@ const GROUPS = [
         ],
     },
     {
+        title: 'Spouse Details',
+        fields: [
+            ['Wife name', 'wife_name'],
+            ['Wife I/C No', 'wife_ic_no'],
+            ["Wife's occupation", 'wife_occupation'],
+            ['Marriage date', 'marriage_date'],
+            ["Wife's income tax no", 'wife_income_tax_no'],
+        ],
+    },
+    {
         title: 'Government IDs',
         fields: [
             ['SSS No.', 'sss_no'],
             ['Pag-IBIG No.', 'pagibig_no'],
+            ['EPF No', 'epf_no'],
+            ['SOCSO No', 'socso_no'],
+            ['Blood', 'blood'],
             ['PhilHealth No.', 'philhealth_no'],
         ],
     },

@@ -57,37 +57,7 @@ class ClientAuthController extends Controller
 
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
-
-        $client = Client::where('email', $credentials['email'])->first();
-
-        if (! $client || ! Hash::check($credentials['password'], $client->password)) {
-            return back()->withErrors(['email' => 'Invalid login details.']);
-        }
-
-        if (! $client->email_verified_at) {
-            // regenerate token and send verification
-            $client->verification_token = Str::random(40);
-            $client->save();
-            $link = route('seafarers.verify', $client->verification_token);
-            SendClientVerificationEmail::dispatch($client, $link);
-
-            return back()->withErrors(['email' => 'Your email is not verified. A verification email has been sent.']);
-        }
-
-        Auth::guard('client')->login($client);
-        $request->session()->regenerate();
-        $request->session()->forget('client_authenticated_via_google');
-        $request->session()->forget('client_authenticated_via_verification');
-
-        if ($this->requiresMandatoryPasswordChange($request, $client)) {
-            return redirect()->route('seafarers.password.mandatory');
-        }
-
-        return $this->redirectToDashboard();
+        return redirect()->route('seafarers.register.google');
     }
 
     public function dashboard()
@@ -128,6 +98,10 @@ class ClientAuthController extends Controller
         }
         if (! empty($clientData['date_of_birth'])) {
             $clientData['date_of_birth'] = optional($client->date_of_birth)->format('Y-m-d');
+        }
+
+        if (! empty($clientData['marriage_date'])) {
+            $clientData['marriage_date'] = optional($client->marriage_date)->format('Y-m-d');
         }
 
         // Keep created_at human-friendly for display
@@ -185,14 +159,11 @@ class ClientAuthController extends Controller
 
         $client = Client::whereRaw('LOWER(email) = ?', [$email])->first();
 
-        $temporaryPassword = null;
-
         if (! $client) {
-            $temporaryPassword = Str::random(12);
             $client = Client::create([
                 'email' => $email,
                 'name' => $name,
-                'password' => bcrypt($temporaryPassword),
+                'password' => bcrypt(Str::random(32)),
                 'must_change_password' => true,
                 'first_name' => $nameParts['first_name'],
                 'middle_name' => $nameParts['middle_name'],
@@ -218,7 +189,7 @@ class ClientAuthController extends Controller
         $client->save();
 
         $link = route('seafarers.verify', $client->verification_token);
-        SendClientVerificationEmail::dispatch($client, $link, $temporaryPassword);
+        SendClientVerificationEmail::dispatch($client, $link);
 
         return Inertia::render('Client/GoogleRegister', ['notice' => 'A verification email has been sent. Please check your inbox.']);
     }
@@ -325,22 +296,27 @@ class ClientAuthController extends Controller
             'fathers_name' => 'required|string|max:255',
             'nationality' => 'required|string|max:255',
             'religion' => 'nullable|string|max:255',
+            'sector_sub_caste' => 'nullable|string|max:255',
 
             // Position & background
             'current_position' => 'required|string|max:255',
             'position_applied_for' => 'required|string|max:255',
             'educational_attainment' => 'required|string|max:255',
             'last_salary' => 'nullable|string|max:255',
+            'expected_salary' => 'nullable|string|max:255',
             'e_registration_number' => 'nullable|string|max:255',
 
             // Physical details
             'body_weight_bmi' => 'required|string|max:100',
             'height_cm' => 'required|integer|min:0|max:300',
             'coverall_shoe_size' => 'required|string|max:100',
+            'safety_shoe_size' => 'nullable|string|max:100',
+            'boiler_suit_size' => 'nullable|string|max:100',
 
             // Contact & address
             'current_home_address' => 'required|string|max:2000',
             'personal_mobile_no' => 'required|string|max:50',
+            'telephone_numbers' => 'nullable|string|max:100',
             'whatsapp_number' => 'nullable|string|max:50',
             'fax_no' => 'nullable|string|max:50',
             'email_address' => [
@@ -354,6 +330,11 @@ class ClientAuthController extends Controller
             // Next of kin / emergency
             'next_of_kin' => 'required|string|max:255',
             'relationship' => 'required|string|max:255',
+            'wife_name' => 'nullable|string|max:255',
+            'wife_ic_no' => 'nullable|string|max:255',
+            'wife_occupation' => 'nullable|string|max:255',
+            'marriage_date' => 'nullable|date',
+            'wife_income_tax_no' => 'nullable|string|max:255',
             'contact_person' => 'required|string|max:255',
             'emergency_contact' => 'required|string|max:255',
 
@@ -391,9 +372,13 @@ class ClientAuthController extends Controller
             'certifications.*.id' => ['nullable', 'integer', Rule::exists('client_certificate_competencies', 'id')->where('client_id', $client->id)],
             'certifications.*.name' => 'nullable|string|max:255',
             'certifications.*.certificate_number' => 'nullable|string|max:255',
+            'certifications.*.stcw_regulation' => 'nullable|string|max:255',
+            'certifications.*.endorsement_number' => 'nullable|string|max:255',
             'certifications.*.place_of_issue' => 'nullable|string|max:255',
             'certifications.*.date_of_issue' => 'nullable|date',
             'certifications.*.date_of_expiry' => 'nullable|date',
+            'certifications.*.revalidation_date' => 'nullable|date',
+            'certifications.*.endorsement_expiry_date' => 'nullable|date',
             'certifications.*.attachment' => 'nullable',
 
             'proficiency' => 'nullable|array',
@@ -478,6 +463,9 @@ class ClientAuthController extends Controller
             // Government IDs
             'sss_no' => 'required|string|max:100',
             'pagibig_no' => 'required|string|max:100',
+            'epf_no' => 'nullable|string|max:100',
+            'socso_no' => 'nullable|string|max:100',
+            'blood' => 'nullable|string|max:100',
             'philhealth_no' => 'required|string|max:100',
             // Avatar upload
             'avatar' => 'nullable|image|max:2048',
@@ -622,9 +610,13 @@ class ClientAuthController extends Controller
         $this->syncRows($client, 'certificateCompetencies', $certificationRows, [
             'name',
             'certificate_number',
+            'stcw_regulation',
+            'endorsement_number',
             'place_of_issue',
             'date_of_issue',
             'date_of_expiry',
+            'revalidation_date',
+            'endorsement_expiry_date',
         ], 'competency-attachments', 'certifications');
         $this->syncRows($client, 'certificateProficiencies', $proficiencyRows, [
             'name',
@@ -772,7 +764,7 @@ class ClientAuthController extends Controller
             ->map(function ($row) {
                 $data = $row->toArray();
 
-                foreach (['date_of_issue', 'date_of_expiry', 'from_date', 'to_date'] as $field) {
+                foreach (['date_of_issue', 'date_of_expiry', 'revalidation_date', 'endorsement_expiry_date', 'from_date', 'to_date'] as $field) {
                     if ($row->{$field}) {
                         $data[$field] = $row->{$field}->format('Y-m-d');
                     }
@@ -835,7 +827,7 @@ class ClientAuthController extends Controller
 
             foreach ($fields as $field) {
                 $value = $row[$field] ?? null;
-                if (in_array($field, ['from_date', 'to_date'], true) || substr($field, 0, 5) === 'date_') {
+                if (in_array($field, ['from_date', 'to_date', 'revalidation_date', 'endorsement_expiry_date'], true) || substr($field, 0, 5) === 'date_') {
                     $payload[$field] = $value ?: null;
                     continue;
                 }

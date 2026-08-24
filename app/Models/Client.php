@@ -47,17 +47,18 @@ class Client extends Authenticatable
         'name', 'email', 'password', 'must_change_password', 'phone', 'address', 'verification_token', 'email_verified_at',
         // profile fields
         'first_name','middle_name','last_name','gender','status','type_of_job','processed_by','application_status','date_applied',
-        'place_of_birth','date_of_birth','mothers_maiden_name','fathers_name','nationality','religion',
-        'current_position','position_applied_for','educational_attainment','last_salary','e_registration_number',
-        'body_weight_bmi','height_cm','coverall_shoe_size',
-        'current_home_address','personal_mobile_no','whatsapp_number','fax_no','email_address','nearest_airport',
-        'next_of_kin','relationship','contact_person','emergency_contact',
-        'sss_no','pagibig_no','philhealth_no','avatar','resume_attachment','privacy_act_accepted','privacy_act_accepted_at'
+        'place_of_birth','date_of_birth','mothers_maiden_name','fathers_name','nationality','religion','sector_sub_caste',
+        'current_position','position_applied_for','educational_attainment','last_salary','expected_salary','e_registration_number',
+        'body_weight_bmi','height_cm','coverall_shoe_size','safety_shoe_size','boiler_suit_size',
+        'current_home_address','personal_mobile_no','telephone_numbers','whatsapp_number','fax_no','email_address','nearest_airport',
+        'next_of_kin','relationship','wife_name','wife_ic_no','wife_occupation','marriage_date','wife_income_tax_no','contact_person','emergency_contact',
+        'sss_no','pagibig_no','epf_no','socso_no','blood','philhealth_no','avatar','resume_attachment','privacy_act_accepted','privacy_act_accepted_at'
     ];
 
     protected $casts = [
         'date_applied' => 'date',
         'date_of_birth' => 'date',
+        'marriage_date' => 'date',
         'email_verified_at' => 'datetime',
         'must_change_password' => 'boolean',
         'privacy_act_accepted' => 'boolean',
