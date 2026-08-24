@@ -5,7 +5,6 @@ namespace App\Http\Middleware;
 use App\Models\CompanySetting;
 use Closure;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureSeafarerPortalIsLive
@@ -20,6 +19,8 @@ class EnsureSeafarerPortalIsLive
             return redirect()->route('seafarers.entry');
         }
 
-        return Inertia::render('Client/Maintenance')->toResponse($request)->setStatusCode(503);
+        return response()->view('seafarers.maintenance', [
+            'company' => CompanySetting::current()->publicData(),
+        ], 503);
     }
 }
