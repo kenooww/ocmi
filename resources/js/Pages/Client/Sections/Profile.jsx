@@ -174,11 +174,11 @@ const GROUPS = [
   {
     title: 'Spouse Details',
     fields: [
-      ['Wife name', 'wife_name'],
-      ['Wife I/C No', 'wife_ic_no'],
-      ["Wife's occupation", 'wife_occupation'],
+      ['Husband/Wife name', 'wife_name'],
+      ['Husband/Wife I/C No', 'wife_ic_no'],
+      ["Husband/Wife's occupation", 'wife_occupation'],
       ['Marriage date', 'marriage_date', 'date'],
-      ["Wife's income tax no", 'wife_income_tax_no'],
+      ["Husband/Wife's income tax no", 'wife_income_tax_no'],
     ],
   },
   {
@@ -505,26 +505,6 @@ function totalAttachmentCount(client) {
   ];
 
   return sections.reduce((total, items) => total + attachmentCount(items), 0);
-}
-
-function AttachmentFolderDownload({ count, folder, routeName, routeParams }) {
-  if (!count || !folder || !routeName) {
-    return null;
-  }
-
-  const params = Array.isArray(routeParams) ? routeParams : [routeParams];
-
-  return (
-    <div className="mb-3 flex justify-end">
-      <a
-        href={route(routeName, [...params, folder])}
-        className="inline-flex items-center gap-2 rounded border border-[#1F6F5C]/25 bg-white px-3 py-2 text-sm font-semibold text-[#1F6F5C] shadow-sm transition hover:border-[#1F6F5C]/45 hover:bg-[#E1EBE6]"
-      >
-        <Download size={16} />
-        Download all attachments
-      </a>
-    </div>
-  );
 }
 
 function RepeatableList({ items, editing, columns, onChange, onAdd, onRemove, emptyLabel, errorsPrefix, errors, printableAttachments = false }) {
@@ -1060,11 +1040,34 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
     setEditing(false);
   }
 
+  function stripStoredAttachmentPaths(rows = []) {
+    return (rows || []).map((row) => {
+      const next = { ...row };
+
+      if (! (next.attachment instanceof File)) {
+        delete next.attachment;
+      }
+
+      return next;
+    });
+  }
+
   function save(e) {
     e.preventDefault();
 
     transform(({ avatar, resume_attachment, ...payload }) => ({
       ...payload,
+      dependents: stripStoredAttachmentPaths(payload.dependents),
+      travel_documents: stripStoredAttachmentPaths(payload.travel_documents),
+      certifications: stripStoredAttachmentPaths(payload.certifications),
+      gmdss_certificates: stripStoredAttachmentPaths(payload.gmdss_certificates),
+      proficiency: stripStoredAttachmentPaths(payload.proficiency),
+      vaccinations: stripStoredAttachmentPaths(payload.vaccinations),
+      flag_documents: stripStoredAttachmentPaths(payload.flag_documents),
+      other_certificates: stripStoredAttachmentPaths(payload.other_certificates),
+      additional_stcw_certificates: stripStoredAttachmentPaths(payload.additional_stcw_certificates),
+      offshore_training_certificates: stripStoredAttachmentPaths(payload.offshore_training_certificates),
+      employment_history: stripStoredAttachmentPaths(payload.employment_history),
       ...(avatar instanceof File ? { avatar } : {}),
       ...(resume_attachment instanceof File ? { resume_attachment } : {}),
       ...(methodOverride ? { _method: methodOverride } : {}),
@@ -1218,15 +1221,6 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
     { key: 'attachment', label: 'Attachment', type: 'file' },
   ];
 
-  const attachmentFolderButton = (folder, items) => (
-    <AttachmentFolderDownload
-      count={attachmentCount(items)}
-      folder={folder}
-      routeName={attachmentDownloadRouteName}
-      routeParams={attachmentDownloadRouteParams}
-    />
-  );
-
   return (
     <div className="w-full px-4 py-5 sm:p-6">
       <form onSubmit={save} encType="multipart/form-data" className="mx-auto max-w-6xl">
@@ -1353,7 +1347,6 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
 
         {activeTab === 'dependents' && (
           <>
-            {attachmentFolderButton('dependents', editing ? data.dependents : (client?.dependents || []))}
             <RepeatableList
               items={editing ? data.dependents : (client?.dependents || [])}
               editing={editing}
@@ -1370,7 +1363,6 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
 
         {activeTab === 'travel_documents' && (
           <>
-            {attachmentFolderButton('travel-documents', editing ? data.travel_documents : buildTravelDocuments(client?.travel_documents))}
             <TravelDocumentsTable
               items={editing ? data.travel_documents : buildTravelDocuments(client?.travel_documents)}
               editing={editing}
@@ -1382,7 +1374,6 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
 
         {activeTab === 'certifications' && (
           <>
-            {attachmentFolderButton('certificate-of-competency', editing ? data.certifications : (client?.certifications || []))}
             <RepeatableList
               items={editing ? data.certifications : (client?.certifications || [])}
               editing={editing}
@@ -1400,7 +1391,6 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
 
         {activeTab === 'proficiency' && (
           <>
-            {attachmentFolderButton('certificate-of-proficiency', editing ? data.proficiency : (client?.proficiency || []))}
             <RepeatableList
               items={editing ? data.proficiency : (client?.proficiency || [])}
               editing={editing}
@@ -1417,7 +1407,6 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
         )}
         {activeTab === 'gmdss_certificates' && (
           <>
-            {attachmentFolderButton('gmdss-certificates', editing ? data.gmdss_certificates : (client?.gmdss_certificates || []))}
             <RepeatableList
               items={editing ? data.gmdss_certificates : (client?.gmdss_certificates || [])}
               editing={editing}
@@ -1434,7 +1423,6 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
         )}
         {activeTab === 'vaccinations' && (
           <>
-            {attachmentFolderButton('vaccinations', editing ? data.vaccinations : (client?.vaccinations || []))}
             <RepeatableList
               items={editing ? data.vaccinations : (client?.vaccinations || [])}
               editing={editing}
@@ -1451,7 +1439,6 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
         )}
         {activeTab === 'flag_documents' && (
           <>
-            {attachmentFolderButton('flag-documents', editing ? data.flag_documents : (client?.flag_documents || []))}
             <RepeatableList
               items={editing ? data.flag_documents : (client?.flag_documents || [])}
               editing={editing}
@@ -1468,7 +1455,6 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
         )}
         {activeTab === 'other_certificates' && (
           <>
-            {attachmentFolderButton('other-certificates', editing ? data.other_certificates : (client?.other_certificates || []))}
             <RepeatableList
               items={editing ? data.other_certificates : (client?.other_certificates || [])}
               editing={editing}
@@ -1485,7 +1471,6 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
         )}
         {activeTab === 'additional_stcw_certificates' && (
           <>
-            {attachmentFolderButton('additional-stcw-certificates', editing ? data.additional_stcw_certificates : (client?.additional_stcw_certificates || []))}
             <RepeatableList
               items={editing ? data.additional_stcw_certificates : (client?.additional_stcw_certificates || [])}
               editing={editing}
@@ -1502,7 +1487,6 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
         )}
         {activeTab === 'offshore_training_certificates' && (
           <>
-            {attachmentFolderButton('offshore-training-certificates', editing ? data.offshore_training_certificates : (client?.offshore_training_certificates || []))}
             <RepeatableList
               items={editing ? data.offshore_training_certificates : (client?.offshore_training_certificates || [])}
               editing={editing}
@@ -1519,7 +1503,6 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
         )}
         {activeTab === 'employment_history' && (
           <>
-            {attachmentFolderButton('employment-history', editing ? data.employment_history : (client?.employment_history || []))}
             <RepeatableList
               items={editing ? data.employment_history : (client?.employment_history || [])}
               editing={editing}

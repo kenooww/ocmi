@@ -137,11 +137,11 @@ const GROUPS = [
     {
         title: 'Spouse Details',
         fields: [
-            ['Wife name', 'wife_name'],
-            ['Wife I/C No', 'wife_ic_no'],
-            ["Wife's occupation", 'wife_occupation'],
+            ['Husband/Wife name', 'wife_name'],
+            ['Husband/Wife I/C No', 'wife_ic_no'],
+            ["Husband/Wife's occupation", 'wife_occupation'],
             ['Marriage date', 'marriage_date'],
-            ["Wife's income tax no", 'wife_income_tax_no'],
+            ["Husband/Wife's income tax no", 'wife_income_tax_no'],
         ],
     },
     {

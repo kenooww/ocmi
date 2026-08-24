@@ -577,7 +577,7 @@ class AdminController extends Controller
         }
 
         if ($request->hasFile('resume_attachment')) {
-            $data['resume_attachment'] = $request->file('resume_attachment')->store('resume-attachments', 'public');
+            $data['resume_attachment'] = $this->storeAttachmentWithOriginalName($request->file('resume_attachment'), 'resume-attachments');
         }
 
         $client = Client::create($data);
@@ -813,7 +813,7 @@ class AdminController extends Controller
         }
 
         if ($request->hasFile('resume_attachment')) {
-            $path = $request->file('resume_attachment')->store('resume-attachments', 'public');
+            $path = $this->storeAttachmentWithOriginalName($request->file('resume_attachment'), 'resume-attachments');
             if ($client->resume_attachment && Storage::disk('public')->exists($client->resume_attachment)) {
                 Storage::disk('public')->delete($client->resume_attachment);
             }
@@ -900,7 +900,7 @@ class AdminController extends Controller
             $attachment = $existingRow ? $existingRow->attachment : null;
 
             if ($request->hasFile("dependents.{$index}.attachment")) {
-                $attachment = $request->file("dependents.{$index}.attachment")->store('dependent-attachments', 'public');
+                $attachment = $this->storeAttachmentWithOriginalName($request->file("dependents.{$index}.attachment"), 'dependent-attachments');
 
                 if ($existingRow && $existingRow->attachment && Storage::disk('public')->exists($existingRow->attachment)) {
                     Storage::disk('public')->delete($existingRow->attachment);
@@ -952,7 +952,7 @@ class AdminController extends Controller
             $attachment = $existingRow ? $existingRow->attachment : null;
 
             if ($request->hasFile("travel_documents.{$index}.attachment")) {
-                $attachment = $request->file("travel_documents.{$index}.attachment")->store('travel-document-attachments', 'public');
+                $attachment = $this->storeAttachmentWithOriginalName($request->file("travel_documents.{$index}.attachment"), 'travel-document-attachments');
 
                 if ($existingRow && $existingRow->attachment && Storage::disk('public')->exists($existingRow->attachment)) {
                     Storage::disk('public')->delete($existingRow->attachment);
@@ -1008,7 +1008,7 @@ class AdminController extends Controller
 
             $attachment = $existingRow ? $existingRow->attachment : null;
             if ($storageFolder && $requestKey && request()->hasFile("{$requestKey}.{$index}.attachment")) {
-                $attachment = request()->file("{$requestKey}.{$index}.attachment")->store($storageFolder, 'public');
+                $attachment = $this->storeAttachmentWithOriginalName(request()->file("{$requestKey}.{$index}.attachment"), $storageFolder);
 
                 if ($existingRow && $existingRow->attachment && Storage::disk('public')->exists($existingRow->attachment)) {
                     Storage::disk('public')->delete($existingRow->attachment);
@@ -1037,6 +1037,28 @@ class AdminController extends Controller
 
                 $row->delete();
             });
+    }
+
+    private function storeAttachmentWithOriginalName($file, string $folder): string
+    {
+        $originalName = basename($file->getClientOriginalName() ?: 'attachment');
+        $originalName = trim(preg_replace('/[\/\\\\]+/', '-', $originalName));
+        $originalName = $originalName === '' ? 'attachment' : $originalName;
+
+        $extension = pathinfo($originalName, PATHINFO_EXTENSION);
+        $baseName = pathinfo($originalName, PATHINFO_FILENAME) ?: 'attachment';
+        $fileName = $originalName;
+        $counter = 1;
+
+        while (Storage::disk('public')->exists($folder . '/' . $fileName)) {
+            $suffix = ' (' . $counter . ')';
+            $fileName = $extension
+                ? $baseName . $suffix . '.' . $extension
+                : $baseName . $suffix;
+            $counter++;
+        }
+
+        return $file->storeAs($folder, $fileName, 'public');
     }
 
     private function applySeaServiceDurations(array $rows): array

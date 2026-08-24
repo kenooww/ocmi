@@ -548,7 +548,7 @@ class ClientAuthController extends Controller
 
             if ($request->hasFile("dependents.{$index}.attachment")) {
                 $file = $request->file("dependents.{$index}.attachment");
-                $attachment = $file->store('dependent-attachments', 'public');
+                $attachment = $this->storeAttachmentWithOriginalName($file, 'dependent-attachments');
 
                 if ($existingDependent && $existingDependent->attachment && Storage::disk('public')->exists($existingDependent->attachment)) {
                     Storage::disk('public')->delete($existingDependent->attachment);
@@ -610,7 +610,7 @@ class ClientAuthController extends Controller
 
             if ($request->hasFile("travel_documents.{$index}.attachment")) {
                 $file = $request->file("travel_documents.{$index}.attachment");
-                $attachment = $file->store('travel-document-attachments', 'public');
+                $attachment = $this->storeAttachmentWithOriginalName($file, 'travel-document-attachments');
 
                 if ($existingTravelDocument && $existingTravelDocument->attachment && Storage::disk('public')->exists($existingTravelDocument->attachment)) {
                     Storage::disk('public')->delete($existingTravelDocument->attachment);
@@ -763,7 +763,7 @@ class ClientAuthController extends Controller
 
         if ($request->hasFile('resume_attachment')) {
             $file = $request->file('resume_attachment');
-            $path = $file->store('resume-attachments', 'public');
+            $path = $this->storeAttachmentWithOriginalName($file, 'resume-attachments');
 
             if ($client->resume_attachment && Storage::disk('public')->exists($client->resume_attachment)) {
                 Storage::disk('public')->delete($client->resume_attachment);
@@ -876,6 +876,28 @@ class ClientAuthController extends Controller
         return $email === '' ? null : strtolower($email);
     }
 
+    private function storeAttachmentWithOriginalName($file, string $folder): string
+    {
+        $originalName = basename($file->getClientOriginalName() ?: 'attachment');
+        $originalName = trim(preg_replace('/[\/\\\\]+/', '-', $originalName));
+        $originalName = $originalName === '' ? 'attachment' : $originalName;
+
+        $extension = pathinfo($originalName, PATHINFO_EXTENSION);
+        $baseName = pathinfo($originalName, PATHINFO_FILENAME) ?: 'attachment';
+        $fileName = $originalName;
+        $counter = 1;
+
+        while (Storage::disk('public')->exists($folder . '/' . $fileName)) {
+            $suffix = ' (' . $counter . ')';
+            $fileName = $extension
+                ? $baseName . $suffix . '.' . $extension
+                : $baseName . $suffix;
+            $counter++;
+        }
+
+        return $file->storeAs($folder, $fileName, 'public');
+    }
+
     private function syncRows(Client $client, string $relation, array $rows, array $fields, ?string $storageFolder = null, ?string $requestKey = null): void
     {
         $existingRows = $client->{$relation}()->get()->keyBy('id');
@@ -904,7 +926,7 @@ class ClientAuthController extends Controller
             $attachment = $existingRow ? $existingRow->attachment : null;
             if ($storageFolder && $requestKey && request()->hasFile("{$requestKey}.{$index}.attachment")) {
                 $file = request()->file("{$requestKey}.{$index}.attachment");
-                $attachment = $file->store($storageFolder, 'public');
+                $attachment = $this->storeAttachmentWithOriginalName($file, $storageFolder);
 
                 if ($existingRow && $existingRow->attachment && Storage::disk('public')->exists($existingRow->attachment)) {
                     Storage::disk('public')->delete($existingRow->attachment);
