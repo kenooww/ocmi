@@ -83,7 +83,7 @@ const COMPLETENESS_SECTIONS = [
   { key: 'vaccinations', label: 'Vaccinations' },
   { key: 'flag_documents', label: 'Flag documents' },
   { key: 'other_certificates', label: 'Other certificates' },
-  { key: 'employment_history', label: 'Employment history' },
+  { key: 'employment_history', label: 'Employment history', minDetails: 2 },
   { key: 'sea_service', label: 'Sea service' },
   { key: 'deck_officer_experience', label: 'Deck officer experience' },
 ];
@@ -106,16 +106,46 @@ function hasValue(value) {
   return String(value).trim() !== '';
 }
 
+function countMeaningfulDetails(value) {
+  if (!Array.isArray(value)) {
+    return 0;
+  }
+
+  return value.reduce((total, item) => {
+    if (!item || typeof item !== 'object') {
+      return total + (hasValue(item) ? 1 : 0);
+    }
+
+    return total + Object.entries(item).filter(([key, fieldValue]) => {
+      if (['id', 'attachment', 'created_at', 'updated_at'].includes(key)) {
+        return false;
+      }
+
+      return hasValue(fieldValue);
+    }).length;
+  }, 0);
+}
+
 function getCompleteness(client) {
   const checks = [
     ...COMPLETENESS_FIELDS.map((field) => ({
       label: field.label,
       complete: hasValue(client?.[field.key]) || (field.fallback ? hasValue(client?.[field.fallback]) : false),
     })),
-    ...COMPLETENESS_SECTIONS.map((section) => ({
-      label: section.label,
-      complete: hasValue(client?.[section.key]),
-    })),
+    ...COMPLETENESS_SECTIONS.map((section) => {
+      const filledDetails = section.minDetails ? countMeaningfulDetails(client?.[section.key]) : 0;
+      const complete = section.minDetails
+        ? filledDetails >= section.minDetails
+        : hasValue(client?.[section.key]);
+
+      return {
+        label: section.label,
+        complete,
+        missingLabel: section.minDetails
+          ? `${section.label} incomplete (${filledDetails}/${section.minDetails} details)`
+          : section.label,
+      };
+    }),
   ];
 
   const completed = checks.filter((check) => check.complete).length;
@@ -126,7 +156,7 @@ function getCompleteness(client) {
     checks,
     completed,
     missing: total - completed,
-    missingItems: checks.filter((check) => !check.complete).map((check) => check.label),
+    missingItems: checks.filter((check) => !check.complete).map((check) => check.missingLabel || check.label),
     percent,
     total,
   };

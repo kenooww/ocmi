@@ -4,12 +4,12 @@ import { CalendarDays, ChevronDown, FileText, Mail, Phone, Plus, Printer, Trash2
 
 const FIELD_KEYS = [
   'avatar', 'resume_attachment', 'privacy_act_accepted', 'first_name', 'middle_name', 'last_name', 'gender', 'status', 'type_of_job', 'date_applied', 'nationality',
-  'place_of_birth', 'date_of_birth', 'mothers_maiden_name', 'fathers_name', 'religion',
-  'current_position', 'position_applied_for', 'educational_attainment', 'last_salary', 'e_registration_number',
-  'body_weight_bmi', 'height_cm', 'coverall_shoe_size',
-  'current_home_address', 'personal_mobile_no', 'whatsapp_number', 'fax_no', 'email_address', 'nearest_airport',
-  'next_of_kin', 'relationship', 'contact_person', 'emergency_contact',
-  'sss_no', 'pagibig_no', 'philhealth_no',
+  'place_of_birth', 'date_of_birth', 'mothers_maiden_name', 'fathers_name', 'religion', 'sector_sub_caste',
+  'current_position', 'position_applied_for', 'educational_attainment', 'last_salary', 'expected_salary', 'e_registration_number',
+  'body_weight_bmi', 'height_cm', 'coverall_shoe_size', 'safety_shoe_size', 'boiler_suit_size',
+  'current_home_address', 'personal_mobile_no', 'telephone_numbers', 'whatsapp_number', 'fax_no', 'email_address', 'nearest_airport',
+  'next_of_kin', 'relationship', 'wife_name', 'wife_ic_no', 'wife_occupation', 'marriage_date', 'wife_income_tax_no', 'contact_person', 'emergency_contact',
+  'sss_no', 'pagibig_no', 'epf_no', 'socso_no', 'blood', 'philhealth_no',
 ];
 
 const TYPE_OF_JOB_OPTIONS = [
@@ -31,7 +31,18 @@ const GENDER_OPTIONS = [
 ];
 
 const EMPTY_DEPENDENT = { name: '', date_of_birth: '', relationship: '', dependent: '', beneficiary: '', address: '', attachment: null };
-const EMPTY_CERTIFICATE = { name: '', certificate_number: '', place_of_issue: '', date_of_issue: '', date_of_expiry: '', attachment: null };
+const EMPTY_CERTIFICATE = {
+  name: '',
+  certificate_number: '',
+  stcw_regulation: '',
+  endorsement_number: '',
+  place_of_issue: '',
+  date_of_issue: '',
+  date_of_expiry: '',
+  revalidation_date: '',
+  endorsement_expiry_date: '',
+  attachment: null,
+};
 const EMPTY_NUMBERED_DOCUMENT = { name: '', number: '', place_of_issue: '', date_of_issue: '', date_of_expiry: '', attachment: null };
 const EMPTY_FLAG_DOCUMENT = { name: '', number: '', place_of_issue: '', date_of_issue: '', date_of_expiry: '' };
 const EMPTY_EMPLOYMENT_HISTORY = { company: '', contact_person_name: '', designation: '', contact_person_number: '', country: '', attachment: null };
@@ -112,6 +123,7 @@ const GROUPS = [
       ["Mother's maiden name", 'mothers_maiden_name'],
       ["Father's name", 'fathers_name'],
       ['Religion', 'religion'],
+      ['Sector / Sub caste', 'sector_sub_caste'],
     ],
   },
   {
@@ -120,6 +132,7 @@ const GROUPS = [
       ['Current position', 'current_position'],
       ['Educational attainment', 'educational_attainment'],
       ['Last salary', 'last_salary'],
+      ['Expected salary', 'expected_salary'],
       ['E-registration number', 'e_registration_number'],
     ],
   },
@@ -129,6 +142,8 @@ const GROUPS = [
       ['Body weight (lbs)', 'body_weight_bmi'],
       ['Height (cm)', 'height_cm', 'number'],
       ['Coverall & shoe size', 'coverall_shoe_size'],
+      ['Safety shoe size', 'safety_shoe_size'],
+      ['Boiler suit size', 'boiler_suit_size'],
     ],
   },
   {
@@ -136,6 +151,7 @@ const GROUPS = [
     fields: [
       ['Home address', 'current_home_address'],
       ['Personal mobile no.', 'personal_mobile_no'],
+      ['Telephone numbers', 'telephone_numbers'],
       ['WhatsApp number', 'whatsapp_number'],
       ['Fax no.', 'fax_no'],
       ['Email address', 'email_address', 'email'],
@@ -152,10 +168,23 @@ const GROUPS = [
     ],
   },
   {
+    title: 'Spouse Details',
+    fields: [
+      ['Wife name', 'wife_name'],
+      ['Wife I/C No', 'wife_ic_no'],
+      ["Wife's occupation", 'wife_occupation'],
+      ['Marriage date', 'marriage_date', 'date'],
+      ["Wife's income tax no", 'wife_income_tax_no'],
+    ],
+  },
+  {
     title: 'Government IDs',
     fields: [
       ['SSS No.', 'sss_no'],
       ['Pag-IBIG No.', 'pagibig_no'],
+      ['EPF No', 'epf_no'],
+      ['SOCSO No', 'socso_no'],
+      ['Blood', 'blood'],
       ['PhilHealth No.', 'philhealth_no'],
     ],
   },
@@ -1039,6 +1068,19 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
     { key: 'attachment', label: 'Attachment', type: 'file' },
   ];
 
+  const competencyColumns = [
+    { key: 'name', label: 'Certificate grade' },
+    { key: 'certificate_number', label: 'Certificate number' },
+    { key: 'stcw_regulation', label: 'STCW regulation' },
+    { key: 'endorsement_number', label: 'Endorsement number' },
+    { key: 'place_of_issue', label: 'Country of issue' },
+    { key: 'date_of_issue', label: 'Date of issue', type: 'date' },
+    { key: 'date_of_expiry', label: 'Certificate expiry date', type: 'date' },
+    { key: 'revalidation_date', label: 'Revalidation date', type: 'date' },
+    { key: 'endorsement_expiry_date', label: 'Endorsement expiry date', type: 'date' },
+    { key: 'attachment', label: 'Attachment', type: 'file' },
+  ];
+
   const certificationColumns = [
     { key: 'name', label: 'Name' },
     { key: 'certificate_number', label: 'Certificate number' },
@@ -1216,7 +1258,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
           <RepeatableList
             items={editing ? data.certifications : (client?.certifications || [])}
             editing={editing}
-            columns={certificationColumns}
+            columns={competencyColumns}
             onChange={updateCertification}
             onAdd={addCertification}
             onRemove={removeCertification}

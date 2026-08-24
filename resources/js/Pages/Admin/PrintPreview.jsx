@@ -384,6 +384,8 @@ function DynamicHeader() {
 function DynamicApplicationForm({ client }) {
     const fullName = fullNameFor(client);
     const [coverallSize, shoeSize] = splitCoverallAndShoe(client?.coverall_shoe_size);
+    const boilerSuitSize = client?.boiler_suit_size || coverallSize;
+    const safetyShoeSize = client?.safety_shoe_size || shoeSize;
     const photo = client?.avatar ? `/storage/${client.avatar}` : true;
     const documents = documentRowsFor(client);
     const passport = findRowByName(documents, ['passport']);
@@ -438,14 +440,14 @@ function DynamicApplicationForm({ client }) {
                         <DynamicPairRow leftLabel="Permanent Address" leftValue={client?.current_home_address} rightLabel="Current Address" rightValue={client?.current_home_address} tall />
                         <DynamicPairRow leftLabel="Date of Birth" leftValue={client?.date_of_birth} rightLabel="Age" rightValue={ageFromDate(client?.date_of_birth)} />
                         <DynamicPairRow leftLabel="Height cm" leftValue={client?.height_cm} rightLabel="Body Weight & BMI" rightValue={client?.body_weight_bmi} />
-                        <DynamicPairRow leftLabel="Coverall Size" leftValue={coverallSize} rightLabel="Shoe Size" rightValue={shoeSize} />
+                        <DynamicPairRow leftLabel="Coverall Size" leftValue={boilerSuitSize} rightLabel="Shoe Size" rightValue={safetyShoeSize} />
                         <DynamicPairRow leftLabel="Religion" leftValue={client?.religion} rightLabel="Nearest Airport" rightValue={client?.nearest_airport} rightColSpan={2} />
                         <DynamicPairRow leftLabel="Mobile" leftValue={client?.personal_mobile_no} rightLabel="Next of Kin Name" rightValue={client?.next_of_kin} rightColSpan={2} />
                         <DynamicPairRow leftLabel="WhatsApp" leftValue={client?.whatsapp_number} rightLabel="Emergency Contact Person" rightValue={client?.contact_person} rightColSpan={2} />
-                        <DynamicPairRow leftLabel="Home Tel" leftValue={client?.fax_no} rightLabel="Next of Kin Relation" rightValue={client?.relationship} rightColSpan={2} />
+                        <DynamicPairRow leftLabel="Home Tel" leftValue={client?.telephone_numbers || client?.fax_no} rightLabel="Next of Kin Relation" rightValue={client?.relationship} rightColSpan={2} />
                         <DynamicPairRow leftLabel="Email" leftValue={client?.email_address || client?.email} rightLabel="Emergency Contact Number" rightValue={client?.emergency_contact} rightColSpan={2} />
                         <DynamicPairRow leftLabel="Current Salary" leftValue={client?.last_salary} rightLabel="" rightValue="" rightColSpan={2} />
-                        <DynamicPairRow leftLabel="Expected Salary" leftValue="" rightLabel="" rightValue="" rightColSpan={2} />
+                        <DynamicPairRow leftLabel="Expected Salary" leftValue={client?.expected_salary} rightLabel="" rightValue="" rightColSpan={2} />
                     </tbody>
                 </table>
 
@@ -532,7 +534,9 @@ function ZmiApplicationForm({ client }) {
     const allCertificates = certificateRowsFor(client);
     const coc = client?.certifications?.[0] || {};
     const gmdss = findRowByName(allCertificates, ['gmdss']) || {};
-    const [boilerSuitSize, safetyShoeSize] = splitCoverallAndShoe(client?.coverall_shoe_size);
+    const [legacyBoilerSuitSize, legacySafetyShoeSize] = splitCoverallAndShoe(client?.coverall_shoe_size);
+    const boilerSuitSize = client?.boiler_suit_size || legacyBoilerSuitSize;
+    const safetyShoeSize = client?.safety_shoe_size || legacySafetyShoeSize;
     const stcwNames = [
         'Basic Safety Training',
         'Personal Survival Techniques',
@@ -639,10 +643,10 @@ function ZmiApplicationForm({ client }) {
                         <tr><ZmiCell label="Availability" valueText="Anytime" colSpan={3} /></tr>
                         <ZmiTitleRow>Basic Information</ZmiTitleRow>
                         <tr><ZmiCell label="Nationality" valueText={client?.nationality} colSpan={2} /><ZmiCell label="Mother Full Name" valueText={client?.mothers_maiden_name} colSpan={2} /></tr>
-                        <tr><ZmiCell label="Religion" valueText={client?.religion} colSpan={2} /><ZmiCell label="Sector / Sub caste" valueText="" colSpan={2} /></tr>
+                        <tr><ZmiCell label="Religion" valueText={client?.religion} colSpan={2} /><ZmiCell label="Sector / Sub caste" valueText={client?.sector_sub_caste} colSpan={2} /></tr>
                         <tr><ZmiCell label="Date of Birth & Age" valueText={client?.date_of_birth} colSpan={2} /><ZmiCell label="Place & Country Of Birth" valueText={client?.place_of_birth} colSpan={2} /></tr>
                         <tr><ZmiCell label="Permanent Address" valueText={client?.current_home_address} colSpan={4} /></tr>
-                        <tr><ZmiCell label="Telephone Numbers" valueText={client?.fax_no} colSpan={2} /><ZmiCell label="Mobile No. (Home)" valueText={client?.personal_mobile_no} colSpan={2} /></tr>
+                        <tr><ZmiCell label="Telephone Numbers" valueText={client?.telephone_numbers || client?.fax_no} colSpan={2} /><ZmiCell label="Mobile No. (Home)" valueText={client?.personal_mobile_no} colSpan={2} /></tr>
                         <tr><ZmiCell label="Email" valueText={client?.email_address || client?.email} colSpan={2} /><ZmiCell label="WhatsApp No." valueText={client?.whatsapp_number} colSpan={2} /></tr>
                         <tr>
                             <ZmiCell label="Marital Status (please mark)" colSpan={4}>
@@ -664,11 +668,11 @@ function ZmiApplicationForm({ client }) {
                         <ZmiTitleRow>Certificate of Competency Details</ZmiTitleRow>
                         <tr><ZmiCell label="Certificate Grade" valueText={coc.name} colSpan={2} /><ZmiCell label="Expiry Date" valueText={coc.date_of_expiry} colSpan={2} /></tr>
                         <tr><ZmiCell label="Certificate Number" valueText={coc.certificate_number} colSpan={2} /><ZmiCell label="Country Of Issue" valueText={coc.place_of_issue} colSpan={2} /></tr>
-                        <tr><ZmiCell label="STCW Regulation" valueText="" colSpan={2} /><ZmiCell label="Revalidation Date" valueText="" colSpan={2} /></tr>
-                        <tr><ZmiCell label="Endorsement Number" valueText="" colSpan={2} /><ZmiCell label="Expiry Date" valueText="" colSpan={2} /></tr>
+                        <tr><ZmiCell label="STCW Regulation" valueText={coc.stcw_regulation} colSpan={2} /><ZmiCell label="Revalidation Date" valueText={coc.revalidation_date} colSpan={2} /></tr>
+                        <tr><ZmiCell label="Endorsement Number" valueText={coc.endorsement_number} colSpan={2} /><ZmiCell label="Expiry Date" valueText={coc.endorsement_expiry_date} colSpan={2} /></tr>
                         <ZmiTitleRow>GMDSS Certificate Details</ZmiTitleRow>
                         <tr><ZmiCell label="Certificate Number" valueText={gmdss.certificate_number || gmdss.number} colSpan={2} /><ZmiCell label="Expiry Date" valueText={gmdss.date_of_expiry} colSpan={2} /></tr>
-                        <tr><ZmiCell label="Endorsement Number" valueText="" colSpan={2} /><ZmiCell label="Expiry Date" valueText="" colSpan={2} /></tr>
+                        <tr><ZmiCell label="Endorsement Number" valueText={gmdss.endorsement_number} colSpan={2} /><ZmiCell label="Expiry Date" valueText={gmdss.endorsement_expiry_date} colSpan={2} /></tr>
                     </tbody>
                 </table>
                 <ZmiFooter />
@@ -767,25 +771,25 @@ function FleetApplicationForm({ client, title, heading = title, showDocumentHead
                         ['Nationality', client?.nationality],
                         ['Relation of NOK', client?.relationship],
                         ['Marital Status', client?.status],
-                        ['Wife Name', ''],
+                        ['Wife Name', client?.wife_name],
                         ['Religion', client?.religion],
-                        ["Wife I/C No", ''],
+                        ["Wife I/C No", client?.wife_ic_no],
                         ['Contact Number', client?.personal_mobile_no],
                         ['WhatsApp Number', client?.whatsapp_number],
-                        ["Wife's Occupation", ''],
-                        ['EPF No', ''],
+                        ["Wife's Occupation", client?.wife_occupation],
+                        ['EPF No', client?.epf_no],
                         ['Emergency Contact Person', client?.contact_person],
                         ['Contact Number NOK', client?.emergency_contact],
-                        ['SOCSO No', ''],
+                        ['SOCSO No', client?.socso_no],
                         ['No of Children', client?.dependents?.length || ''],
                         ['Income Tax No', ''],
-                        ['Marriage Date', ''],
+                        ['Marriage Date', client?.marriage_date],
                         ['Current Address', client?.current_home_address],
-                        ["Wife's Income Tax No", ''],
+                        ["Wife's Income Tax No", client?.wife_income_tax_no],
                         ['Date of Join', client?.date_applied],
                         ['Employee Code', client?.e_registration_number],
                         ['Height', client?.height_cm],
-                        ['Blood', ''],
+                        ['Blood', client?.blood],
                         ['Weight', client?.body_weight_bmi],
                     ]}
                 />
@@ -902,19 +906,34 @@ export default function PrintPreview({ client, printForm = 'complete' }) {
         ['Gender', client?.gender], ['Status', client?.status], ['Type of Job', client?.type_of_job],
         ['Place Of Birth', client?.place_of_birth], ['Current Position', client?.current_position], ['Date of Birth', client?.date_of_birth],
         ['Position applied for', client?.position_applied_for], ["Mother's Maiden Name", client?.mothers_maiden_name],
-        ['Religion', client?.religion], ["Father's Name", client?.fathers_name], ['Next of Kin', client?.next_of_kin],
+        ['Religion', client?.religion], ['Sector / Sub caste', client?.sector_sub_caste], ["Father's Name", client?.fathers_name], ['Next of Kin', client?.next_of_kin],
         ['Current Home Address', client?.current_home_address], ['Relationship', client?.relationship],
         ['Nationality', client?.nationality], ['Emergency Contact Person', client?.contact_person],
         ['Emergency Contact Number', client?.emergency_contact],
         ['Educational Attainment', client?.educational_attainment], ['Fax No.', client?.fax_no],
+        ['Telephone Numbers', client?.telephone_numbers],
         ['Body Weight and BMI', client?.body_weight_bmi], ['Personal Mobile No.', client?.personal_mobile_no],
         ['WhatsApp Number', client?.whatsapp_number], ['Email Address', client?.email_address || client?.email],
         ['Height in cm', client?.height_cm],
-        ['Last Salary', client?.last_salary], ['Coverall and Shoe Size', client?.coverall_shoe_size],
+        ['Last Salary', client?.last_salary], ['Expected Salary', client?.expected_salary],
+        ['Coverall and Shoe Size', client?.coverall_shoe_size], ['Safety Shoe Size', client?.safety_shoe_size], ['Boiler Suit Size', client?.boiler_suit_size],
         ['E-registration Number', client?.e_registration_number], ['Nearest Airport', client?.nearest_airport],
-        ['SSS No.', client?.sss_no], ['Pag-ibig No.', client?.pagibig_no], ['Philhealth No.', client?.philhealth_no],
+        ['Wife Name', client?.wife_name], ["Wife I/C No", client?.wife_ic_no], ["Wife's Occupation", client?.wife_occupation],
+        ['Marriage Date', client?.marriage_date], ["Wife's Income Tax No", client?.wife_income_tax_no],
+        ['SSS No.', client?.sss_no], ['Pag-ibig No.', client?.pagibig_no], ['EPF No', client?.epf_no], ['SOCSO No', client?.socso_no],
+        ['Blood', client?.blood], ['Philhealth No.', client?.philhealth_no],
     ];
 
+    const competencyColumns = [
+        { key: 'name', label: 'Certificate Grade' },
+        { key: 'certificate_number', label: 'Certificate Number' },
+        { key: 'stcw_regulation', label: 'STCW Regulation' },
+        { key: 'endorsement_number', label: 'Endorsement Number' },
+        { key: 'place_of_issue', label: 'Country Of Issue' },
+        { key: 'date_of_expiry', label: 'Expiry Date' },
+        { key: 'revalidation_date', label: 'Revalidation Date' },
+        { key: 'endorsement_expiry_date', label: 'Endorsement Expiry Date' },
+    ];
     const certificateColumns = [
         { key: 'name', label: 'Name' },
         { key: 'certificate_number', label: 'Certificate Number' },
@@ -1032,7 +1051,7 @@ export default function PrintPreview({ client, printForm = 'complete' }) {
                 {showCertificates && (
                 <section className="print-page print-page-portrait min-h-[1120px] bg-white p-8 shadow-sm">
                     <Header client={client} page={isComplete ? 'Page 2 of 4' : pageLabel(1)} />
-                    <SimpleTable title="Certificate of Competency" columns={certificateColumns} rows={client?.certifications || []} minRows={4} />
+                    <SimpleTable title="Certificate of Competency" columns={competencyColumns} rows={client?.certifications || []} minRows={4} />
                     <SimpleTable title="Certificate of Profeciency" columns={certificateColumns} rows={client?.proficiency || []} minRows={10} />
                     <SimpleTable title="Vaccinations" columns={numberColumns} rows={client?.vaccinations || []} minRows={4} />
                     <SimpleTable title="Flag Documents" columns={numberColumns} rows={client?.flag_documents || []} minRows={4} />

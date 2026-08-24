@@ -17,17 +17,15 @@ class SendClientVerificationEmail implements ShouldQueue
 
     public Client $client;
     public string $link;
-    public ?string $temporaryPassword;
 
-    public function __construct(Client $client, string $link, ?string $temporaryPassword = null)
+    public function __construct(Client $client, string $link)
     {
         $this->client = $client;
         $this->link = $link;
-        $this->temporaryPassword = $temporaryPassword;
     }
 
     public function handle()
     {
-        Mail::to($this->client->email)->send(new ClientVerificationMail($this->client, $this->link, $this->temporaryPassword));
+        Mail::to($this->client->email)->send(new ClientVerificationMail($this->client, $this->link));
     }
 }
