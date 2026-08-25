@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useForm, usePage } from '@inertiajs/react';
-import { CalendarDays, ChevronDown, Download, FileText, Mail, Phone, Plus, Printer, Trash2, Upload, X } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, ChevronDown, Download, FileText, Mail, Phone, Plus, Printer, Trash2, Upload, X } from 'lucide-react';
 
 const FIELD_KEYS = [
   'avatar', 'resume_attachment', 'privacy_act_accepted', 'first_name', 'middle_name', 'last_name', 'gender', 'status', 'type_of_job', 'date_applied', 'nationality',
@@ -194,6 +194,36 @@ const GROUPS = [
   },
 ];
 
+const ONBOARDING_REQUIRED_FIELDS = [
+  ['First name', 'first_name'],
+  ['Last name', 'last_name'],
+  ['Position applied for', 'position_applied_for'],
+  ['Date applied', 'date_applied'],
+  ['Nationality', 'nationality'],
+  ['Place of birth', 'place_of_birth'],
+  ['Date of birth', 'date_of_birth'],
+  ["Mother's maiden name", 'mothers_maiden_name'],
+  ["Father's name", 'fathers_name'],
+  ['Current position', 'current_position'],
+  ['Educational attainment', 'educational_attainment'],
+  ['Body weight (lbs)', 'body_weight_bmi'],
+  ['Height (cm)', 'height_cm'],
+  ['Coverall & shoe size', 'coverall_shoe_size'],
+  ['Home address', 'current_home_address'],
+  ['Personal mobile no.', 'personal_mobile_no'],
+  ['Email address', 'email_address'],
+  ['Nearest airport', 'nearest_airport'],
+  ['Next of kin', 'next_of_kin'],
+  ['Relationship', 'relationship'],
+  ['Emergency contact person', 'contact_person'],
+  ['Emergency contact number', 'emergency_contact'],
+  ['SSS No.', 'sss_no'],
+  ['Pag-IBIG No.', 'pagibig_no'],
+  ['PhilHealth No.', 'philhealth_no'],
+];
+
+const ONBOARDING_REQUIRED_FIELD_NAMES = new Set(ONBOARDING_REQUIRED_FIELDS.map(([, key]) => key));
+
 function initialsFor(name) {
   return (name || 'SF')
     .trim()
@@ -279,7 +309,7 @@ function calculateSeaServiceDuration(fromDate, toDate) {
   };
 }
 
-function FieldRow({ label, name, value, editing, data, setData, error, type = 'text', options = [] }) {
+function FieldRow({ label, name, value, editing, data, setData, error, type = 'text', options = [], required = false }) {
   const optionValue = (option) => typeof option === 'string' ? option : option.value;
   const optionLabel = (option) => typeof option === 'string' ? option : option.label;
 
@@ -294,11 +324,16 @@ function FieldRow({ label, name, value, editing, data, setData, error, type = 't
 
   return (
     <div className="border-b border-slate-100 py-3">
-      <label className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</label>
+      <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        {label}{required && <span className="ml-1 text-red-500">*</span>}
+      </label>
       {type === 'select' ? (
         <select
+          id={`field-${name}`}
+          name={name}
           value={data[name] ?? ''}
           onChange={(e) => setData(name, e.target.value)}
+          required={required}
           className={`mt-1 w-full rounded border p-2.5 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${
             error ? 'border-red-300' : 'border-slate-300'
           }`}
@@ -310,9 +345,12 @@ function FieldRow({ label, name, value, editing, data, setData, error, type = 't
         </select>
       ) : (
         <input
+          id={`field-${name}`}
+          name={name}
           type={type}
           value={data[name] ?? ''}
           onChange={(e) => setData(name, e.target.value)}
+          required={required}
           className={`mt-1 w-full rounded border p-2.5 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${
             error ? 'border-red-300' : 'border-slate-300'
           }`}
@@ -323,7 +361,7 @@ function FieldRow({ label, name, value, editing, data, setData, error, type = 't
   );
 }
 
-function Section({ title, fields, client, editing, data, setData, errors, rankOptions = [] }) {
+function Section({ title, fields, client, editing, data, setData, errors, rankOptions = [], requiredFieldNames = new Set() }) {
   return (
     <section className="rounded border border-slate-200 bg-white p-5 shadow-sm">
       <h3 className="text-base font-semibold text-slate-900">{title}</h3>
@@ -344,6 +382,7 @@ function Section({ title, fields, client, editing, data, setData, errors, rankOp
               error={errors[key]}
               type={shouldUseRankSelect ? 'select' : type}
               options={shouldUseRankSelect ? rankOptions : options}
+              required={requiredFieldNames.has(key)}
             />
           );
         })}
@@ -421,6 +460,30 @@ function TabBar({ active, onChange }) {
             })}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function OnboardingStepper({ active }) {
+  const activeIndex = TABS.findIndex((tab) => tab.key === active);
+
+  return (
+    <div className="mb-5 rounded border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#8A642C]">
+            Step {activeIndex + 1} of {TABS.length}
+          </p>
+          <h3 className="mt-1 text-lg font-semibold text-slate-900">{TABS[activeIndex]?.label}</h3>
+        </div>
+        <div className="text-sm font-medium text-slate-500">{Math.round(((activeIndex + 1) / TABS.length) * 100)}%</div>
+      </div>
+      <div className="mt-4 h-2 overflow-hidden rounded bg-slate-100">
+        <div
+          className="h-full rounded bg-[#1F6F5C] transition-all"
+          style={{ width: `${((activeIndex + 1) / TABS.length) * 100}%` }}
+        />
       </div>
     </div>
   );
@@ -995,10 +1058,11 @@ function EmptyTabPanel({ title }) {
   );
 }
 
-export default function Profile({ client, updateRouteName = 'seafarers.update-profile', updateRouteParams = [], methodOverride = null, headerActions = null }) {
+export default function Profile({ client, updateRouteName = 'seafarers.update-profile', updateRouteParams = [], methodOverride = null, headerActions = null, onboarding = false }) {
   const { certificateOptions = {}, rankOptions = [] } = usePage().props;
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(onboarding);
   const [activeTab, setActiveTab] = useState('personal');
+  const [requiredAlert, setRequiredAlert] = useState([]);
 
   const initialValues = FIELD_KEYS.reduce((acc, key) => {
     acc[key] = client?.[key] ?? (key === 'email_address' ? client?.email ?? '' : '');
@@ -1017,13 +1081,17 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
   initialValues.employment_history = client?.employment_history?.length ? client.employment_history : [];
   initialValues.sea_service = client?.sea_service?.length ? client.sea_service : [];
   initialValues.deck_officer_experience = client?.deck_officer_experience?.length ? client.deck_officer_experience : [];
+  initialValues.privacy_act_accepted = Boolean(client?.privacy_act_accepted);
 
-  const { data, setData, post, processing, errors, reset, transform } = useForm(initialValues);
+  const { data, setData, post, processing, errors, reset, transform, setError, clearErrors } = useForm(initialValues);
 
   const fullName = fullNameFor(client);
   const profileTitle = editing ? fullNameFor(data) : fullName;
   const avatarPreview = data.avatar && typeof data.avatar !== 'string' ? URL.createObjectURL(data.avatar) : null;
   const requiresPrivacyConsent = updateRouteName === 'seafarers.update-profile';
+  const activeTabIndex = TABS.findIndex((tab) => tab.key === activeTab);
+  const previousTab = TABS[activeTabIndex - 1] || null;
+  const nextTab = TABS[activeTabIndex + 1] || null;
   const isAdminProfile = updateRouteName.startsWith('admin.');
   const attachmentDownloadRouteName = isAdminProfile
     ? 'admin.seafarers.attachments.download'
@@ -1048,6 +1116,64 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
     setEditing(false);
   }
 
+  function goToTab(tabKey) {
+    setActiveTab(tabKey);
+    window.requestAnimationFrame(() => {
+      document.getElementById('profile-step-start')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  function validateOnboardingRequiredFields() {
+    if (!onboarding) {
+      return true;
+    }
+
+    const missingErrors = {};
+    const missingFields = [];
+
+    const addMissingField = (label, key, message = `${label} is required.`) => {
+      missingErrors[key] = message;
+      missingFields.push(label);
+    };
+
+    ONBOARDING_REQUIRED_FIELDS.forEach(([label, key]) => {
+      if (!String(data[key] ?? '').trim()) {
+        addMissingField(label, key);
+      }
+    });
+
+    if (!client?.avatar && !(data.avatar instanceof File)) {
+      addMissingField('Profile photo', 'avatar');
+    }
+
+    if (!client?.resume_attachment && !(data.resume_attachment instanceof File)) {
+      addMissingField('Resume attachment', 'resume_attachment');
+    }
+
+    if (!data.privacy_act_accepted) {
+      addMissingField('Data Privacy Act consent', 'privacy_act_accepted', 'Please accept the Data Privacy Act consent.');
+    }
+
+    if (Object.keys(missingErrors).length === 0) {
+      clearErrors();
+      setRequiredAlert([]);
+      return true;
+    }
+
+    setError(missingErrors);
+    setRequiredAlert(missingFields);
+    setActiveTab('personal');
+
+    window.requestAnimationFrame(() => {
+      const firstName = Object.keys(missingErrors)[0];
+      const firstField = document.getElementById(`field-${firstName}`) || document.querySelector(`[name="${firstName}"]`);
+      firstField?.focus?.();
+      firstField?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    });
+
+    return false;
+  }
+
   function stripStoredAttachmentPaths(rows = []) {
     return (rows || []).map((row) => {
       const next = { ...row };
@@ -1062,6 +1188,10 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
 
   function save(e) {
     e.preventDefault();
+
+    if (!validateOnboardingRequiredFields()) {
+      return;
+    }
 
     transform(({ avatar, resume_attachment, ...payload }) => ({
       ...payload,
@@ -1083,7 +1213,11 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
 
     post(route(updateRouteName, updateRouteParams), {
       forceFormData: true,
-      onSuccess: () => setEditing(false),
+      onSuccess: () => {
+        if (!onboarding) {
+          setEditing(false);
+        }
+      },
     });
   }
 
@@ -1232,7 +1366,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
   return (
     <div className="w-full px-4 py-5 sm:p-6">
       <form onSubmit={save} encType="multipart/form-data" className="mx-auto max-w-6xl">
-        <div className="mb-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+        <div id="profile-step-start" className="mb-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               {avatarPreview ? (
@@ -1299,33 +1433,67 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-wrap justify-end gap-2">
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                    <Upload size={16} />
-                    Upload Photo
-                    <input name="avatar" type="file" accept="image/*" onChange={(e) => setData('avatar', e.target.files[0] ?? null)} className="sr-only" />
-                  </label>
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                    <FileText size={16} />
-                    Upload Resume
-                    <input name="resume_attachment" type="file" accept=".pdf,.doc,.docx,image/*" onChange={(e) => setData('resume_attachment', e.target.files[0] ?? null)} className="sr-only" />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={cancelEditing}
-                    disabled={processing}
-                    className="inline-flex items-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                  >
-                    <X size={16} />
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={processing}
-                    className="rounded bg-[#0A2436] px-4 py-2 text-sm font-semibold text-white hover:bg-[#12364F] disabled:opacity-60"
-                  >
-                    {processing ? 'Saving...' : 'Save Changes'}
-                  </button>
+                <div className="flex flex-wrap justify-end gap-3">
+                  <div className="max-w-56">
+                    <label className={`inline-flex cursor-pointer items-center gap-2 rounded border px-4 py-2 text-sm font-medium transition hover:bg-slate-50 ${
+                      errors.avatar ? 'border-red-300 text-red-700' : 'border-slate-300 text-slate-700'
+                    }`}>
+                      <Upload size={16} />
+                      Upload Photo{onboarding && !client?.avatar && <span className="text-red-500">*</span>}
+                      <input
+                        id="field-avatar"
+                        name="avatar"
+                        type="file"
+                        accept="image/*"
+                        required={onboarding && !client?.avatar}
+                        onChange={(e) => setData('avatar', e.target.files[0] ?? null)}
+                        className="sr-only"
+                      />
+                    </label>
+                    <p className="mt-1 truncate text-xs text-slate-500">
+                      {data.avatar instanceof File ? `Selected: ${data.avatar.name}` : client?.avatar ? 'Current photo uploaded' : 'No photo selected'}
+                    </p>
+                  </div>
+                  <div className="max-w-56">
+                    <label className={`inline-flex cursor-pointer items-center gap-2 rounded border px-4 py-2 text-sm font-medium transition hover:bg-slate-50 ${
+                      errors.resume_attachment ? 'border-red-300 text-red-700' : 'border-slate-300 text-slate-700'
+                    }`}>
+                      <FileText size={16} />
+                      Upload Resume{onboarding && !client?.resume_attachment && <span className="text-red-500">*</span>}
+                      <input
+                        id="field-resume_attachment"
+                        name="resume_attachment"
+                        type="file"
+                        accept=".pdf,.doc,.docx,image/*"
+                        required={onboarding && !client?.resume_attachment}
+                        onChange={(e) => setData('resume_attachment', e.target.files[0] ?? null)}
+                        className="sr-only"
+                      />
+                    </label>
+                    <p className="mt-1 truncate text-xs text-slate-500">
+                      {data.resume_attachment instanceof File ? `Selected: ${data.resume_attachment.name}` : client?.resume_attachment ? `Current: ${client.resume_attachment.split('/').pop()}` : 'No resume selected'}
+                    </p>
+                  </div>
+                  {!onboarding && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={cancelEditing}
+                        disabled={processing}
+                        className="inline-flex items-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                      >
+                        <X size={16} />
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={processing}
+                        className="rounded bg-[#0A2436] px-4 py-2 text-sm font-semibold text-white hover:bg-[#12364F] disabled:opacity-60"
+                      >
+                        {processing ? 'Saving...' : 'Save Changes'}
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
               {errors.avatar && <p className="text-xs text-red-600">{errors.avatar}</p>}
@@ -1334,7 +1502,44 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
           </div>
         </div>
 
-        <TabBar active={activeTab} onChange={setActiveTab} />
+        {onboarding && <OnboardingStepper active={activeTab} />}
+
+        {onboarding && requiredAlert.length > 0 && (
+          <div
+            role="alert"
+            className="mb-5 rounded border border-red-200 bg-red-50 p-4 text-red-800 shadow-sm"
+          >
+            <div className="flex items-start gap-3">
+              <AlertCircle size={20} className="mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold">Please complete the required fields before submitting.</h3>
+                    <p className="mt-1 text-sm text-red-700">Missing fields:</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRequiredAlert([])}
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded text-red-700 transition hover:bg-red-100"
+                    aria-label="Dismiss required fields alert"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <ul className="mt-3 grid grid-cols-1 gap-1 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                  {requiredAlert.map((label) => (
+                    <li key={label} className="flex items-center gap-2">
+                      <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                      <span>{label}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <TabBar active={activeTab} onChange={onboarding ? goToTab : setActiveTab} />
 
         {activeTab === 'personal' && (
           <div className="space-y-5">
@@ -1349,6 +1554,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
                 setData={setData}
                 errors={errors}
                 rankOptions={rankOptions}
+                requiredFieldNames={onboarding ? ONBOARDING_REQUIRED_FIELD_NAMES : new Set()}
               />
             ))}
           </div>
@@ -1553,7 +1759,9 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               type="checkbox"
               checked={Boolean(editing ? data.privacy_act_accepted : client?.privacy_act_accepted)}
               onChange={(e) => setData('privacy_act_accepted', e.target.checked)}
-              disabled
+              id="field-privacy_act_accepted"
+              name="privacy_act_accepted"
+              disabled={!editing || !requiresPrivacyConsent}
               required={editing && requiresPrivacyConsent}
               className="mt-1 h-4 w-4 rounded border-slate-300 text-[#1F6F5C] focus:ring-[#1F6F5C] disabled:opacity-70"
             />
@@ -1570,6 +1778,56 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
           )}
           {errors.privacy_act_accepted && <p className="mt-2 text-xs text-red-600">{errors.privacy_act_accepted}</p>}
         </div>
+
+        {onboarding && (
+          <div className="sticky bottom-0 z-20 mt-5 border-t border-slate-200 bg-[#EEF2F0]/95 py-4 backdrop-blur">
+            <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                type="button"
+                onClick={() => previousTab && goToTab(previousTab.key)}
+                disabled={!previousTab || processing}
+                className="inline-flex items-center justify-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ArrowLeft size={16} />
+                Back
+              </button>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                {nextTab && activeTab !== 'personal' && (
+                  <button
+                    type="button"
+                    onClick={() => goToTab(nextTab.key)}
+                    disabled={processing}
+                    className="inline-flex items-center justify-center rounded border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
+                  >
+                    Skip
+                  </button>
+                )}
+
+                {nextTab ? (
+                  <button
+                    type="button"
+                    onClick={() => goToTab(nextTab.key)}
+                    disabled={processing}
+                    className="inline-flex items-center justify-center gap-2 rounded bg-[#0A2436] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#12364F] disabled:opacity-60"
+                  >
+                    Next
+                    <ArrowRight size={16} />
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={processing}
+                    className="inline-flex items-center justify-center gap-2 rounded bg-[#0A2436] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#12364F] disabled:opacity-60"
+                  >
+                    <CheckCircle2 size={16} />
+                    {processing ? 'Saving...' : 'Submit profile'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </form>
     </div>
   );
