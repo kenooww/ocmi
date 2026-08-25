@@ -250,6 +250,8 @@ class ClientAuthController extends Controller
             return $this->redirectToDashboard();
         }
 
+        $clientData = null;
+
         if ($client) {
             $client->load([
                 'dependents',
@@ -266,9 +268,39 @@ class ClientAuthController extends Controller
                 'seaServices',
                 'deckOfficerExperiences',
             ]);
+
+            $clientData = $client->toArray();
+            unset($clientData['password'], $clientData['verification_token']);
+
+            if (! empty($clientData['date_applied'])) {
+                $clientData['date_applied'] = optional($client->date_applied)->format('Y-m-d');
+            }
+            if (! empty($clientData['date_of_birth'])) {
+                $clientData['date_of_birth'] = optional($client->date_of_birth)->format('Y-m-d');
+            }
+            if (! empty($clientData['marriage_date'])) {
+                $clientData['marriage_date'] = optional($client->marriage_date)->format('Y-m-d');
+            }
+
+            $clientData['created_at_human'] = $client->created_at->toFormattedDateString();
+            $clientData['privacy_act_accepted_at_human'] = optional($client->privacy_act_accepted_at)->toFormattedDateString();
+            $clientData['dependents'] = $client->dependents
+                ->map(fn ($dependent) => [
+                    'id' => $dependent->id,
+                    'name' => $dependent->name,
+                    'date_of_birth' => optional($dependent->date_of_birth)->format('Y-m-d'),
+                    'relationship' => $dependent->relationship,
+                    'dependent' => $dependent->dependent,
+                    'beneficiary' => $dependent->beneficiary,
+                    'address' => $dependent->address,
+                    'attachment' => $dependent->attachment,
+                ])
+                ->values();
+            $clientData['travel_documents'] = $this->formatTravelDocuments($client);
+            $this->appendDocumentSections($client, $clientData);
         }
 
-        return Inertia::render('Client/ContinueProfile', ['client' => $client]);
+        return Inertia::render('Client/ContinueProfile', ['client' => $clientData]);
     }
 
     public function continueProfile(Request $request)
@@ -501,7 +533,11 @@ class ClientAuthController extends Controller
             'blood' => 'nullable|string|max:100',
             'philhealth_no' => 'required|string|max:100',
             // Avatar upload
-            'avatar' => 'nullable|image|max:2048',
+            'avatar' => [
+                $client->avatar ? 'nullable' : 'required',
+                'image',
+                'max:2048',
+            ],
             'resume_attachment' => [
                 $client->resume_attachment ? 'nullable' : 'required',
                 'file',
