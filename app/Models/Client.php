@@ -11,7 +11,7 @@ class Client extends Authenticatable
 {
     use Notifiable;
 
-    public const DEFAULT_APPLICATION_STATUS = 'PENDING/ONHOLD';
+    public const DEFAULT_APPLICATION_STATUS = 'NEW APPLICANT';
 
     public const CONTINUE_PROFILE_REQUIRED_FIELDS = [
         'first_name' => 'First name',

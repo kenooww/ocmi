@@ -446,6 +446,7 @@ class AdminController extends Controller
                         ->orWhere('middle_name', 'like', "%{$search}%")
                         ->orWhere('last_name', 'like', "%{$search}%")
                         ->orWhere('current_position', 'like', "%{$search}%")
+                        ->orWhere('nationality', 'like', "%{$search}%")
                         ->orWhere('position_applied_for', 'like', "%{$search}%")
                         ->orWhere('type_of_job', 'like', "%{$search}%")
                         ->orWhere('whatsapp_number', 'like', "%{$search}%")
@@ -467,6 +468,7 @@ class AdminController extends Controller
                     'address' => $client->address,
                     'avatar' => $client->avatar,
                     'current_position' => $client->current_position,
+                    'nationality' => $client->nationality,
                     'position_applied_for' => $client->position_applied_for,
                     'type_of_job' => $client->type_of_job,
                     'whatsapp_number' => $client->whatsapp_number,

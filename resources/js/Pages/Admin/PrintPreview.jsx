@@ -935,9 +935,10 @@ export default function PrintPreview({ client, printForm = 'complete' }) {
     const visiblePageCount = [showPersonal, showCertificates, showSeaService, showDeckOfficer].filter(Boolean).length;
     const pageLabel = (pageNumber) => `Page ${pageNumber} of ${visiblePageCount}`;
     const personalFields = [
+        ['Current Position', client?.current_position],
         ['First Name', client?.first_name], ['Middle Name', client?.middle_name], ['Last Name', client?.last_name],
         ['Gender', client?.gender], ['Status', client?.status], ['Type of Job', client?.type_of_job],
-        ['Place Of Birth', client?.place_of_birth], ['Current Position', client?.current_position], ['Date of Birth', client?.date_of_birth],
+        ['Place Of Birth', client?.place_of_birth], ['Date of Birth', client?.date_of_birth],
         ['Position applied for', client?.position_applied_for], ["Mother's Maiden Name", client?.mothers_maiden_name],
         ['Religion', client?.religion], ['Sector / Sub caste', client?.sector_sub_caste], ["Father's Name", client?.fathers_name], ['Next of Kin', client?.next_of_kin],
         ['Current Home Address', client?.current_home_address], ['Relationship', client?.relationship],
