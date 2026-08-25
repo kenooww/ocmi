@@ -111,20 +111,36 @@ const APPLICATION_STATUS_OPTIONS = [
 function applicationStatusClass(status) {
     const normalized = String(status || '').toUpperCase();
 
-    if (normalized === 'FAILED' || normalized === 'DISAPPROVED') {
+    if (normalized === 'FAILED') {
         return 'bg-red-100 text-red-700 ring-1 ring-red-200';
     }
 
-    if (normalized === 'TO REPORT' || normalized === 'APPROVED') {
+    if (normalized === 'DISAPPROVED') {
+        return 'bg-rose-100 text-rose-700 ring-1 ring-rose-200';
+    }
+
+    if (normalized === 'TO REPORT') {
+        return 'bg-lime-100 text-lime-700 ring-1 ring-lime-200';
+    }
+
+    if (normalized === 'APPROVED') {
         return 'bg-green-100 text-green-700 ring-1 ring-green-200';
     }
 
-    if (normalized === 'FOR REEVAL/FOR APPROVAL' || normalized === 'DOCUMENT PROCESSING') {
+    if (normalized === 'FOR REEVAL/FOR APPROVAL') {
         return 'bg-blue-100 text-blue-700 ring-1 ring-blue-200';
+    }
+
+    if (normalized === 'DOCUMENT PROCESSING') {
+        return 'bg-cyan-100 text-cyan-700 ring-1 ring-cyan-200';
     }
 
     if (normalized === 'PROPOSED') {
         return 'bg-purple-100 text-purple-700 ring-1 ring-purple-200';
+    }
+
+    if (normalized === 'NEW APPLICANT') {
+        return 'bg-teal-100 text-teal-700 ring-1 ring-teal-200';
     }
 
     if (normalized === 'PENDING/ONHOLD') {
@@ -132,6 +148,10 @@ function applicationStatusClass(status) {
     }
 
     return 'bg-slate-100 text-slate-700 ring-1 ring-slate-200';
+}
+
+function applicationStatusUpdateValue(status) {
+    return APPLICATION_STATUS_OPTIONS.includes(status) ? status : 'PENDING/ONHOLD';
 }
 
 export default function Clients({ clients, filters = {} }) {
@@ -270,7 +290,7 @@ export default function Clients({ clients, filters = {} }) {
         setApplicationClient(client);
         setApplicationTab('update');
         setApplicationData({
-            application_status: client.application_status || 'PENDING/ONHOLD',
+            application_status: applicationStatusUpdateValue(client.application_status),
             remarks: '',
         });
     };
@@ -385,30 +405,32 @@ export default function Clients({ clients, filters = {} }) {
                     <div className="overflow-hidden">
                         <table className="w-full table-fixed border-collapse">
                             <colgroup>
-                                <col className="w-[18%]" />
+                                <col className="w-[19%]" />
                                 <col className="w-[13%]" />
-                                <col className="w-[17%]" />
-                                <col className="w-[11%]" />
                                 <col className="w-[12%]" />
-                                <col className="w-[14%]" />
-                                <col className="w-[15%]" />
+                                <col className="w-[11%]" />
+                                <col className="w-[9%]" />
+                                <col className="w-[11%]" />
+                                <col className="w-[13%]" />
+                                <col className="w-[12%]" />
                             </colgroup>
                             <thead>
                                 <tr className="border-b border-slate-200 bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                                    <th className="px-3 py-3 leading-tight">Rank</th>
-                                    <th className="px-3 py-3 leading-tight">Applied Position</th>
-                                    <th className="px-3 py-3 leading-tight">Type of Job</th>
-                                    <th className="px-3 py-3 leading-tight">WhatsApp</th>
-                                    <th className="px-3 py-3 leading-tight">Processed By</th>
-                                    <th className="px-3 py-3 leading-tight">Application Status</th>
-                                    <th className="px-3 py-3 text-right leading-tight">Actions</th>
+                                    <th className="px-2 py-3 leading-tight">Rank</th>
+                                    <th className="px-2 py-3 leading-tight">Applied Position</th>
+                                    <th className="px-2 py-3 leading-tight">Type of Job</th>
+                                    <th className="px-2 py-3 leading-tight">WhatsApp</th>
+                                    <th className="px-2 py-3 leading-tight">Nationality</th>
+                                    <th className="px-2 py-3 leading-tight">Processed By</th>
+                                    <th className="px-2 py-3 leading-tight">Application Status</th>
+                                    <th className="px-2 py-3 text-right leading-tight">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {(clients?.data ?? []).length > 0 ? (
                                     clients.data.map((client) => (
                                         <tr key={client.id} className="text-sm transition hover:bg-slate-50">
-                                            <td className="px-3 py-4">
+                                            <td className="px-2 py-4">
                                                 <div className="flex min-w-0 items-center gap-2">
                                                     {client.avatar ? (
                                                         <img
@@ -430,56 +452,59 @@ export default function Clients({ clients, filters = {} }) {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="break-words px-3 py-4 leading-snug text-slate-600">
+                                            <td className="break-words px-2 py-4 leading-snug text-slate-600">
                                                 {client.position_applied_for || 'Not set'}
                                             </td>
-                                            <td className="break-words px-3 py-4 leading-snug text-slate-600">
+                                            <td className="break-words px-2 py-4 leading-snug text-slate-600">
                                                 {client.type_of_job || 'Not set'}
                                             </td>
-                                            <td className="break-words px-3 py-4 leading-snug text-slate-600">
+                                            <td className="break-words px-2 py-4 leading-snug text-slate-600">
                                                 {client.whatsapp_number || 'Not set'}
                                             </td>
-                                            <td className="break-words px-3 py-4 leading-snug text-slate-600">
+                                            <td className="break-words px-2 py-4 leading-snug text-slate-600">
+                                                {client.nationality || 'Not set'}
+                                            </td>
+                                            <td className="break-words px-2 py-4 leading-snug text-slate-600">
                                                 {client.processed_by || 'Not set'}
                                             </td>
-                                            <td className="px-3 py-4">
+                                            <td className="px-2 py-4">
                                                 <span className={`inline-flex max-w-full rounded px-2 py-1 text-center text-[11px] font-medium leading-tight ${applicationStatusClass(client.application_status)}`}>
                                                     <span className="break-words whitespace-normal">{client.application_status || 'Not set'}</span>
                                                 </span>
                                             </td>
-                                            <td className="px-3 py-4">
+                                            <td className="px-2 py-4">
                                                 <div className="flex flex-nowrap justify-end gap-1">
                                                     <Link
                                                         href={route('admin.seafarers.show', client.id)}
-                                                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-emerald-100 bg-emerald-50 text-emerald-700 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-100 hover:shadow"
+                                                        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-emerald-100 bg-emerald-50 text-emerald-700 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-100 hover:shadow"
                                                         aria-label={`View ${client.name}`}
                                                     >
-                                                        <Eye size={14} />
+                                                        <Eye size={13} />
                                                     </Link>
                                                     <button
                                                         type="button"
                                                         onClick={() => setPrintClient(client)}
-                                                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-sky-100 bg-sky-50 text-sky-700 shadow-sm transition hover:-translate-y-0.5 hover:border-sky-200 hover:bg-sky-100 hover:shadow"
+                                                        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-sky-100 bg-sky-50 text-sky-700 shadow-sm transition hover:-translate-y-0.5 hover:border-sky-200 hover:bg-sky-100 hover:shadow"
                                                         aria-label={`Print forms for ${client.name}`}
                                                     >
-                                                        <Printer size={14} />
+                                                        <Printer size={13} />
                                                     </button>
                                                     <button
                                                         type="button"
                                                         onClick={() => openApplicationModal(client)}
-                                                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-amber-100 bg-amber-50 text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-200 hover:bg-amber-100 hover:shadow"
+                                                        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-amber-100 bg-amber-50 text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-200 hover:bg-amber-100 hover:shadow"
                                                         aria-label={`Update application status for ${client.name}`}
                                                     >
-                                                        <ClipboardCheck size={14} />
+                                                        <ClipboardCheck size={13} />
                                                     </button>
                                                     {canDeleteSeafarers && (
                                                         <button
                                                             type="button"
                                                             onClick={() => confirm('Delete seafarer record?') && destroy(route('admin.seafarers.destroy', client.id), { preserveScroll: true })}
-                                                            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-red-100 bg-red-50 text-red-700 shadow-sm transition hover:-translate-y-0.5 hover:border-red-200 hover:bg-red-100 hover:shadow"
+                                                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-red-100 bg-red-50 text-red-700 shadow-sm transition hover:-translate-y-0.5 hover:border-red-200 hover:bg-red-100 hover:shadow"
                                                             aria-label={`Delete ${client.name}`}
                                                         >
-                                                            <Trash2 size={14} />
+                                                            <Trash2 size={13} />
                                                         </button>
                                                     )}
                                                 </div>
@@ -488,7 +513,7 @@ export default function Clients({ clients, filters = {} }) {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="7" className="px-5 py-12 text-center text-sm text-slate-500">
+                                        <td colSpan="8" className="px-5 py-12 text-center text-sm text-slate-500">
                                             No seafarers found.
                                         </td>
                                     </tr>

@@ -3,9 +3,9 @@ import { useForm, usePage } from '@inertiajs/react';
 import { AlertCircle, ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, ChevronDown, Download, FileText, Mail, Phone, Plus, Printer, Trash2, Upload, X } from 'lucide-react';
 
 const FIELD_KEYS = [
-  'avatar', 'resume_attachment', 'privacy_act_accepted', 'first_name', 'middle_name', 'last_name', 'gender', 'status', 'type_of_job', 'date_applied', 'nationality',
+  'avatar', 'resume_attachment', 'privacy_act_accepted', 'current_position', 'first_name', 'middle_name', 'last_name', 'gender', 'status', 'type_of_job', 'date_applied', 'nationality',
   'place_of_birth', 'date_of_birth', 'mothers_maiden_name', 'fathers_name', 'religion', 'sector_sub_caste',
-  'current_position', 'position_applied_for', 'educational_attainment', 'last_salary', 'expected_salary', 'e_registration_number',
+  'position_applied_for', 'educational_attainment', 'last_salary', 'expected_salary', 'e_registration_number',
   'body_weight_bmi', 'height_cm', 'coverall_shoe_size', 'safety_shoe_size', 'boiler_suit_size',
   'current_home_address', 'personal_mobile_no', 'telephone_numbers', 'whatsapp_number', 'fax_no', 'email_address', 'nearest_airport',
   'next_of_kin', 'relationship', 'wife_name', 'wife_ic_no', 'wife_occupation', 'marriage_date', 'wife_income_tax_no', 'contact_person', 'emergency_contact',
@@ -96,9 +96,9 @@ const TABS = [
   { key: 'proficiency', label: 'Certificate of Proficiency' },
   { key: 'vaccinations', label: 'Vaccinations' },
   { key: 'flag_documents', label: 'Flag Documents' },
-  { key: 'other_certificates', label: 'Other Certificates' },
   { key: 'additional_stcw_certificates', label: 'Additional STCW Certificate' },
   { key: 'offshore_training_certificates', label: 'Offshore Training Certificate' },
+  { key: 'other_certificates', label: 'Other Certificates' },
   { key: 'employment_history', label: 'Employment History' },
   { key: 'sea_service', label: 'Sea Service' },
   { key: 'deck_officer_experience', label: 'Deck Officer Experience' },
@@ -108,6 +108,7 @@ const GROUPS = [
   {
     title: 'Personal Information',
     fields: [
+      ['Current position', 'current_position'],
       ['First name', 'first_name'],
       ['Middle name', 'middle_name'],
       ['Last name', 'last_name'],
@@ -133,7 +134,6 @@ const GROUPS = [
   {
     title: 'Position & Background',
     fields: [
-      ['Current position', 'current_position'],
       ['Educational attainment', 'educational_attainment'],
       ['Last salary', 'last_salary'],
       ['Expected salary', 'expected_salary'],
@@ -195,6 +195,7 @@ const GROUPS = [
 ];
 
 const ONBOARDING_REQUIRED_FIELDS = [
+  ['Current position', 'current_position'],
   ['First name', 'first_name'],
   ['Last name', 'last_name'],
   ['Position applied for', 'position_applied_for'],
@@ -204,7 +205,6 @@ const ONBOARDING_REQUIRED_FIELDS = [
   ['Date of birth', 'date_of_birth'],
   ["Mother's maiden name", 'mothers_maiden_name'],
   ["Father's name", 'fathers_name'],
-  ['Current position', 'current_position'],
   ['Educational attainment', 'educational_attainment'],
   ['Body weight (lbs)', 'body_weight_bmi'],
   ['Height (cm)', 'height_cm'],

@@ -13,9 +13,9 @@ const TABS = [
     { key: 'proficiency', label: 'Certificate of Proficiency' },
     { key: 'vaccinations', label: 'Vaccinations' },
     { key: 'flag_documents', label: 'Flag Documents' },
-    { key: 'other_certificates', label: 'Other Certificates' },
     { key: 'additional_stcw_certificates', label: 'Additional STCW Certificate' },
     { key: 'offshore_training_certificates', label: 'Offshore Training Certificate' },
+    { key: 'other_certificates', label: 'Other Certificates' },
     { key: 'employment_history', label: 'Employment History' },
     { key: 'sea_service', label: 'Sea Service' },
     { key: 'deck_officer_experience', label: 'Deck Officer Experience' },
@@ -75,6 +75,7 @@ const GROUPS = [
     {
         title: 'Personal Information',
         fields: [
+            ['Current position', 'current_position'],
             ['First name', 'first_name'],
             ['Middle name', 'middle_name'],
             ['Last name', 'last_name'],
@@ -96,7 +97,6 @@ const GROUPS = [
     {
         title: 'Position & Background',
         fields: [
-            ['Current position', 'current_position'],
             ['Position applied for', 'position_applied_for'],
             ['Educational attainment', 'educational_attainment'],
             ['Last salary', 'last_salary'],
