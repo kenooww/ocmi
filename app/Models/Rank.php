@@ -8,5 +8,6 @@ class Rank extends Model
 {
     protected $fillable = [
         'rank_name',
+        'priority_level',
     ];
 }

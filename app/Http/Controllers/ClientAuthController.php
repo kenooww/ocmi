@@ -29,8 +29,27 @@ class ClientAuthController extends Controller
     ];
 
     private const TYPE_OF_JOB_OPTIONS = [
+        'No Experience',
         'Landbased/Skilled/Office Job',
         'Seabased/Seaman',
+    ];
+    private const SEABASED_WORK_EXPERIENCE = 'Seabased/Seaman';
+    private const SEA_SERVICE_REQUIRED_FIELDS = [
+        'from_date',
+        'to_date',
+        'duration_months',
+        'duration_days',
+        'position',
+        'vessel_name',
+        'type_imo_number',
+        'area_of_operation',
+        'flag',
+        'propulsion_type',
+        'grt',
+        'bollard_pull',
+        'main_engine_type_model',
+        'main_engine_kw',
+        'ship_owner_manager_contact',
     ];
 
     private const STATUS_OPTIONS = [
@@ -318,14 +337,21 @@ class ClientAuthController extends Controller
             $request->request->remove('resume_attachment');
         }
 
+        $request->merge([
+            'sea_service' => $this->applySeaServiceDurations((array) $request->input('sea_service', [])),
+        ]);
+
+        $seaServiceIsRequired = $request->input('type_of_job') === self::SEABASED_WORK_EXPERIENCE;
+        $seaServicePresenceRule = $seaServiceIsRequired ? 'required' : 'nullable';
+
         $data = $request->validate([
             // Identity
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
             'last_name' => 'required|string|max:255',
             'gender' => ['nullable', 'string', Rule::in(self::GENDER_OPTIONS)],
-            'status' => ['nullable', 'string', Rule::in(self::STATUS_OPTIONS)],
-            'type_of_job' => ['nullable', 'string', Rule::in(self::TYPE_OF_JOB_OPTIONS)],
+            'status' => ['required', 'string', Rule::in(self::STATUS_OPTIONS)],
+            'type_of_job' => ['required', 'string', Rule::in(self::TYPE_OF_JOB_OPTIONS)],
             'date_applied' => 'required|date',
 
             // Birth & family
@@ -490,24 +516,24 @@ class ClientAuthController extends Controller
             'employment_history.*.country' => 'nullable|string|max:255',
             'employment_history.*.attachment' => 'nullable',
 
-            'sea_service' => 'nullable|array',
+            'sea_service' => [$seaServicePresenceRule, 'array', $seaServiceIsRequired ? 'min:1' : 'nullable'],
             'sea_service.*.id' => ['nullable', 'integer', Rule::exists('client_sea_services', 'id')->where('client_id', $client->id)],
-            'sea_service.*.from_date' => 'nullable|date',
-            'sea_service.*.to_date' => 'nullable|date',
-            'sea_service.*.duration_months' => 'nullable|integer|min:0',
-            'sea_service.*.duration_days' => 'nullable|integer|min:0',
-            'sea_service.*.position' => 'nullable|string|max:255',
-            'sea_service.*.vessel_name' => 'nullable|string|max:255',
-            'sea_service.*.type_imo_number' => 'nullable|string|max:255',
-            'sea_service.*.area_of_operation' => 'nullable|string|max:255',
-            'sea_service.*.flag' => 'nullable|string|max:255',
+            'sea_service.*.from_date' => [$seaServicePresenceRule, 'date'],
+            'sea_service.*.to_date' => [$seaServicePresenceRule, 'date'],
+            'sea_service.*.duration_months' => 'exclude',
+            'sea_service.*.duration_days' => 'exclude',
+            'sea_service.*.position' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.vessel_name' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.type_imo_number' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.area_of_operation' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.flag' => [$seaServicePresenceRule, 'string', 'max:255'],
             'sea_service.*.oilfield_yn' => 'nullable|string|max:255',
-            'sea_service.*.propulsion_type' => 'nullable|string|max:255',
-            'sea_service.*.grt' => 'nullable|string|max:255',
-            'sea_service.*.bollard_pull' => 'nullable|string|max:255',
-            'sea_service.*.main_engine_type_model' => 'nullable|string|max:255',
-            'sea_service.*.main_engine_kw' => 'nullable|string|max:255',
-            'sea_service.*.ship_owner_manager_contact' => 'nullable|string|max:2000',
+            'sea_service.*.propulsion_type' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.grt' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.bollard_pull' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.main_engine_type_model' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.main_engine_kw' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.ship_owner_manager_contact' => [$seaServicePresenceRule, 'string', 'max:2000'],
 
             'deck_officer_experience' => 'nullable|array',
             'deck_officer_experience.*.id' => ['nullable', 'integer', Rule::exists('client_deck_officer_experiences', 'id')->where('client_id', $client->id)],
@@ -749,24 +775,7 @@ class ClientAuthController extends Controller
             'country',
         ], 'employment-history-attachments', 'employment_history');
         $seaServiceRows = $this->applySeaServiceDurations($seaServiceRows);
-        $this->syncRows($client, 'seaServices', $seaServiceRows, [
-            'from_date',
-            'to_date',
-            'duration_months',
-            'duration_days',
-            'position',
-            'vessel_name',
-            'type_imo_number',
-            'area_of_operation',
-            'flag',
-            'oilfield_yn',
-            'propulsion_type',
-            'grt',
-            'bollard_pull',
-            'main_engine_type_model',
-            'main_engine_kw',
-            'ship_owner_manager_contact',
-        ]);
+        $this->syncRows($client, 'seaServices', $seaServiceRows, self::SEA_SERVICE_REQUIRED_FIELDS);
         $this->syncRows($client, 'deckOfficerExperiences', $deckOfficerExperienceRows, [
             'vessel_name',
             'charterer',
@@ -1095,8 +1104,14 @@ class ClientAuthController extends Controller
                 return $row;
             }
 
-            $from = Carbon::parse($fromDate)->startOfDay();
-            $to = Carbon::parse($toDate)->startOfDay();
+            try {
+                $from = Carbon::parse($fromDate)->startOfDay();
+                $to = Carbon::parse($toDate)->startOfDay();
+            } catch (\Exception $e) {
+                $row['duration_months'] = null;
+                $row['duration_days'] = null;
+                return $row;
+            }
 
             if ($to->lt($from)) {
                 $row['duration_months'] = null;
