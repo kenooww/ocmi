@@ -370,7 +370,7 @@ export default function Clients({ clients, filters = {} }) {
                     <div className="flex flex-col gap-3 border-b border-slate-200 p-5 lg:flex-row lg:items-center lg:justify-between">
                         <div>
                             <h3 className="text-lg font-semibold text-slate-900">Seafarer Listing</h3>
-                            <p className="mt-1 text-sm text-slate-500">Search by rank, applied position, job type, WhatsApp, processed by, or status.</p>
+                            <p className="mt-1 text-sm text-slate-500">Search by rank, applied position, work experience, WhatsApp, processed by, or status.</p>
                         </div>
                         <form onSubmit={handleSearch} className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
                             <div className="relative w-full sm:w-80">
@@ -418,7 +418,7 @@ export default function Clients({ clients, filters = {} }) {
                                 <tr className="border-b border-slate-200 bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                                     <th className="px-2 py-3 leading-tight">Rank</th>
                                     <th className="px-2 py-3 leading-tight">Applied Position</th>
-                                    <th className="px-2 py-3 leading-tight">Type of Job</th>
+                                    <th className="px-2 py-3 leading-tight">Work Experience</th>
                                     <th className="px-2 py-3 leading-tight">WhatsApp</th>
                                     <th className="px-2 py-3 leading-tight">Nationality</th>
                                     <th className="px-2 py-3 leading-tight">Processed By</th>

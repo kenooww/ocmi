@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
-import { Anchor, Award, Bell, ChevronDown, LayoutDashboard, LogOut, Menu, Settings, Ship, UserRound, X } from 'lucide-react';
+import { Anchor, Award, Bell, ChevronDown, ClipboardList, LayoutDashboard, LogOut, Menu, Settings, Ship, UserRound, X } from 'lucide-react';
 
 const PALETTE = {
     navyDeep: '#0A2436',
@@ -30,14 +30,26 @@ export default function AdminTabs({ activeTab, title, children }) {
     const company = companySettings || {};
     const [profileOpen, setProfileOpen] = useState(false);
     const [openMenus, setOpenMenus] = useState({
+        applicantMonitoring: activeTab === 'applicant-monitoring' || activeTab.startsWith('applicant-monitoring-'),
         certificates: activeTab === 'certificates' || activeTab.startsWith('certificates-'),
     });
 
     const tabs = [
         { key: 'dashboard', label: 'Dashboard', href: route('admin.dashboard.index'), icon: LayoutDashboard },
+        {
+            key: 'applicant-monitoring',
+            label: 'Applicant Monitoring',
+            href: route('admin.applicant-monitoring.index'),
+            icon: ClipboardList,
+            children: [
+                { key: 'applicant-monitoring-create', label: 'Add Monitoring', href: route('admin.applicant-monitoring.create') },
+                { key: 'applicant-monitoring-records', label: 'Monitoring Records', href: route('admin.applicant-monitoring.index') },
+            ],
+        },
         { key: 'users', label: 'Users', href: route('admin.users.index'), icon: UserRound, adminOnly: true },
         { key: 'clients', label: 'Seafarers', href: route('admin.seafarers.index'), icon: Ship },
         { key: 'ranks', label: 'Ranks', href: route('admin.ranks.index'), icon: Award },
+        { key: 'principals', label: 'Principal', href: route('admin.principals.index'), icon: Anchor },
         {
             key: 'certificates',
             label: 'Certificates',

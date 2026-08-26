@@ -13,9 +13,11 @@ const FIELD_KEYS = [
 ];
 
 const TYPE_OF_JOB_OPTIONS = [
+  'No Experience',
   'Landbased/Skilled/Office Job',
   'Seabased/Seaman',
 ];
+const SEABASED_WORK_EXPERIENCE = 'Seabased/Seaman';
 
 const STATUS_OPTIONS = [
   'single',
@@ -65,6 +67,23 @@ const EMPTY_SEA_SERVICE = {
   main_engine_kw: '',
   ship_owner_manager_contact: '',
 };
+const SEA_SERVICE_REQUIRED_FIELDS = [
+  ['Vessel Name', 'vessel_name'],
+  ['Company (Owners)', 'ship_owner_manager_contact'],
+  ['Rank', 'position'],
+  ['Type of Vessel', 'type_imo_number'],
+  ['Propulsion type AZ, CPP', 'propulsion_type'],
+  ['Flag', 'flag'],
+  ['Area of operation', 'area_of_operation'],
+  ['GT', 'grt'],
+  ['Types/Model', 'main_engine_type_model'],
+  ['KW', 'main_engine_kw'],
+  ['Bollard Pull', 'bollard_pull'],
+  ['Sign on Date', 'from_date'],
+  ['Sign off Date', 'to_date'],
+  ['Duration Month', 'duration_months'],
+  ['Duration Days', 'duration_days'],
+];
 const EMPTY_DECK_OFFICER_EXPERIENCE = {
   vessel_name: '',
   charterer: '',
@@ -115,7 +134,7 @@ const GROUPS = [
       ['Gender', 'gender', 'select', GENDER_OPTIONS],
       ['Status', 'status', 'select', STATUS_OPTIONS],
       ['Position applied for', 'position_applied_for'],
-      ['Type of job', 'type_of_job', 'select', TYPE_OF_JOB_OPTIONS],
+      ['Work Experience', 'type_of_job', 'select', TYPE_OF_JOB_OPTIONS],
       ['Date applied', 'date_applied', 'date'],
       ['Nationality', 'nationality'],
     ],
@@ -198,6 +217,8 @@ const ONBOARDING_REQUIRED_FIELDS = [
   ['Current position', 'current_position'],
   ['First name', 'first_name'],
   ['Last name', 'last_name'],
+  ['Status', 'status'],
+  ['Work Experience', 'type_of_job'],
   ['Position applied for', 'position_applied_for'],
   ['Date applied', 'date_applied'],
   ['Nationality', 'nationality'],
@@ -223,6 +244,7 @@ const ONBOARDING_REQUIRED_FIELDS = [
 ];
 
 const ONBOARDING_REQUIRED_FIELD_NAMES = new Set(ONBOARDING_REQUIRED_FIELDS.map(([, key]) => key));
+const PROFILE_REQUIRED_FIELD_NAMES = new Set(['status', 'type_of_job']);
 
 function initialsFor(name) {
   return (name || 'SF')
@@ -810,26 +832,23 @@ function TravelDocumentsTable({ items, editing, onChange, errors }) {
   );
 }
 
-function SeaServiceTable({ items, editing, onChange, onAdd, onRemove, errors }) {
+function SeaServiceTable({ items, editing, onChange, onAdd, onRemove, errors, required = false }) {
   const columns = [
-    { key: 'from_date', label: 'From', type: 'date', className: 'min-w-[170px]' },
-    { key: 'to_date', label: 'To', type: 'date', className: 'min-w-[170px]' },
-    { key: 'duration_months', label: 'Mos.', type: 'number', readOnly: true, className: 'min-w-[90px]' },
-    { key: 'duration_days', label: 'Days', type: 'number', readOnly: true, className: 'min-w-[90px]' },
-    { key: 'position', label: 'Position', className: 'min-w-[170px]' },
     { key: 'vessel_name', label: 'Vessel Name', className: 'min-w-[180px]' },
-    { key: 'type_imo_number', label: 'Type / IMO #', className: 'min-w-[150px]' },
-    { key: 'area_of_operation', label: 'Area of Operation', className: 'min-w-[170px]' },
+    { key: 'ship_owner_manager_contact', label: 'Company (Owners)', type: 'textarea', className: 'min-w-[220px]' },
+    { key: 'position', label: 'Rank', className: 'min-w-[150px]' },
+    { key: 'type_imo_number', label: 'Type of Vessel', className: 'min-w-[150px]' },
+    { key: 'propulsion_type', label: 'Propulsion type AZ, CPP', className: 'min-w-[190px]' },
     { key: 'flag', label: 'Flag', className: 'min-w-[120px]' },
-    { key: 'oilfield_yn', label: 'Oilfield Y/N', className: 'min-w-[130px]' },
-    { key: 'propulsion_type', label: 'Propulsion Type AZ, CPP', className: 'min-w-[190px]' },
-    { key: 'grt', label: 'GRT', className: 'min-w-[120px]' },
-    { key: 'bollard_pull', label: 'Bollard Pull', className: 'min-w-[140px]' },
-    { key: 'main_engine_type_model', label: 'Types/Model', className: 'min-w-[170px]' },
-    { key: 'main_engine_kw', label: 'KW', className: 'min-w-[120px]' },
-    { key: 'ship_owner_manager_contact', label: 'Ship Owner/Management/Company, Tel #, Contact Person & Email ID', type: 'textarea', className: 'min-w-[320px]' },
+    { key: 'area_of_operation', label: 'Area of operation', className: 'min-w-[170px]' },
+    { key: 'grt', label: 'GT', className: 'min-w-[100px]' },
+    { key: 'main_engine_type_model', label: 'Type of Engine', className: 'min-w-[170px]' },
+    { key: 'main_engine_kw', label: 'BHP', className: 'min-w-[110px]' },
+    { key: 'bollard_pull', label: 'Bollard Pull', className: 'min-w-[130px]' },
+    { key: 'from_date', label: 'Sign on Date (DD:MM:YY)', type: 'date', className: 'min-w-[150px]' },
+    { key: 'to_date', label: 'Sign off Date (DD:MM:YY)', type: 'date', className: 'min-w-[150px]' },
+    { key: 'duration', label: 'Duration (Days : Month)', readOnly: true, className: 'min-w-[150px]' },
   ];
-  const groupedHeaderColumns = columns.filter((column) => !['position', 'vessel_name', 'ship_owner_manager_contact'].includes(column.key));
 
   if (!editing && (!items || items.length === 0)) {
     return (
@@ -846,19 +865,18 @@ function SeaServiceTable({ items, editing, onChange, onAdd, onRemove, errors }) 
           <table className="w-full min-w-[2600px] table-fixed border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-center text-xs font-semibold text-slate-600">
-                <th colSpan={2} className="border-r border-slate-200 px-3 py-3">( Day/Month/Year )</th>
-                <th colSpan={2} className="border-r border-slate-200 px-3 py-3">Duration of Sea Service</th>
-                <th rowSpan={2} className="min-w-[170px] border-r border-slate-200 px-3 py-3">Position</th>
-                <th rowSpan={2} className="min-w-[180px] border-r border-slate-200 px-3 py-3">Vessel Name</th>
-                <th colSpan={7} className="border-r border-slate-200 px-3 py-3">Vessel Name</th>
-                <th colSpan={2} className="border-r border-slate-200 px-3 py-3">Main Engine*</th>
-                <th rowSpan={2} className="min-w-[320px] px-3 py-3 text-red-600">Ship Owner/ Ship Management/Company, Tel #, Contact Person & Email ID</th>
-                {editing && <th rowSpan={2} className="w-20 px-3 py-3">Action</th>}
+                <th colSpan={columns.length + (editing ? 1 : 0)} className="border-r border-slate-200 px-3 py-3">
+                  <div>Record of Sea Service</div>
+                  <div className="font-normal italic">(Recent Vessel/MOU First)</div>
+                </th>
               </tr>
               <tr className="border-b border-slate-200 bg-white text-center text-xs font-medium text-slate-500">
-                {groupedHeaderColumns.map((column) => (
-                  <th key={column.key} className={`${column.className} border-r border-slate-200 px-3 py-3`}>{column.label}</th>
+                {columns.map((column) => (
+                  <th key={column.key} className={`${column.className} border-r border-slate-200 px-3 py-3`}>
+                    {column.label}{required && <span className="ml-1 text-red-500">*</span>}
+                  </th>
                 ))}
+                {editing && <th className="w-20 px-3 py-3">Action</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -866,35 +884,57 @@ function SeaServiceTable({ items, editing, onChange, onAdd, onRemove, errors }) 
                 <tr key={index} className="align-top text-sm">
                   {columns.map((column) => {
                     const errKey = `sea_service.${index}.${column.key}`;
+                    const durationError = column.key === 'duration'
+                      ? errors?.[`sea_service.${index}.duration_days`] || errors?.[`sea_service.${index}.duration_months`]
+                      : null;
+                    const fieldError = durationError || errors?.[errKey];
+                    const durationValue = [item.duration_days, item.duration_months]
+                      .filter((part) => part !== null && part !== undefined && part !== '')
+                      .join(' : ');
 
                     return (
                       <td key={column.key} className={`${column.className} border-r border-slate-100 px-3 py-3 text-slate-700`}>
                         {editing ? (
                           <>
-                            {column.type === 'textarea' ? (
+                            {column.key === 'duration' ? (
+                              <div
+                                id={`field-sea_service.${index}.duration_days`}
+                                className={`min-h-10 rounded border bg-slate-100 p-2 text-sm text-slate-600 ${
+                                  fieldError ? 'border-red-300' : 'border-slate-300'
+                                }`}
+                              >
+                                {durationValue || 'Auto'}
+                              </div>
+                            ) : column.type === 'textarea' ? (
                               <textarea
+                                id={`field-sea_service.${index}.${column.key}`}
+                                name={`sea_service.${index}.${column.key}`}
                                 value={item[column.key] ?? ''}
                                 onChange={(e) => onChange(index, column.key, e.target.value)}
                                 rows={2}
+                                required={required}
                                 className={`w-full rounded border p-2 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${
-                                  errors?.[errKey] ? 'border-red-300' : 'border-slate-300'
+                                  fieldError ? 'border-red-300' : 'border-slate-300'
                                 }`}
                               />
                             ) : (
                               <input
+                                id={`field-sea_service.${index}.${column.key}`}
+                                name={`sea_service.${index}.${column.key}`}
                                 type={column.type || 'text'}
                                 value={item[column.key] ?? ''}
                                 onChange={(e) => onChange(index, column.key, e.target.value)}
                                 readOnly={column.readOnly}
+                                required={required}
                                 className={`w-full rounded border p-2 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${
-                                  errors?.[errKey] ? 'border-red-300' : 'border-slate-300'
+                                  fieldError ? 'border-red-300' : 'border-slate-300'
                                 } ${column.readOnly ? 'bg-slate-100 text-slate-600' : ''}`}
                               />
                             )}
-                            {errors?.[errKey] && <p className="mt-1 text-xs text-red-600">{errors[errKey]}</p>}
+                            {fieldError && <p className="mt-1 text-xs text-red-600">{fieldError}</p>}
                           </>
                         ) : (
-                          item[column.key] || 'Not provided'
+                          column.key === 'duration' ? (durationValue || 'Not provided') : (item[column.key] || 'Not provided')
                         )}
                       </td>
                     );
@@ -917,6 +957,7 @@ function SeaServiceTable({ items, editing, onChange, onAdd, onRemove, errors }) 
           </table>
         </div>
       </div>
+      {errors?.sea_service && <p className="text-sm text-red-600">{errors.sea_service}</p>}
 
       {editing && (
         <button
@@ -1105,6 +1146,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
         ? route('admin.seafarers.resume.view', updateRouteParams)
         : route('seafarers.resume.view'))
     : null;
+  const requiresSeaService = data.type_of_job === SEABASED_WORK_EXPERIENCE;
 
   function startEditing() {
     reset();
@@ -1123,11 +1165,16 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
     });
   }
 
-  function validateOnboardingRequiredFields() {
-    if (!onboarding) {
-      return true;
-    }
+  function focusFirstMissingField(missingErrors) {
+    window.requestAnimationFrame(() => {
+      const firstName = Object.keys(missingErrors)[0];
+      const firstField = document.getElementById(`field-${firstName}`) || document.querySelector(`[name="${firstName}"]`);
+      firstField?.focus?.();
+      firstField?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    });
+  }
 
+  function collectMissingRequiredFields(fields) {
     const missingErrors = {};
     const missingFields = [];
 
@@ -1136,11 +1183,42 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
       missingFields.push(label);
     };
 
-    ONBOARDING_REQUIRED_FIELDS.forEach(([label, key]) => {
+    fields.forEach(([label, key]) => {
       if (!String(data[key] ?? '').trim()) {
         addMissingField(label, key);
       }
     });
+
+    return { missingErrors, missingFields, addMissingField };
+  }
+
+  function validateOnboardingPersonalFields() {
+    if (!onboarding) {
+      return true;
+    }
+
+    const { missingErrors, missingFields } = collectMissingRequiredFields(ONBOARDING_REQUIRED_FIELDS);
+
+    if (Object.keys(missingErrors).length === 0) {
+      clearErrors(...ONBOARDING_REQUIRED_FIELDS.map(([, key]) => key));
+      setRequiredAlert([]);
+      return true;
+    }
+
+    setError(missingErrors);
+    setRequiredAlert(missingFields);
+    setActiveTab('personal');
+    focusFirstMissingField(missingErrors);
+
+    return false;
+  }
+
+  function validateOnboardingRequiredFields() {
+    if (!onboarding) {
+      return true;
+    }
+
+    const { missingErrors, missingFields, addMissingField } = collectMissingRequiredFields(ONBOARDING_REQUIRED_FIELDS);
 
     if (!client?.avatar && !(data.avatar instanceof File)) {
       addMissingField('Profile photo', 'avatar');
@@ -1163,15 +1241,54 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
     setError(missingErrors);
     setRequiredAlert(missingFields);
     setActiveTab('personal');
-
-    window.requestAnimationFrame(() => {
-      const firstName = Object.keys(missingErrors)[0];
-      const firstField = document.getElementById(`field-${firstName}`) || document.querySelector(`[name="${firstName}"]`);
-      firstField?.focus?.();
-      firstField?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-    });
+    focusFirstMissingField(missingErrors);
 
     return false;
+  }
+
+  function validateSeaServiceRequiredFields() {
+    if (!requiresSeaService) {
+      return true;
+    }
+
+    const rows = data.sea_service || [];
+    const missingErrors = {};
+    const missingFields = [];
+
+    if (rows.length === 0) {
+      missingErrors.sea_service = 'Sea service is required when Work Experience is Seabased/Seaman.';
+      missingFields.push('Sea Service');
+    }
+
+    rows.forEach((row, index) => {
+      SEA_SERVICE_REQUIRED_FIELDS.forEach(([label, key]) => {
+        if (!String(row?.[key] ?? '').trim()) {
+          missingErrors[`sea_service.${index}.${key}`] = `${label} is required.`;
+          missingFields.push(`Sea Service row ${index + 1}: ${label}`);
+        }
+      });
+    });
+
+    if (Object.keys(missingErrors).length === 0) {
+      clearErrors('sea_service', ...rows.flatMap((_, index) => SEA_SERVICE_REQUIRED_FIELDS.map(([, key]) => `sea_service.${index}.${key}`)));
+      setRequiredAlert([]);
+      return true;
+    }
+
+    setError(missingErrors);
+    setRequiredAlert(missingFields);
+    setActiveTab('sea_service');
+    focusFirstMissingField(missingErrors);
+
+    return false;
+  }
+
+  function continueToTab(tabKey) {
+    if (tabKey !== 'personal' && !validateOnboardingPersonalFields()) {
+      return;
+    }
+
+    goToTab(tabKey);
   }
 
   function stripStoredAttachmentPaths(rows = []) {
@@ -1190,6 +1307,10 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
     e.preventDefault();
 
     if (!validateOnboardingRequiredFields()) {
+      return;
+    }
+
+    if (!validateSeaServiceRequiredFields()) {
       return;
     }
 
@@ -1539,7 +1660,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
           </div>
         )}
 
-        <TabBar active={activeTab} onChange={onboarding ? goToTab : setActiveTab} />
+        <TabBar active={activeTab} onChange={onboarding ? continueToTab : setActiveTab} />
 
         {activeTab === 'personal' && (
           <div className="space-y-5">
@@ -1554,7 +1675,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
                 setData={setData}
                 errors={errors}
                 rankOptions={rankOptions}
-                requiredFieldNames={onboarding ? ONBOARDING_REQUIRED_FIELD_NAMES : new Set()}
+                requiredFieldNames={onboarding ? ONBOARDING_REQUIRED_FIELD_NAMES : PROFILE_REQUIRED_FIELD_NAMES}
               />
             ))}
           </div>
@@ -1740,6 +1861,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             onAdd={() => addRow('sea_service', EMPTY_SEA_SERVICE)}
             onRemove={(index) => removeRow('sea_service', index)}
             errors={errors}
+            required={requiresSeaService}
           />
         )}
         {activeTab === 'deck_officer_experience' && (
@@ -1796,7 +1918,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
                 {nextTab && activeTab !== 'personal' && (
                   <button
                     type="button"
-                    onClick={() => goToTab(nextTab.key)}
+                    onClick={() => continueToTab(nextTab.key)}
                     disabled={processing}
                     className="inline-flex items-center justify-center rounded border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
                   >
@@ -1807,7 +1929,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
                 {nextTab ? (
                   <button
                     type="button"
-                    onClick={() => goToTab(nextTab.key)}
+                    onClick={() => continueToTab(nextTab.key)}
                     disabled={processing}
                     className="inline-flex items-center justify-center gap-2 rounded bg-[#0A2436] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#12364F] disabled:opacity-60"
                   >

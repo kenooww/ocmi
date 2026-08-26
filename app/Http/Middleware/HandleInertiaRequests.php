@@ -65,11 +65,16 @@ class HandleInertiaRequests extends Middleware
                     ->values(),
             ],
             'rankOptions' => fn () => Schema::hasTable('ranks')
-                ? Rank::latest()
-                    ->get(['id', 'rank_name', 'created_at'])
+                ? Rank::query()
+                    ->when(Schema::hasColumn('ranks', 'priority_level'), fn ($query) => $query->orderBy('priority_level'))
+                    ->latest()
+                    ->get(Schema::hasColumn('ranks', 'priority_level')
+                        ? ['id', 'rank_name', 'priority_level', 'created_at']
+                        : ['id', 'rank_name', 'created_at'])
                     ->map(fn ($rank) => [
                         'value' => $rank->rank_name,
                         'label' => $rank->rank_name,
+                        'priority_level' => $rank->priority_level ?? 0,
                         'created_at' => optional($rank->created_at)->toISOString(),
                     ])
                     ->values()
