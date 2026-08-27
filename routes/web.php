@@ -27,6 +27,10 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('/applicant-monitoring/{monitoring}', [AdminController::class, 'showApplicantMonitoring'])->name('applicant-monitoring.show');
     Route::put('/applicant-monitoring/{monitoring}', [AdminController::class, 'updateApplicantMonitoring'])->name('applicant-monitoring.update');
     Route::delete('/applicant-monitoring/{monitoring}', [AdminController::class, 'deleteApplicantMonitoring'])->name('applicant-monitoring.destroy');
+    Route::get('/reports/applicant-monitoring', [AdminController::class, 'applicantMonitoringReport'])->name('reports.applicant-monitoring.index');
+    Route::get('/reports/applicant-monitoring/export', [AdminController::class, 'exportApplicantMonitoringReport'])->name('reports.applicant-monitoring.export');
+    Route::get('/reports/applicant-status', [AdminController::class, 'applicantStatusReport'])->name('reports.applicant-status.index');
+    Route::get('/reports/applicant-status/export', [AdminController::class, 'exportApplicantStatusReport'])->name('reports.applicant-status.export');
     Route::get('/preferences', [AdminController::class, 'preferences'])->name('preferences.edit');
     Route::put('/preferences', [AdminController::class, 'updatePreferences'])->name('preferences.update');
     Route::post('/logout', [AdminController::class, 'logout'])->name('logout');

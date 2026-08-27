@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
-import { Anchor, Award, Bell, ChevronDown, ClipboardList, LayoutDashboard, LogOut, Menu, Settings, Ship, UserRound, X } from 'lucide-react';
+import { Anchor, Award, Bell, ChevronDown, ClipboardList, FileText, LayoutDashboard, LogOut, Menu, Settings, Ship, UserRound, X } from 'lucide-react';
 
 const PALETTE = {
     navyDeep: '#0A2436',
@@ -32,6 +32,7 @@ export default function AdminTabs({ activeTab, title, children }) {
     const [openMenus, setOpenMenus] = useState({
         applicantMonitoring: activeTab === 'applicant-monitoring' || activeTab.startsWith('applicant-monitoring-'),
         certificates: activeTab === 'certificates' || activeTab.startsWith('certificates-'),
+        reports: activeTab === 'reports' || activeTab.startsWith('reports-'),
     });
 
     const tabs = [
@@ -58,6 +59,16 @@ export default function AdminTabs({ activeTab, title, children }) {
             children: [
                 { key: 'certificates-stcw', label: 'STCW Certificate', href: route('admin.certificates.stcw.index') },
                 { key: 'certificates-offshore', label: 'Offshore Training', href: route('admin.certificates.offshore-training.index') },
+            ],
+        },
+        {
+            key: 'reports',
+            label: 'Report',
+            href: route('admin.reports.applicant-monitoring.index'),
+            icon: FileText,
+            children: [
+                { key: 'reports-applicant-monitoring', label: 'Applicant Monitoring', href: route('admin.reports.applicant-monitoring.index') },
+                { key: 'reports-applicant-status', label: 'Applicant Status', href: route('admin.reports.applicant-status.index') },
             ],
         },
         { key: 'company-settings', label: 'Company Settings', href: route('admin.company-settings.edit'), icon: Settings, adminOnly: true },

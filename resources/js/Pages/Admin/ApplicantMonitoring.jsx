@@ -211,8 +211,8 @@ export default function ApplicantMonitoring({ pageMode = 'records', monitorings 
     };
 
     return (
-        <AdminTabs activeTab={isCreateMode ? 'applicant-monitoring-create' : 'applicant-monitoring-records'} title="Applicant Monitoring">
-            <Head title="Applicant Monitoring" />
+        <AdminTabs activeTab={isCreateMode ? 'applicant-monitoring-create' : 'applicant-monitoring-records'} title="Processed Applicant Monitoring">
+            <Head title="Processed Applicant Monitoring" />
             <style>{`
                 @media screen { .applicant-monitoring-print { display: none; } }
                 @media print {
@@ -230,7 +230,7 @@ export default function ApplicantMonitoring({ pageMode = 'records', monitorings 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <p className="text-sm font-medium uppercase tracking-wider text-[#8A642C]">Admin</p>
-                        <h2 className="mt-1 text-2xl font-semibold text-slate-900">Applicant Monitoring</h2>
+                        <h2 className="mt-1 text-2xl font-semibold text-slate-900">Processed Applicant Monitoring</h2>
                     </div>
                     {!isCreateMode && <form onSubmit={handleSearch} className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                         <div className="relative w-full sm:w-80">
@@ -268,7 +268,7 @@ export default function ApplicantMonitoring({ pageMode = 'records', monitorings 
                     </div>
 
                     <form onSubmit={submit} className="space-y-5 px-5 py-5">
-                        <div className="grid gap-4 md:grid-cols-3 md:items-start">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                             <div className="relative">
                                 <label className="block text-sm font-medium text-slate-700">Principal</label>
                                 <input
@@ -279,7 +279,7 @@ export default function ApplicantMonitoring({ pageMode = 'records', monitorings 
                                         setData('principal_id', '');
                                     }}
                                     placeholder="Search principal"
-                                    className="mt-1 w-full rounded border border-slate-300 p-2.5 text-sm shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B]"
+                                    className="mt-1 h-10 w-full rounded border border-slate-300 px-3 text-sm shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B]"
                                 />
                                 {principalMatches.length > 0 && principalSearch && (
                                     <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded border border-slate-200 bg-white shadow-lg">
@@ -306,7 +306,7 @@ export default function ApplicantMonitoring({ pageMode = 'records', monitorings 
                                     type="text"
                                     value={data.crewing}
                                     onChange={(event) => setData('crewing', event.target.value)}
-                                    className="mt-1 w-full rounded border border-slate-300 p-2.5 text-sm shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B]"
+                                    className="mt-1 h-10 w-full rounded border border-slate-300 px-3 text-sm shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B]"
                                 />
                                 {errors.crewing && <p className="mt-1 text-sm text-red-600">{errors.crewing}</p>}
                             </div>
@@ -316,7 +316,7 @@ export default function ApplicantMonitoring({ pageMode = 'records', monitorings 
                                     type="date"
                                     value={data.proposed_date}
                                     onChange={(event) => setData('proposed_date', event.target.value)}
-                                    className="mt-1 w-full rounded border border-slate-300 p-2.5 text-sm shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B]"
+                                    className="mt-1 h-10 w-full rounded border border-slate-300 px-3 text-sm shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B]"
                                 />
                                 {errors.proposed_date && <p className="mt-1 text-sm text-red-600">{errors.proposed_date}</p>}
                             </div>
