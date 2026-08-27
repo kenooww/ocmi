@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ApplicationStatusLog;
 use App\Models\ApplicantMonitoring;
+use App\Models\ApplicantMonitoringItem;
 use App\Models\CompanySetting;
 use App\Models\OffshoreTraining;
 use App\Models\Principal;
@@ -15,6 +16,7 @@ use App\Models\Client;
 use App\Jobs\SendClientVerificationEmail;
 use App\Services\ClientAttachmentArchiveService;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
@@ -284,6 +286,160 @@ class AdminController extends Controller
         $monitoring->delete();
 
         return back()->with('success', 'Applicant monitoring record deleted successfully.');
+    }
+
+    public function applicantMonitoringReport(Request $request)
+    {
+        if ($request->boolean('filtered')) {
+            $request->validate([
+                'date_from' => ['required', 'date'],
+                'date_to' => ['required', 'date', 'after_or_equal:date_from'],
+            ]);
+        }
+
+        $filters = [
+            'date_from' => $request->query('date_from', ''),
+            'date_to' => $request->query('date_to', ''),
+            'principal_id' => $request->query('principal_id', ''),
+            'filtered' => $request->boolean('filtered') ? '1' : '',
+        ];
+        $rows = $request->boolean('filtered')
+            ? $this->applicantMonitoringReportQuery($request)
+                ->paginate(10)
+                ->withQueryString()
+                ->through(fn ($item) => $this->applicantMonitoringReportRow($item))
+            : new LengthAwarePaginator([], 0, 10, 1, [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]);
+
+        return Inertia::render('Admin/Reports/ApplicantMonitoringReport', [
+            'rows' => $rows,
+            'printRows' => $request->boolean('filtered') ? $this->applicantMonitoringReportRows($request) : [],
+            'filters' => $filters,
+            'principals' => Principal::query()
+                ->orderBy('principal_name')
+                ->get(['id', 'principal_name', 'principal_code']),
+        ]);
+    }
+
+    public function exportApplicantMonitoringReport(Request $request)
+    {
+        if ($request->boolean('filtered')) {
+            $request->validate([
+                'date_from' => ['required', 'date'],
+                'date_to' => ['required', 'date', 'after_or_equal:date_from'],
+            ]);
+        }
+
+        $rows = $request->boolean('filtered') ? $this->applicantMonitoringReportRows($request) : collect();
+        $filename = 'applicant-monitoring-report-' . now()->format('Ymd-His') . '.csv';
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        return response()->stream(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, [
+                'Reference ID',
+                'Processed Date',
+                'Processed By',
+                'Principal',
+                'Crewing',
+                'Country',
+                'Rank',
+                'Name',
+                'Contact Number',
+                'Status',
+                'Remarks',
+            ]);
+
+            foreach ($rows as $row) {
+                fputcsv($handle, [
+                    $row['reference_id'],
+                    $row['processed_date'],
+                    $row['processed_by'],
+                    $row['principal'],
+                    $row['crewing'],
+                    $row['country'],
+                    $row['rank'],
+                    $row['name'],
+                    $row['contact_number'],
+                    $row['status'],
+                    $row['remarks'],
+                ]);
+            }
+
+            fclose($handle);
+        }, 200, $headers);
+    }
+
+    public function applicantStatusReport(Request $request)
+    {
+        $filters = [
+            'rank' => $request->query('rank', ''),
+            'application_status' => $request->query('application_status', ''),
+            'filtered' => $request->boolean('filtered') ? '1' : '',
+        ];
+        $rows = $request->boolean('filtered')
+            ? $this->applicantStatusReportQuery($request)
+                ->paginate(10)
+                ->withQueryString()
+                ->through(fn ($client) => $this->applicantStatusReportRow($client))
+            : new LengthAwarePaginator([], 0, 10, 1, [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]);
+
+        return Inertia::render('Admin/Reports/ApplicantStatusReport', [
+            'rows' => $rows,
+            'printRows' => $request->boolean('filtered') ? $this->applicantStatusReportRows($request) : [],
+            'filters' => $filters,
+            'ranks' => Rank::query()
+                ->orderByRaw('priority_level IS NULL')
+                ->orderBy('priority_level')
+                ->orderBy('rank_name')
+                ->get(['id', 'rank_name', 'priority_level']),
+            'statusOptions' => self::APPLICATION_STATUS_OPTIONS,
+        ]);
+    }
+
+    public function exportApplicantStatusReport(Request $request)
+    {
+        $rows = $request->boolean('filtered') ? $this->applicantStatusReportRows($request) : collect();
+        $filename = 'applicant-status-report-' . now()->format('Ymd-His') . '.csv';
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        return response()->stream(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, [
+                'Seafarer',
+                'Ranks',
+                'Applied For',
+                'Contact Number',
+                'Processed By',
+                'Application Status (Latest)',
+                'Application Log (Latest)',
+            ]);
+
+            foreach ($rows as $row) {
+                fputcsv($handle, [
+                    $row['seafarer'],
+                    $row['rank'],
+                    $row['applied_for'],
+                    $row['contact_number'],
+                    $row['processed_by'],
+                    $row['application_status'],
+                    $row['application_log'],
+                ]);
+            }
+
+            fclose($handle);
+        }, 200, $headers);
     }
 
     public function updatePreferences(Request $request)
@@ -844,6 +1000,99 @@ class AdminController extends Controller
         }
 
         return ctype_digit($normalized) ? (int) $normalized : null;
+    }
+
+    private function applicantMonitoringReportRows(Request $request)
+    {
+        return $this->applicantMonitoringReportQuery($request)
+            ->get()
+            ->map(fn ($item) => $this->applicantMonitoringReportRow($item))
+            ->values();
+    }
+
+    private function applicantMonitoringReportQuery(Request $request)
+    {
+        $dateFrom = $request->query('date_from');
+        $dateTo = $request->query('date_to');
+        $principalId = $request->query('principal_id');
+
+        return ApplicantMonitoringItem::query()
+            ->with(['applicantMonitoring.principal:id,principal_name,principal_code', 'client:id,name,first_name,middle_name,last_name'])
+            ->whereHas('applicantMonitoring', function ($query) use ($dateFrom, $dateTo, $principalId) {
+                $query
+                    ->when($dateFrom, fn ($query) => $query->whereDate('proposed_date', '>=', $dateFrom))
+                    ->when($dateTo, fn ($query) => $query->whereDate('proposed_date', '<=', $dateTo))
+                    ->when($principalId, fn ($query) => $query->where('principal_id', $principalId));
+            })
+            ->orderByDesc('applicant_monitoring_id')
+            ->orderBy('id');
+    }
+
+    private function applicantMonitoringReportRow(ApplicantMonitoringItem $item): array
+    {
+        $monitoring = $item->applicantMonitoring;
+
+        return [
+            'reference_id' => optional($monitoring)->monitoring_reference,
+            'processed_date' => optional(optional($monitoring)->proposed_date)->format('Y-m-d'),
+            'processed_by' => optional($monitoring)->proposed_by,
+            'principal' => optional(optional($monitoring)->principal)->principal_name,
+            'crewing' => optional($monitoring)->crewing,
+            'country' => $item->country,
+            'rank' => $item->rank,
+            'name' => $item->client ? $this->clientDisplayName($item->client) : '',
+            'contact_number' => $item->contact,
+            'status' => $item->status,
+            'remarks' => $item->remarks,
+        ];
+    }
+
+    private function applicantStatusReportRows(Request $request)
+    {
+        return $this->applicantStatusReportQuery($request)
+            ->get()
+            ->map(fn ($client) => $this->applicantStatusReportRow($client))
+            ->values();
+    }
+
+    private function applicantStatusReportQuery(Request $request)
+    {
+        $rank = $request->query('rank');
+        $applicationStatus = $request->query('application_status');
+        $hasRankPriorityLevel = Schema::hasColumn('ranks', 'priority_level');
+
+        return $this->visibleSeafarersQuery()
+            ->select('clients.*')
+            ->leftJoin('ranks', 'clients.current_position', '=', 'ranks.rank_name')
+            ->with(['applicationStatusLogs' => fn ($query) => $query->latest()])
+            ->when($rank, fn ($query) => $query->where('clients.current_position', $rank))
+            ->when($applicationStatus, fn ($query) => $query->where('clients.application_status', $applicationStatus))
+            ->when($hasRankPriorityLevel, fn ($query) => $query
+                ->orderByRaw('ranks.priority_level IS NULL')
+                ->orderBy('ranks.priority_level'))
+            ->orderBy('clients.current_position')
+            ->orderByDesc('clients.created_at');
+    }
+
+    private function applicantStatusReportRow(Client $client): array
+    {
+        $latestLog = $client->applicationStatusLogs->first();
+        $latestLogParts = $latestLog
+            ? array_filter([
+                optional($latestLog->created_at)->format('Y-m-d H:i'),
+                $latestLog->remarks ?: null,
+            ])
+            : [];
+
+        return [
+            'seafarer' => $this->clientDisplayName($client),
+            'rank' => $client->current_position,
+            'applied_for' => $client->position_applied_for,
+            'contact_number' => $client->personal_mobile_no ?: $client->whatsapp_number ?: $client->phone,
+            'processed_by' => $latestLog->processed_by ?? $client->processed_by,
+            'application_status' => $client->application_status,
+            'application_log' => $latestLog ? implode(' - ', $latestLogParts) : '',
+        ];
     }
 
     public function showClient(Client $client)
