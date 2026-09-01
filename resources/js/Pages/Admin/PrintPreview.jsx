@@ -60,6 +60,25 @@ function rowsWithMinimum(rows = [], count = 4) {
     return [...sortedRows, ...blankRows];
 }
 
+function rowsWithMinimumInOrder(rows = [], count = 4) {
+    const orderedRows = [...(rows || [])];
+    const blankRows = Array.from({ length: Math.max(count - orderedRows.length, 0) }, () => ({}));
+    return [...orderedRows, ...blankRows];
+}
+
+function sortRowsBySignOffDate(rows = []) {
+    return [...(rows || [])].sort((a, b) => {
+        const aTime = Date.parse(a?.to_date || '') || 0;
+        const bTime = Date.parse(b?.to_date || '') || 0;
+
+        if (aTime !== bTime) {
+            return bTime - aTime;
+        }
+
+        return Number(b?.id || 0) - Number(a?.id || 0);
+    });
+}
+
 function Header({ client, page }) {
     const { companySettings } = usePage().props;
     const company = companySettings || {};
@@ -126,7 +145,7 @@ function SimpleTable({ title, columns, rows, minRows = 4, rowLabelKey }) {
     );
 }
 
-function SeaServiceTable({ rows }) {
+function SeaServiceTable({ rows, preserveOrder = false }) {
     const columns = [
         ['vessel_name', 'Vessel Name'],
         ['ship_owner_manager_contact', 'Company (Owners)'],
@@ -162,7 +181,7 @@ function SeaServiceTable({ rows }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {rowsWithMinimum(rows, 5).map((row, index) => (
+                        {(preserveOrder ? rowsWithMinimumInOrder(rows, 5) : rowsWithMinimum(rows, 5)).map((row, index) => (
                             <tr key={index}>
                                 {columns.map(([key]) => (
                                     <td key={key} className="h-8 border border-black px-1 py-1">{value(row, key)}</td>
@@ -609,6 +628,7 @@ function ZmiApplicationForm({ client }) {
     const stcwRows = [...namedStcwRows, ...extraStcwRows];
     const offshoreRows = [...namedOffshoreRows, ...extraOffshoreRows];
     const referenceRows = rowsWithMinimum(client?.employment_history || [], 2);
+    const seaServiceRows = sortRowsBySignOffDate(client?.sea_service || []);
     const ZmiHeader = ({ page }) => (
         <div className="mb-3 grid grid-cols-[145px_1fr_265px] border-l border-t border-black text-xs text-slate-600">
             <div className="flex items-center justify-center border-b border-r border-black px-3 py-2">
@@ -779,7 +799,7 @@ function ZmiApplicationForm({ client }) {
 
             <section className="zmi-page zmi-page-landscape print-page print-page-landscape relative min-h-[790px] w-[1120px] max-w-full bg-white p-8 pb-20 shadow-sm print:w-full">
                 <ZmiHeader page="3 of 4" />
-                <SeaServiceTable rows={client?.sea_service || []} />
+                <SeaServiceTable rows={seaServiceRows} preserveOrder />
                 <p className="mt-4 text-xs font-bold">Note: Type of Engines &amp; BHP: Mandatory for Engineers</p>
                 <ZmiFooter />
             </section>
