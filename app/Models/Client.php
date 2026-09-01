@@ -12,6 +12,24 @@ class Client extends Authenticatable
     use Notifiable;
 
     public const DEFAULT_APPLICATION_STATUS = 'NEW APPLICANT';
+    public const SEABASED_WORK_EXPERIENCE = 'Seabased/Seaman';
+    public const SEA_SERVICE_REQUIRED_FIELDS = [
+        'from_date',
+        'to_date',
+        'duration_months',
+        'duration_days',
+        'position',
+        'vessel_name',
+        'type_imo_number',
+        'area_of_operation',
+        'flag',
+        'propulsion_type',
+        'grt',
+        'bollard_pull',
+        'main_engine_type_model',
+        'main_engine_kw',
+        'ship_owner_manager_contact',
+    ];
 
     public const CONTINUE_PROFILE_REQUIRED_FIELDS = [
         'first_name' => 'First name',
@@ -76,10 +94,26 @@ class Client extends Authenticatable
 
     public function missingContinueProfileFields(): array
     {
-        return collect(self::CONTINUE_PROFILE_REQUIRED_FIELDS)
+        $missingFields = collect(self::CONTINUE_PROFILE_REQUIRED_FIELDS)
             ->filter(fn ($label, $field) => blank($this->{$field}))
             ->values()
             ->all();
+
+        if ($this->type_of_job === self::SEABASED_WORK_EXPERIENCE) {
+            $this->loadMissing('seaServices');
+
+            $hasIncompleteSeaService = $this->seaServices->isEmpty()
+                || $this->seaServices->contains(function ($seaService) {
+                    return collect(self::SEA_SERVICE_REQUIRED_FIELDS)
+                        ->contains(fn ($field) => blank($seaService->{$field}));
+                });
+
+            if ($hasIncompleteSeaService) {
+                $missingFields[] = 'Sea service';
+            }
+        }
+
+        return $missingFields;
     }
 
     public function hasCompletedContinueProfile(): bool

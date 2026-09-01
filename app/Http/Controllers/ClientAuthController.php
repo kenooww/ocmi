@@ -826,6 +826,16 @@ class ClientAuthController extends Controller
         $data = $this->titleCaseFormData($data);
         $data['email_address'] = $this->normalizeEmail($data['email_address'] ?? null) ?: $data['email_address'];
         $client->update($data);
+
+        $client->refresh();
+        if (! $client->hasCompletedContinueProfile()) {
+            return redirect()
+                ->route('seafarers.continue')
+                ->withErrors([
+                    'profile' => 'Profile saved, but the dashboard is still locked. Missing: '
+                        . implode(', ', $client->missingContinueProfileFields()) . '.',
+                ]);
+        }
       
         return $this->redirectToDashboard()->with('notice', 'Profile saved successfully.');
     }
