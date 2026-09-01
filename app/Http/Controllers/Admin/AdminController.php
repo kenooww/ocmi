@@ -449,7 +449,7 @@ class AdminController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
-            'avatar' => 'nullable|image|max:2048',
+            'avatar' => 'nullable|image',
             'current_password' => 'nullable|required_with:password|current_password',
             'password' => 'nullable|string|min:6|confirmed',
         ]);
@@ -809,7 +809,7 @@ class AdminController extends Controller
             'email' => 'required|email|unique:users',
             'role' => ['required', 'string', Rule::in(self::USER_ROLE_OPTIONS)],
             'password' => 'required|min:6',
-            'avatar' => 'nullable|image|max:2048',
+            'avatar' => 'nullable|image',
         ]);
 
         $data = [
@@ -834,7 +834,7 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
             'role' => ['required', 'string', Rule::in(self::USER_ROLE_OPTIONS)],
-            'avatar' => 'nullable|image|max:2048',
+            'avatar' => 'nullable|image',
         ]);
 
         $data = $request->only('name', 'email', 'role');
@@ -1231,7 +1231,7 @@ class AdminController extends Controller
             'password' => 'required|min:6',
             'phone' => 'nullable|string',
             'address' => 'nullable|string',
-            'avatar' => 'nullable|image|max:2048',
+            'avatar' => 'nullable|image',
             'resume_attachment' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
             'privacy_act_accepted' => 'nullable|boolean',
         ]);
@@ -1325,7 +1325,7 @@ class AdminController extends Controller
             'socso_no' => 'nullable|string|max:100',
             'blood' => 'nullable|string|max:100',
             'philhealth_no' => 'nullable|string|max:100',
-            'avatar' => 'nullable|image|max:2048',
+            'avatar' => 'nullable|image',
             'resume_attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
             'privacy_act_accepted' => 'nullable|boolean',
 

@@ -562,7 +562,6 @@ class ClientAuthController extends Controller
             'avatar' => [
                 $client->avatar ? 'nullable' : 'required',
                 'image',
-                'max:2048',
             ],
             'resume_attachment' => [
                 $client->resume_attachment ? 'nullable' : 'required',
