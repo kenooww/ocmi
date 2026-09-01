@@ -622,10 +622,11 @@ function ZmiApplicationForm({ client }) {
     const stcwSourceRows = [...allCertificates, ...additionalStcwRows];
     const offshoreSourceRows = [...allCertificates, ...offshoreTrainingRows];
     const namedStcwRows = stcwNames.map((name) => ({ ...findRowByName(stcwSourceRows, [name]), name }));
+    const competencyStcwRows = (client?.certifications || []).filter((row) => ! stcwNames.some((name) => String(row?.name || '').toLowerCase() === name.toLowerCase()));
     const extraStcwRows = additionalStcwRows.filter((row) => ! stcwNames.some((name) => String(row?.name || '').toLowerCase() === name.toLowerCase()));
     const namedOffshoreRows = offshoreNames.map((name) => ({ ...findRowByName(offshoreSourceRows, [name]), name }));
     const extraOffshoreRows = offshoreTrainingRows.filter((row) => ! offshoreNames.some((name) => String(row?.name || '').toLowerCase() === name.toLowerCase()));
-    const stcwRows = [...namedStcwRows, ...extraStcwRows];
+    const stcwRows = [...namedStcwRows, ...competencyStcwRows, ...extraStcwRows];
     const offshoreRows = [...namedOffshoreRows, ...extraOffshoreRows];
     const referenceRows = rowsWithMinimum(client?.employment_history || [], 2);
     const seaServiceRows = sortRowsBySignOffDate(client?.sea_service || []);
