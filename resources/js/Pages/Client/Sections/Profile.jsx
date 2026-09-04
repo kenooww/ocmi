@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm, usePage } from '@inertiajs/react';
-import { AlertCircle, ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, ChevronDown, Download, FileText, Mail, Phone, Plus, Printer, Trash2, Upload, X } from 'lucide-react';
+import { AlertCircle, CalendarDays, CheckCircle2, ChevronDown, Download, FileText, Mail, Phone, Plus, Printer, Trash2, Upload, X } from 'lucide-react';
 
 const FIELD_KEYS = [
   'avatar', 'resume_attachment', 'privacy_act_accepted', 'current_position', 'first_name', 'middle_name', 'last_name', 'gender', 'status', 'type_of_job', 'date_applied', 'nationality',
@@ -217,6 +217,7 @@ const ONBOARDING_REQUIRED_FIELDS = [
   ['Current position', 'current_position'],
   ['First name', 'first_name'],
   ['Last name', 'last_name'],
+  ['Gender', 'gender'],
   ['Status', 'status'],
   ['Work Experience', 'type_of_job'],
   ['Position applied for', 'position_applied_for'],
@@ -487,26 +488,61 @@ function TabBar({ active, onChange }) {
   );
 }
 
-function OnboardingStepper({ active }) {
-  const activeIndex = TABS.findIndex((tab) => tab.key === active);
+function RequiredFieldsModal({ open, fields, onClose }) {
+  if (!open || fields.length === 0) {
+    return null;
+  }
 
   return (
-    <div className="mb-5 rounded border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#8A642C]">
-            Step {activeIndex + 1} of {TABS.length}
-          </p>
-          <h3 className="mt-1 text-lg font-semibold text-slate-900">{TABS[activeIndex]?.label}</h3>
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center p-2 sm:items-center sm:p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative flex max-h-[calc(100dvh-1rem)] w-full max-w-2xl flex-col overflow-hidden rounded border border-red-200 bg-white shadow-xl sm:max-h-[85vh]">
+        <div className="shrink-0 flex items-start gap-3 border-b border-red-100 bg-red-50 px-4 py-3 text-red-800 sm:px-5 sm:py-4">
+          <AlertCircle size={22} className="mt-0.5 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base font-semibold">Please complete the required fields before submitting.</h3>
+            <p className="mt-1 text-sm text-red-700">These fields still need attention:</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded text-red-700 transition hover:bg-red-100"
+            aria-label="Close missing fields"
+          >
+            <X size={18} />
+          </button>
         </div>
-        <div className="text-sm font-medium text-slate-500">{Math.round(((activeIndex + 1) / TABS.length) * 100)}%</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4">
+          <ul className="grid grid-cols-1 gap-2 text-sm text-slate-700 sm:grid-cols-2">
+            {fields.map((field) => (
+              <li key={field} className="flex items-start gap-2 rounded border border-slate-100 bg-slate-50 px-3 py-2">
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
+                <span className="break-words">{field}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="shrink-0 flex justify-end border-t border-slate-200 px-4 py-3 sm:px-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded bg-[#0A2436] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#12364F]"
+          >
+            Close
+          </button>
+        </div>
       </div>
-      <div className="mt-4 h-2 overflow-hidden rounded bg-slate-100">
-        <div
-          className="h-full rounded bg-[#1F6F5C] transition-all"
-          style={{ width: `${((activeIndex + 1) / TABS.length) * 100}%` }}
-        />
-      </div>
+    </div>
+  );
+}
+
+function OnboardingSectionLabel({ number, title }) {
+  return (
+    <div className="mb-3 mt-6 flex items-center gap-3">
+      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E1EBE6] text-sm font-semibold text-[#1F6F5C]">
+        {number}
+      </span>
+      <h3 className="text-base font-semibold text-slate-900">{title}</h3>
     </div>
   );
 }
@@ -1104,6 +1140,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
   const [editing, setEditing] = useState(onboarding);
   const [activeTab, setActiveTab] = useState('personal');
   const [requiredAlert, setRequiredAlert] = useState([]);
+  const [requiredModalOpen, setRequiredModalOpen] = useState(false);
 
   const initialValues = FIELD_KEYS.reduce((acc, key) => {
     acc[key] = client?.[key] ?? (key === 'email_address' ? client?.email ?? '' : '');
@@ -1130,9 +1167,6 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
   const profileTitle = editing ? fullNameFor(data) : fullName;
   const avatarPreview = data.avatar && typeof data.avatar !== 'string' ? URL.createObjectURL(data.avatar) : null;
   const requiresPrivacyConsent = updateRouteName === 'seafarers.update-profile';
-  const activeTabIndex = TABS.findIndex((tab) => tab.key === activeTab);
-  const previousTab = TABS[activeTabIndex - 1] || null;
-  const nextTab = TABS[activeTabIndex + 1] || null;
   const isAdminProfile = updateRouteName.startsWith('admin.');
   const attachmentDownloadRouteName = isAdminProfile
     ? 'admin.seafarers.attachments.download'
@@ -1147,6 +1181,17 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
         : route('seafarers.resume.view'))
     : null;
   const requiresSeaService = data.type_of_job === SEABASED_WORK_EXPERIENCE;
+  const submissionErrorList = Array.from(new Set(
+    (requiredAlert.length > 0 ? requiredAlert : Object.values(errors || {}))
+      .filter(Boolean)
+      .map((message) => String(message))
+  ));
+
+  useEffect(() => {
+    if (onboarding && Object.keys(errors || {}).length > 0) {
+      setRequiredModalOpen(true);
+    }
+  }, [errors, onboarding]);
 
   function startEditing() {
     reset();
@@ -1156,13 +1201,6 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
   function cancelEditing() {
     reset();
     setEditing(false);
-  }
-
-  function goToTab(tabKey) {
-    setActiveTab(tabKey);
-    window.requestAnimationFrame(() => {
-      document.getElementById('profile-step-start')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
   }
 
   function focusFirstMissingField(missingErrors) {
@@ -1192,27 +1230,6 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
     return { missingErrors, missingFields, addMissingField };
   }
 
-  function validateOnboardingPersonalFields() {
-    if (!onboarding) {
-      return true;
-    }
-
-    const { missingErrors, missingFields } = collectMissingRequiredFields(ONBOARDING_REQUIRED_FIELDS);
-
-    if (Object.keys(missingErrors).length === 0) {
-      clearErrors(...ONBOARDING_REQUIRED_FIELDS.map(([, key]) => key));
-      setRequiredAlert([]);
-      return true;
-    }
-
-    setError(missingErrors);
-    setRequiredAlert(missingFields);
-    setActiveTab('personal');
-    focusFirstMissingField(missingErrors);
-
-    return false;
-  }
-
   function validateOnboardingRequiredFields() {
     if (!onboarding) {
       return true;
@@ -1235,11 +1252,13 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
     if (Object.keys(missingErrors).length === 0) {
       clearErrors();
       setRequiredAlert([]);
+      setRequiredModalOpen(false);
       return true;
     }
 
     setError(missingErrors);
     setRequiredAlert(missingFields);
+    setRequiredModalOpen(true);
     setActiveTab('personal');
     focusFirstMissingField(missingErrors);
 
@@ -1272,23 +1291,17 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
     if (Object.keys(missingErrors).length === 0) {
       clearErrors('sea_service', ...rows.flatMap((_, index) => SEA_SERVICE_REQUIRED_FIELDS.map(([, key]) => `sea_service.${index}.${key}`)));
       setRequiredAlert([]);
+      setRequiredModalOpen(false);
       return true;
     }
 
     setError(missingErrors);
     setRequiredAlert(missingFields);
+    setRequiredModalOpen(true);
     setActiveTab('sea_service');
     focusFirstMissingField(missingErrors);
 
     return false;
-  }
-
-  function continueToTab(tabKey) {
-    if (tabKey !== 'personal' && !validateOnboardingPersonalFields()) {
-      return;
-    }
-
-    goToTab(tabKey);
   }
 
   function stripStoredAttachmentPaths(rows = []) {
@@ -1486,7 +1499,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
 
   return (
     <div className="w-full px-4 py-5 sm:p-6">
-      <form onSubmit={save} encType="multipart/form-data" className="mx-auto max-w-6xl">
+      <form onSubmit={save} encType="multipart/form-data" noValidate={onboarding} className="mx-auto max-w-6xl">
         <div id="profile-step-start" className="mb-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
@@ -1623,47 +1636,19 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
           </div>
         </div>
 
-        {onboarding && <OnboardingStepper active={activeTab} />}
-
-        {onboarding && requiredAlert.length > 0 && (
-          <div
-            role="alert"
-            className="mb-5 rounded border border-red-200 bg-red-50 p-4 text-red-800 shadow-sm"
-          >
-            <div className="flex items-start gap-3">
-              <AlertCircle size={20} className="mt-0.5 shrink-0" />
-              <div className="flex-1">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold">Please complete the required fields before submitting.</h3>
-                    <p className="mt-1 text-sm text-red-700">Missing fields:</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setRequiredAlert([])}
-                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded text-red-700 transition hover:bg-red-100"
-                    aria-label="Dismiss required fields alert"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-                <ul className="mt-3 grid grid-cols-1 gap-1 text-sm sm:grid-cols-2 lg:grid-cols-3">
-                  {requiredAlert.map((label) => (
-                    <li key={label} className="flex items-center gap-2">
-                      <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                      <span>{label}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
+        {onboarding && (
+          <RequiredFieldsModal
+            open={requiredModalOpen}
+            fields={submissionErrorList}
+            onClose={() => setRequiredModalOpen(false)}
+          />
         )}
 
-        <TabBar active={activeTab} onChange={onboarding ? continueToTab : setActiveTab} />
+        {!onboarding && <TabBar active={activeTab} onChange={setActiveTab} />}
 
-        {activeTab === 'personal' && (
+        {(onboarding || activeTab === 'personal') && (
           <div className="space-y-5">
+            {onboarding && <OnboardingSectionLabel number="1" title="Personal Information" />}
             {GROUPS.map((group) => (
               <Section
                 key={group.title}
@@ -1681,8 +1666,9 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
           </div>
         )}
 
-        {activeTab === 'dependents' && (
+        {(onboarding || activeTab === 'dependents') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="2" title="Dependents" />}
             <RepeatableList
               items={editing ? data.dependents : (client?.dependents || [])}
               editing={editing}
@@ -1697,8 +1683,9 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
           </>
         )}
 
-        {activeTab === 'travel_documents' && (
+        {(onboarding || activeTab === 'travel_documents') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="3" title="Travel Documents" />}
             <TravelDocumentsTable
               items={editing ? data.travel_documents : buildTravelDocuments(client?.travel_documents)}
               editing={editing}
@@ -1708,8 +1695,9 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
           </>
         )}
 
-        {activeTab === 'certifications' && (
+        {(onboarding || activeTab === 'certifications') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="4" title="Certificate of Competency" />}
             <RepeatableList
               items={editing ? data.certifications : (client?.certifications || [])}
               editing={editing}
@@ -1725,8 +1713,9 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
           </>
         )}
 
-        {activeTab === 'proficiency' && (
+        {(onboarding || activeTab === 'proficiency') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="5" title="Certificate of Proficiency" />}
             <RepeatableList
               items={editing ? data.proficiency : (client?.proficiency || [])}
               editing={editing}
@@ -1741,8 +1730,9 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             />
           </>
         )}
-        {activeTab === 'gmdss_certificates' && (
+        {(onboarding || activeTab === 'gmdss_certificates') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="6" title="GMDSS Certificate" />}
             <RepeatableList
               items={editing ? data.gmdss_certificates : (client?.gmdss_certificates || [])}
               editing={editing}
@@ -1757,8 +1747,9 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             />
           </>
         )}
-        {activeTab === 'vaccinations' && (
+        {(onboarding || activeTab === 'vaccinations') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="7" title="Vaccinations" />}
             <RepeatableList
               items={editing ? data.vaccinations : (client?.vaccinations || [])}
               editing={editing}
@@ -1773,8 +1764,9 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             />
           </>
         )}
-        {activeTab === 'flag_documents' && (
+        {(onboarding || activeTab === 'flag_documents') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="8" title="Flag Documents" />}
             <RepeatableList
               items={editing ? data.flag_documents : (client?.flag_documents || [])}
               editing={editing}
@@ -1789,8 +1781,9 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             />
           </>
         )}
-        {activeTab === 'other_certificates' && (
+        {(onboarding || activeTab === 'other_certificates') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="9" title="Other Certificates" />}
             <RepeatableList
               items={editing ? data.other_certificates : (client?.other_certificates || [])}
               editing={editing}
@@ -1805,8 +1798,9 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             />
           </>
         )}
-        {activeTab === 'additional_stcw_certificates' && (
+        {(onboarding || activeTab === 'additional_stcw_certificates') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="10" title="Additional STCW Certificate" />}
             <RepeatableList
               items={editing ? data.additional_stcw_certificates : (client?.additional_stcw_certificates || [])}
               editing={editing}
@@ -1821,8 +1815,9 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             />
           </>
         )}
-        {activeTab === 'offshore_training_certificates' && (
+        {(onboarding || activeTab === 'offshore_training_certificates') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="11" title="Offshore Training Certificate" />}
             <RepeatableList
               items={editing ? data.offshore_training_certificates : (client?.offshore_training_certificates || [])}
               editing={editing}
@@ -1837,8 +1832,9 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             />
           </>
         )}
-        {activeTab === 'employment_history' && (
+        {(onboarding || activeTab === 'employment_history') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="12" title="Employment History" />}
             <RepeatableList
               items={editing ? data.employment_history : (client?.employment_history || [])}
               editing={editing}
@@ -1853,29 +1849,36 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             />
           </>
         )}
-        {activeTab === 'sea_service' && (
-          <SeaServiceTable
-            items={editing ? data.sea_service : (client?.sea_service || [])}
-            editing={editing}
-            onChange={updateSeaService}
-            onAdd={() => addRow('sea_service', EMPTY_SEA_SERVICE)}
-            onRemove={(index) => removeRow('sea_service', index)}
-            errors={errors}
-            required={requiresSeaService}
-          />
+        {(onboarding || activeTab === 'sea_service') && (
+          <>
+            {onboarding && <OnboardingSectionLabel number="13" title="Sea Service" />}
+            <SeaServiceTable
+              items={editing ? data.sea_service : (client?.sea_service || [])}
+              editing={editing}
+              onChange={updateSeaService}
+              onAdd={() => addRow('sea_service', EMPTY_SEA_SERVICE)}
+              onRemove={(index) => removeRow('sea_service', index)}
+              errors={errors}
+              required={requiresSeaService}
+            />
+          </>
         )}
-        {activeTab === 'deck_officer_experience' && (
-          <DeckOfficerExperienceTable
-            items={editing ? data.deck_officer_experience : (client?.deck_officer_experience || [])}
-            editing={editing}
-            onChange={(index, key, value) => updateRows('deck_officer_experience', index, key, value)}
-            onAdd={() => addRow('deck_officer_experience', EMPTY_DECK_OFFICER_EXPERIENCE)}
-            onRemove={(index) => removeRow('deck_officer_experience', index)}
-            errors={errors}
-          />
+        {(onboarding || activeTab === 'deck_officer_experience') && (
+          <>
+            {onboarding && <OnboardingSectionLabel number="14" title="Deck Officer Experience" />}
+            <DeckOfficerExperienceTable
+              items={editing ? data.deck_officer_experience : (client?.deck_officer_experience || [])}
+              editing={editing}
+              onChange={(index, key, value) => updateRows('deck_officer_experience', index, key, value)}
+              onAdd={() => addRow('deck_officer_experience', EMPTY_DECK_OFFICER_EXPERIENCE)}
+              onRemove={(index) => removeRow('deck_officer_experience', index)}
+              errors={errors}
+            />
+          </>
         )}
 
         <div className="mt-5 rounded border border-slate-200 bg-white p-5 shadow-sm">
+          {onboarding && <OnboardingSectionLabel number="15" title="Data Privacy Consent" />}
           <label className={`flex items-start gap-3 text-sm ${editing ? 'text-slate-800' : 'text-slate-600'}`}>
             <input
               type="checkbox"
@@ -1903,50 +1906,15 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
 
         {onboarding && (
           <div className="sticky bottom-0 z-20 mt-5 border-t border-slate-200 bg-[#EEF2F0]/95 py-4 backdrop-blur">
-            <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mx-auto flex max-w-6xl justify-end">
               <button
-                type="button"
-                onClick={() => previousTab && goToTab(previousTab.key)}
-                disabled={!previousTab || processing}
-                className="inline-flex items-center justify-center gap-2 rounded border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                type="submit"
+                disabled={processing}
+                className="inline-flex items-center justify-center gap-2 rounded bg-[#0A2436] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#12364F] disabled:opacity-60"
               >
-                <ArrowLeft size={16} />
-                Back
+                <CheckCircle2 size={16} />
+                {processing ? 'Saving...' : 'Submit profile'}
               </button>
-
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                {nextTab && activeTab !== 'personal' && (
-                  <button
-                    type="button"
-                    onClick={() => continueToTab(nextTab.key)}
-                    disabled={processing}
-                    className="inline-flex items-center justify-center rounded border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
-                  >
-                    Skip
-                  </button>
-                )}
-
-                {nextTab ? (
-                  <button
-                    type="button"
-                    onClick={() => continueToTab(nextTab.key)}
-                    disabled={processing}
-                    className="inline-flex items-center justify-center gap-2 rounded bg-[#0A2436] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#12364F] disabled:opacity-60"
-                  >
-                    Next
-                    <ArrowRight size={16} />
-                  </button>
-                ) : (
-                  <button
-                    type="submit"
-                    disabled={processing}
-                    className="inline-flex items-center justify-center gap-2 rounded bg-[#0A2436] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#12364F] disabled:opacity-60"
-                  >
-                    <CheckCircle2 size={16} />
-                    {processing ? 'Saving...' : 'Submit profile'}
-                  </button>
-                )}
-              </div>
             </div>
           </div>
         )}

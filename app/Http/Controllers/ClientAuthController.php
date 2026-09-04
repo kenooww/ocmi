@@ -349,7 +349,7 @@ class ClientAuthController extends Controller
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
             'last_name' => 'required|string|max:255',
-            'gender' => ['nullable', 'string', Rule::in(self::GENDER_OPTIONS)],
+            'gender' => ['required', 'string', Rule::in(self::GENDER_OPTIONS)],
             'status' => ['required', 'string', Rule::in(self::STATUS_OPTIONS)],
             'type_of_job' => ['required', 'string', Rule::in(self::TYPE_OF_JOB_OPTIONS)],
             'date_applied' => 'required|date',
