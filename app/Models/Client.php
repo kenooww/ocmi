@@ -34,6 +34,7 @@ class Client extends Authenticatable
     public const CONTINUE_PROFILE_REQUIRED_FIELDS = [
         'first_name' => 'First name',
         'last_name' => 'Last name',
+        'gender' => 'Gender',
         'status' => 'Status',
         'type_of_job' => 'Work Experience',
         'date_applied' => 'Date applied',
