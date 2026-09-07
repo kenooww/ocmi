@@ -1348,9 +1348,20 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
     post(route(updateRouteName, updateRouteParams), {
       forceFormData: true,
       onSuccess: () => {
+        setRequiredAlert([]);
+        setRequiredModalOpen(false);
         if (!onboarding) {
           setEditing(false);
         }
+      },
+      onError: (submissionErrors) => {
+        const messages = Object.values(submissionErrors || {})
+          .flatMap((message) => Array.isArray(message) ? message : [message])
+          .filter(Boolean)
+          .map((message) => String(message));
+
+        setRequiredAlert(Array.from(new Set(messages)));
+        setRequiredModalOpen(true);
       },
     });
   }
