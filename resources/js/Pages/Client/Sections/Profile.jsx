@@ -257,6 +257,22 @@ function initialsFor(name) {
     .toUpperCase();
 }
 
+function hasFormValue(value) {
+  if (value instanceof File) {
+    return true;
+  }
+
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  return String(value ?? '').trim() !== '';
+}
+
 function fullNameFor(client) {
   return [client?.first_name, client?.middle_name, client?.last_name].filter(Boolean).join(' ') || client?.name || 'Seafarer';
 }
@@ -1181,14 +1197,21 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
         : route('seafarers.resume.view'))
     : null;
   const requiresSeaService = data.type_of_job === SEABASED_WORK_EXPERIENCE;
+  const visibleErrors = Object.fromEntries(
+    Object.entries(errors || {}).filter(([key]) => {
+      const value = key.split('.').reduce((current, part) => current?.[part], data);
+      return !hasFormValue(value);
+    })
+  );
   const submissionErrorList = Array.from(new Set(
-    (requiredAlert.length > 0 ? requiredAlert : Object.values(errors || {}))
+    Object.values(visibleErrors || {})
+      .concat(Object.keys(visibleErrors).length === 0 ? requiredAlert : [])
       .filter(Boolean)
       .map((message) => String(message))
   ));
 
   useEffect(() => {
-    if (onboarding && Object.keys(errors || {}).length > 0) {
+    if (onboarding && Object.keys(visibleErrors || {}).length > 0) {
       setRequiredModalOpen(true);
     }
   }, [errors, onboarding]);
@@ -1581,7 +1604,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
                 <div className="flex flex-wrap justify-end gap-3">
                   <div className="max-w-56">
                     <label className={`inline-flex cursor-pointer items-center gap-2 rounded border px-4 py-2 text-sm font-medium transition hover:bg-slate-50 ${
-                      errors.avatar ? 'border-red-300 text-red-700' : 'border-slate-300 text-slate-700'
+                      visibleErrors.avatar ? 'border-red-300 text-red-700' : 'border-slate-300 text-slate-700'
                     }`}>
                       <Upload size={16} />
                       Upload Photo{onboarding && !client?.avatar && <span className="text-red-500">*</span>}
@@ -1601,7 +1624,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
                   </div>
                   <div className="max-w-56">
                     <label className={`inline-flex cursor-pointer items-center gap-2 rounded border px-4 py-2 text-sm font-medium transition hover:bg-slate-50 ${
-                      errors.resume_attachment ? 'border-red-300 text-red-700' : 'border-slate-300 text-slate-700'
+                      visibleErrors.resume_attachment ? 'border-red-300 text-red-700' : 'border-slate-300 text-slate-700'
                     }`}>
                       <FileText size={16} />
                       Upload Resume{onboarding && !client?.resume_attachment && <span className="text-red-500">*</span>}
@@ -1641,8 +1664,8 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
                   )}
                 </div>
               )}
-              {errors.avatar && <p className="text-xs text-red-600">{errors.avatar}</p>}
-              {errors.resume_attachment && <p className="text-xs text-red-600">{errors.resume_attachment}</p>}
+              {visibleErrors.avatar && <p className="text-xs text-red-600">{visibleErrors.avatar}</p>}
+              {visibleErrors.resume_attachment && <p className="text-xs text-red-600">{visibleErrors.resume_attachment}</p>}
             </div>
           </div>
         </div>
@@ -1669,7 +1692,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
                 editing={editing}
                 data={data}
                 setData={setData}
-                errors={errors}
+                errors={visibleErrors}
                 rankOptions={rankOptions}
                 requiredFieldNames={onboarding ? ONBOARDING_REQUIRED_FIELD_NAMES : PROFILE_REQUIRED_FIELD_NAMES}
               />
@@ -1689,7 +1712,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={removeDependent}
               emptyLabel="No dependents added yet"
               errorsPrefix="dependents"
-              errors={errors}
+              errors={visibleErrors}
             />
           </>
         )}
@@ -1701,7 +1724,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               items={editing ? data.travel_documents : buildTravelDocuments(client?.travel_documents)}
               editing={editing}
               onChange={updateTravelDocument}
-              errors={errors}
+              errors={visibleErrors}
             />
           </>
         )}
@@ -1718,7 +1741,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={removeCertification}
               emptyLabel="No certifications added yet"
               errorsPrefix="certifications"
-              errors={errors}
+              errors={visibleErrors}
               printableAttachments
             />
           </>
@@ -1736,7 +1759,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={(index) => removeRow('proficiency', index)}
               emptyLabel="No certificate of proficiency added yet"
               errorsPrefix="proficiency"
-              errors={errors}
+              errors={visibleErrors}
               printableAttachments
             />
           </>
@@ -1753,7 +1776,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={(index) => removeRow('gmdss_certificates', index)}
               emptyLabel="No GMDSS certificate added yet"
               errorsPrefix="gmdss_certificates"
-              errors={errors}
+              errors={visibleErrors}
               printableAttachments
             />
           </>
@@ -1770,7 +1793,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={(index) => removeRow('vaccinations', index)}
               emptyLabel="No vaccinations added yet"
               errorsPrefix="vaccinations"
-              errors={errors}
+              errors={visibleErrors}
               printableAttachments
             />
           </>
@@ -1787,7 +1810,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={(index) => removeRow('flag_documents', index)}
               emptyLabel="No flag documents added yet"
               errorsPrefix="flag_documents"
-              errors={errors}
+              errors={visibleErrors}
               printableAttachments
             />
           </>
@@ -1804,7 +1827,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={(index) => removeRow('other_certificates', index)}
               emptyLabel="No other certificates added yet"
               errorsPrefix="other_certificates"
-              errors={errors}
+              errors={visibleErrors}
               printableAttachments
             />
           </>
@@ -1821,7 +1844,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={(index) => removeRow('additional_stcw_certificates', index)}
               emptyLabel="No additional STCW certificates added yet"
               errorsPrefix="additional_stcw_certificates"
-              errors={errors}
+              errors={visibleErrors}
               printableAttachments
             />
           </>
@@ -1838,7 +1861,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={(index) => removeRow('offshore_training_certificates', index)}
               emptyLabel="No offshore training certificates added yet"
               errorsPrefix="offshore_training_certificates"
-              errors={errors}
+              errors={visibleErrors}
               printableAttachments
             />
           </>
@@ -1855,7 +1878,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={(index) => removeRow('employment_history', index)}
               emptyLabel="No employment history added yet"
               errorsPrefix="employment_history"
-              errors={errors}
+              errors={visibleErrors}
               printableAttachments
             />
           </>
@@ -1869,7 +1892,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onChange={updateSeaService}
               onAdd={() => addRow('sea_service', EMPTY_SEA_SERVICE)}
               onRemove={(index) => removeRow('sea_service', index)}
-              errors={errors}
+              errors={visibleErrors}
               required={requiresSeaService}
             />
           </>
@@ -1883,7 +1906,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onChange={(index, key, value) => updateRows('deck_officer_experience', index, key, value)}
               onAdd={() => addRow('deck_officer_experience', EMPTY_DECK_OFFICER_EXPERIENCE)}
               onRemove={(index) => removeRow('deck_officer_experience', index)}
-              errors={errors}
+              errors={visibleErrors}
             />
           </>
         )}
@@ -1912,7 +1935,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               Accepted on {client.privacy_act_accepted_at_human || client.privacy_act_accepted_at}
             </p>
           )}
-          {errors.privacy_act_accepted && <p className="mt-2 text-xs text-red-600">{errors.privacy_act_accepted}</p>}
+          {visibleErrors.privacy_act_accepted && <p className="mt-2 text-xs text-red-600">{visibleErrors.privacy_act_accepted}</p>}
         </div>
 
         {onboarding && (
