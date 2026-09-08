@@ -312,6 +312,25 @@ function parseDateInput(value) {
   return new Date(Date.UTC(year, month - 1, day));
 }
 
+function calculateAge(dateOfBirth) {
+  const birthDate = parseDateInput(dateOfBirth);
+
+  if (!birthDate) {
+    return null;
+  }
+
+  const today = new Date();
+  let age = today.getUTCFullYear() - birthDate.getUTCFullYear();
+  const birthdayHasPassed = today.getUTCMonth() > birthDate.getUTCMonth()
+    || (today.getUTCMonth() === birthDate.getUTCMonth() && today.getUTCDate() >= birthDate.getUTCDate());
+
+  if (!birthdayHasPassed) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : null;
+}
+
 function addUtcMonths(date, months) {
   const next = new Date(date.getTime());
   const originalDay = next.getUTCDate();
@@ -400,7 +419,7 @@ function FieldRow({ label, name, value, editing, data, setData, error, type = 't
   );
 }
 
-function Section({ title, fields, client, editing, data, setData, errors, rankOptions = [], requiredFieldNames = new Set() }) {
+function Section({ title, fields, client, editing, data, setData, errors, rankOptions = [], requiredFieldNames = new Set(), showAge = false }) {
   return (
     <section className="rounded border border-slate-200 bg-white p-5 shadow-sm">
       <h3 className="text-base font-semibold text-slate-900">{title}</h3>
@@ -409,7 +428,7 @@ function Section({ title, fields, client, editing, data, setData, errors, rankOp
           const isRankField = ['current_position', 'position_applied_for'].includes(key);
           const shouldUseRankSelect = isRankField && rankOptions.length > 0;
 
-          return (
+          const field = (
             <FieldRow
               key={key}
               label={label}
@@ -423,6 +442,19 @@ function Section({ title, fields, client, editing, data, setData, errors, rankOp
               options={shouldUseRankSelect ? rankOptions : options}
               required={requiredFieldNames.has(key)}
             />
+          );
+
+          if (!showAge || key !== 'date_of_birth') {
+            return field;
+          }
+
+          const age = calculateAge(editing ? data.date_of_birth : client?.date_of_birth);
+
+          return (
+            <React.Fragment key={key}>
+              {field}
+              <FieldRow label="Age" value={age === null ? null : `${age} years old`} />
+            </React.Fragment>
           );
         })}
       </div>
@@ -1352,6 +1384,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
 
     transform(({ avatar, resume_attachment, ...payload }) => ({
       ...payload,
+      _token: document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
       dependents: stripStoredAttachmentPaths(payload.dependents),
       travel_documents: stripStoredAttachmentPaths(payload.travel_documents),
       certifications: stripStoredAttachmentPaths(payload.certifications),
@@ -1383,7 +1416,9 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
           .filter(Boolean)
           .map((message) => String(message));
 
-        setRequiredAlert(Array.from(new Set(messages)));
+        setRequiredAlert(Array.from(new Set(messages.length > 0 ? messages : [
+          'The profile could not be submitted. Please refresh the page and try again.',
+        ])));
         setRequiredModalOpen(true);
       },
     });
@@ -1695,6 +1730,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
                 errors={visibleErrors}
                 rankOptions={rankOptions}
                 requiredFieldNames={onboarding ? ONBOARDING_REQUIRED_FIELD_NAMES : PROFILE_REQUIRED_FIELD_NAMES}
+                showAge={isAdminProfile}
               />
             ))}
           </div>
