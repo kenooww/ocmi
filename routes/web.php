@@ -88,12 +88,7 @@ Route::middleware('seafarer.live')->group(function () {
     Route::get('/seafarers/register/google', [ClientAuthController::class, 'googleRedirect'])->name('seafarers.register.google');
     Route::get('/seafarers/register/google/callback', [ClientAuthController::class, 'googleCallback'])->name('seafarers.register.google.callback');
     Route::get('/seafarers/verify/{token}', [ClientAuthController::class, 'verify'])->name('seafarers.verify');
-    Route::get('/seafarers/continue', [ClientAuthController::class, 'showContinueProfile'])->name('seafarers.continue');
-    Route::post('/seafarers/continue', [ClientAuthController::class, 'continueProfile'])->name('seafarers.update-profile');
     Route::post('/seafarers/verification/resend', [ClientAuthController::class, 'resendVerification'])->name('seafarers.verification.resend');
-
-    Route::patch('/seafarers/continue', [ClientAuthController::class, 'continueProfile']);
-    Route::put('/seafarers/continue', [ClientAuthController::class, 'continueProfile']);
 
     // Temporary test route to send a verification email to any address (use ?email=you@example.com)
     Route::get('/seafarers/test-verification', function (Request $request) {
@@ -127,6 +122,10 @@ Route::middleware('seafarer.live')->group(function () {
     });
 
     Route::middleware(['auth:client'])->prefix('seafarers')->name('seafarers.')->group(function () {
+        Route::get('/continue', [ClientAuthController::class, 'showContinueProfile'])->name('continue');
+        Route::post('/continue', [ClientAuthController::class, 'continueProfile'])->name('update-profile');
+        Route::patch('/continue', [ClientAuthController::class, 'continueProfile']);
+        Route::put('/continue', [ClientAuthController::class, 'continueProfile']);
         Route::get('/password/mandatory', [ClientAuthController::class, 'showMandatoryPassword'])->name('password.mandatory');
         Route::put('/password/mandatory', [ClientAuthController::class, 'updateMandatoryPassword'])->name('password.mandatory.update');
         Route::get('/dashboard', [ClientAuthController::class, 'dashboard'])->name('dashboard');
