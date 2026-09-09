@@ -66,6 +66,13 @@ class ClientContinueProfileTest extends TestCase
         ]);
     }
 
+    public function test_guest_is_redirected_from_continue_profile_to_login(): void
+    {
+        $response = $this->get('/seafarers/continue');
+
+        $response->assertRedirect(route('seafarers.login'));
+    }
+
     private function createClient(array $overrides = []): Client
     {
         return Client::create(array_merge([
