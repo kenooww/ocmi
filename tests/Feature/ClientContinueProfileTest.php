@@ -88,6 +88,9 @@ class ClientContinueProfileTest extends TestCase
         return [
             'first_name' => 'Juan',
             'last_name' => 'Dela Cruz',
+            'gender' => 'Male',
+            'status' => 'single',
+            'type_of_job' => 'No Experience',
             'date_applied' => '2026-08-21',
             'place_of_birth' => 'Manila',
             'date_of_birth' => '1990-01-15',
@@ -106,10 +109,14 @@ class ClientContinueProfileTest extends TestCase
             'nearest_airport' => 'NAIA',
             'next_of_kin' => 'Maria Dela Cruz',
             'relationship' => 'Mother',
+            'contact_person' => 'Maria Dela Cruz',
             'emergency_contact' => 'Maria / 09176543210',
             'sss_no' => 'SSS-123',
             'pagibig_no' => 'PAG-123',
             'philhealth_no' => 'PH-123',
+            'avatar' => 'avatars/juan.jpg',
+            'resume_attachment' => 'resume-attachments/juan.pdf',
+            'privacy_act_accepted' => true,
         ];
     }
 }

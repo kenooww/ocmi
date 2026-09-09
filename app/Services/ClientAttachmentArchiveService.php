@@ -49,11 +49,6 @@ class ClientAttachmentArchiveService
             'folder' => 'flag-document-attachments',
             'relation' => 'flagDocuments',
         ],
-        'other-certificates' => [
-            'title' => 'Other Certificates',
-            'folder' => 'other-certificate-attachments',
-            'relation' => 'otherCertificates',
-        ],
         'additional-stcw-certificates' => [
             'title' => 'Additional STCW Certificates',
             'folder' => 'additional-stcw-certificate-attachments',
@@ -63,6 +58,11 @@ class ClientAttachmentArchiveService
             'title' => 'Offshore Training Certificates',
             'folder' => 'offshore-training-certificate-attachments',
             'relation' => 'offshoreTrainingCertificates',
+        ],
+        'other-certificates' => [
+            'title' => 'Other Certificates',
+            'folder' => 'other-certificate-attachments',
+            'relation' => 'otherCertificates',
         ],
         'employment-history' => [
             'title' => 'Employment History',

@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm, usePage } from '@inertiajs/react';
-import { CalendarDays, ChevronDown, Download, FileText, Mail, Phone, Plus, Printer, Trash2, Upload, X } from 'lucide-react';
+import { AlertCircle, CalendarDays, CheckCircle2, ChevronDown, Download, FileText, Mail, Phone, Plus, Printer, Trash2, Upload, X } from 'lucide-react';
 
 const FIELD_KEYS = [
-  'avatar', 'resume_attachment', 'privacy_act_accepted', 'first_name', 'middle_name', 'last_name', 'gender', 'status', 'type_of_job', 'date_applied', 'nationality',
+  'avatar', 'resume_attachment', 'privacy_act_accepted', 'current_position', 'first_name', 'middle_name', 'last_name', 'gender', 'status', 'type_of_job', 'date_applied', 'nationality',
   'place_of_birth', 'date_of_birth', 'mothers_maiden_name', 'fathers_name', 'religion', 'sector_sub_caste',
-  'current_position', 'position_applied_for', 'educational_attainment', 'last_salary', 'expected_salary', 'e_registration_number',
+  'position_applied_for', 'educational_attainment', 'last_salary', 'expected_salary', 'e_registration_number',
   'body_weight_bmi', 'height_cm', 'coverall_shoe_size', 'safety_shoe_size', 'boiler_suit_size',
   'current_home_address', 'personal_mobile_no', 'telephone_numbers', 'whatsapp_number', 'fax_no', 'email_address', 'nearest_airport',
   'next_of_kin', 'relationship', 'wife_name', 'wife_ic_no', 'wife_occupation', 'marriage_date', 'wife_income_tax_no', 'contact_person', 'emergency_contact',
@@ -13,9 +13,11 @@ const FIELD_KEYS = [
 ];
 
 const TYPE_OF_JOB_OPTIONS = [
+  'No Experience',
   'Landbased/Skilled/Office Job',
   'Seabased/Seaman',
 ];
+const SEABASED_WORK_EXPERIENCE = 'Seabased/Seaman';
 
 const STATUS_OPTIONS = [
   'single',
@@ -65,6 +67,23 @@ const EMPTY_SEA_SERVICE = {
   main_engine_kw: '',
   ship_owner_manager_contact: '',
 };
+const SEA_SERVICE_REQUIRED_FIELDS = [
+  ['Vessel Name', 'vessel_name'],
+  ['Company (Owners)', 'ship_owner_manager_contact'],
+  ['Rank', 'position'],
+  ['Type of Vessel', 'type_imo_number'],
+  ['Propulsion type AZ, CPP', 'propulsion_type'],
+  ['Flag', 'flag'],
+  ['Area of operation', 'area_of_operation'],
+  ['GT', 'grt'],
+  ['Types/Model', 'main_engine_type_model'],
+  ['KW', 'main_engine_kw'],
+  ['Bollard Pull', 'bollard_pull'],
+  ['Sign on Date', 'from_date'],
+  ['Sign off Date', 'to_date'],
+  ['Duration Month', 'duration_months'],
+  ['Duration Days', 'duration_days'],
+];
 const EMPTY_DECK_OFFICER_EXPERIENCE = {
   vessel_name: '',
   charterer: '',
@@ -96,9 +115,9 @@ const TABS = [
   { key: 'proficiency', label: 'Certificate of Proficiency' },
   { key: 'vaccinations', label: 'Vaccinations' },
   { key: 'flag_documents', label: 'Flag Documents' },
-  { key: 'other_certificates', label: 'Other Certificates' },
   { key: 'additional_stcw_certificates', label: 'Additional STCW Certificate' },
   { key: 'offshore_training_certificates', label: 'Offshore Training Certificate' },
+  { key: 'other_certificates', label: 'Other Certificates' },
   { key: 'employment_history', label: 'Employment History' },
   { key: 'sea_service', label: 'Sea Service' },
   { key: 'deck_officer_experience', label: 'Deck Officer Experience' },
@@ -108,13 +127,14 @@ const GROUPS = [
   {
     title: 'Personal Information',
     fields: [
+      ['Current position', 'current_position'],
       ['First name', 'first_name'],
       ['Middle name', 'middle_name'],
       ['Last name', 'last_name'],
       ['Gender', 'gender', 'select', GENDER_OPTIONS],
       ['Status', 'status', 'select', STATUS_OPTIONS],
       ['Position applied for', 'position_applied_for'],
-      ['Type of job', 'type_of_job', 'select', TYPE_OF_JOB_OPTIONS],
+      ['Work Experience', 'type_of_job', 'select', TYPE_OF_JOB_OPTIONS],
       ['Date applied', 'date_applied', 'date'],
       ['Nationality', 'nationality'],
     ],
@@ -133,7 +153,6 @@ const GROUPS = [
   {
     title: 'Position & Background',
     fields: [
-      ['Current position', 'current_position'],
       ['Educational attainment', 'educational_attainment'],
       ['Last salary', 'last_salary'],
       ['Expected salary', 'expected_salary'],
@@ -194,6 +213,40 @@ const GROUPS = [
   },
 ];
 
+const ONBOARDING_REQUIRED_FIELDS = [
+  ['Current position', 'current_position'],
+  ['First name', 'first_name'],
+  ['Last name', 'last_name'],
+  ['Gender', 'gender'],
+  ['Status', 'status'],
+  ['Work Experience', 'type_of_job'],
+  ['Position applied for', 'position_applied_for'],
+  ['Date applied', 'date_applied'],
+  ['Nationality', 'nationality'],
+  ['Place of birth', 'place_of_birth'],
+  ['Date of birth', 'date_of_birth'],
+  ["Mother's maiden name", 'mothers_maiden_name'],
+  ["Father's name", 'fathers_name'],
+  ['Educational attainment', 'educational_attainment'],
+  ['Body weight (lbs)', 'body_weight_bmi'],
+  ['Height (cm)', 'height_cm'],
+  ['Coverall & shoe size', 'coverall_shoe_size'],
+  ['Home address', 'current_home_address'],
+  ['Personal mobile no.', 'personal_mobile_no'],
+  ['Email address', 'email_address'],
+  ['Nearest airport', 'nearest_airport'],
+  ['Next of kin', 'next_of_kin'],
+  ['Relationship', 'relationship'],
+  ['Emergency contact person', 'contact_person'],
+  ['Emergency contact number', 'emergency_contact'],
+  ['SSS No.', 'sss_no'],
+  ['Pag-IBIG No.', 'pagibig_no'],
+  ['PhilHealth No.', 'philhealth_no'],
+];
+
+const ONBOARDING_REQUIRED_FIELD_NAMES = new Set(ONBOARDING_REQUIRED_FIELDS.map(([, key]) => key));
+const PROFILE_REQUIRED_FIELD_NAMES = new Set(['status', 'type_of_job']);
+
 function initialsFor(name) {
   return (name || 'SF')
     .trim()
@@ -202,6 +255,22 @@ function initialsFor(name) {
     .map((part) => part[0])
     .join('')
     .toUpperCase();
+}
+
+function hasFormValue(value) {
+  if (value instanceof File) {
+    return true;
+  }
+
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  return String(value ?? '').trim() !== '';
 }
 
 function fullNameFor(client) {
@@ -243,6 +312,25 @@ function parseDateInput(value) {
   return new Date(Date.UTC(year, month - 1, day));
 }
 
+function calculateAge(dateOfBirth) {
+  const birthDate = parseDateInput(dateOfBirth);
+
+  if (!birthDate) {
+    return null;
+  }
+
+  const today = new Date();
+  let age = today.getUTCFullYear() - birthDate.getUTCFullYear();
+  const birthdayHasPassed = today.getUTCMonth() > birthDate.getUTCMonth()
+    || (today.getUTCMonth() === birthDate.getUTCMonth() && today.getUTCDate() >= birthDate.getUTCDate());
+
+  if (!birthdayHasPassed) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : null;
+}
+
 function addUtcMonths(date, months) {
   const next = new Date(date.getTime());
   const originalDay = next.getUTCDate();
@@ -279,7 +367,10 @@ function calculateSeaServiceDuration(fromDate, toDate) {
   };
 }
 
-function FieldRow({ label, name, value, editing, data, setData, error, type = 'text', options = [] }) {
+function FieldRow({ label, name, value, editing, data, setData, error, type = 'text', options = [], required = false }) {
+  const optionValue = (option) => typeof option === 'string' ? option : option.value;
+  const optionLabel = (option) => typeof option === 'string' ? option : option.label;
+
   if (!editing) {
     return (
       <div className="border-b border-slate-100 py-3">
@@ -291,25 +382,33 @@ function FieldRow({ label, name, value, editing, data, setData, error, type = 't
 
   return (
     <div className="border-b border-slate-100 py-3">
-      <label className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</label>
+      <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        {label}{required && <span className="ml-1 text-red-500">*</span>}
+      </label>
       {type === 'select' ? (
         <select
+          id={`field-${name}`}
+          name={name}
           value={data[name] ?? ''}
           onChange={(e) => setData(name, e.target.value)}
+          required={required}
           className={`mt-1 w-full rounded border p-2.5 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${
             error ? 'border-red-300' : 'border-slate-300'
           }`}
         >
           <option value="">Select {label.toLowerCase()}</option>
           {options.map((option) => (
-            <option key={option} value={option}>{option}</option>
+            <option key={optionValue(option)} value={optionValue(option)}>{optionLabel(option)}</option>
           ))}
         </select>
       ) : (
         <input
+          id={`field-${name}`}
+          name={name}
           type={type}
           value={data[name] ?? ''}
           onChange={(e) => setData(name, e.target.value)}
+          required={required}
           className={`mt-1 w-full rounded border p-2.5 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${
             error ? 'border-red-300' : 'border-slate-300'
           }`}
@@ -320,25 +419,44 @@ function FieldRow({ label, name, value, editing, data, setData, error, type = 't
   );
 }
 
-function Section({ title, fields, client, editing, data, setData, errors }) {
+function Section({ title, fields, client, editing, data, setData, errors, rankOptions = [], requiredFieldNames = new Set(), showAge = false }) {
   return (
     <section className="rounded border border-slate-200 bg-white p-5 shadow-sm">
       <h3 className="text-base font-semibold text-slate-900">{title}</h3>
       <div className="mt-3 grid grid-cols-1 gap-x-8 sm:grid-cols-2">
-        {fields.map(([label, key, type, options]) => (
-          <FieldRow
-            key={key}
-            label={label}
-            name={key}
-            value={displayValue(client, key)}
-            editing={editing}
-            data={data}
-            setData={setData}
-            error={errors[key]}
-            type={type}
-            options={options}
-          />
-        ))}
+        {fields.map(([label, key, type, options]) => {
+          const isRankField = ['current_position', 'position_applied_for'].includes(key);
+          const shouldUseRankSelect = isRankField && rankOptions.length > 0;
+
+          const field = (
+            <FieldRow
+              key={key}
+              label={label}
+              name={key}
+              value={displayValue(client, key)}
+              editing={editing}
+              data={data}
+              setData={setData}
+              error={errors[key]}
+              type={shouldUseRankSelect ? 'select' : type}
+              options={shouldUseRankSelect ? rankOptions : options}
+              required={requiredFieldNames.has(key)}
+            />
+          );
+
+          if (!showAge || key !== 'date_of_birth') {
+            return field;
+          }
+
+          const age = calculateAge(editing ? data.date_of_birth : client?.date_of_birth);
+
+          return (
+            <React.Fragment key={key}>
+              {field}
+              <FieldRow label="Age" value={age === null ? null : `${age} years old`} />
+            </React.Fragment>
+          );
+        })}
       </div>
     </section>
   );
@@ -414,6 +532,65 @@ function TabBar({ active, onChange }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function RequiredFieldsModal({ open, fields, onClose }) {
+  if (!open || fields.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center p-2 sm:items-center sm:p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative flex max-h-[calc(100dvh-1rem)] w-full max-w-2xl flex-col overflow-hidden rounded border border-red-200 bg-white shadow-xl sm:max-h-[85vh]">
+        <div className="shrink-0 flex items-start gap-3 border-b border-red-100 bg-red-50 px-4 py-3 text-red-800 sm:px-5 sm:py-4">
+          <AlertCircle size={22} className="mt-0.5 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base font-semibold">Please complete the required fields before submitting.</h3>
+            <p className="mt-1 text-sm text-red-700">These fields still need attention:</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded text-red-700 transition hover:bg-red-100"
+            aria-label="Close missing fields"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4">
+          <ul className="grid grid-cols-1 gap-2 text-sm text-slate-700 sm:grid-cols-2">
+            {fields.map((field) => (
+              <li key={field} className="flex items-start gap-2 rounded border border-slate-100 bg-slate-50 px-3 py-2">
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
+                <span className="break-words">{field}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="shrink-0 flex justify-end border-t border-slate-200 px-4 py-3 sm:px-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded bg-[#0A2436] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#12364F]"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OnboardingSectionLabel({ number, title }) {
+  return (
+    <div className="mb-3 mt-6 flex items-center gap-3">
+      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E1EBE6] text-sm font-semibold text-[#1F6F5C]">
+        {number}
+      </span>
+      <h3 className="text-base font-semibold text-slate-900">{title}</h3>
     </div>
   );
 }
@@ -739,26 +916,23 @@ function TravelDocumentsTable({ items, editing, onChange, errors }) {
   );
 }
 
-function SeaServiceTable({ items, editing, onChange, onAdd, onRemove, errors }) {
+function SeaServiceTable({ items, editing, onChange, onAdd, onRemove, errors, required = false }) {
   const columns = [
-    { key: 'from_date', label: 'From', type: 'date', className: 'min-w-[170px]' },
-    { key: 'to_date', label: 'To', type: 'date', className: 'min-w-[170px]' },
-    { key: 'duration_months', label: 'Mos.', type: 'number', readOnly: true, className: 'min-w-[90px]' },
-    { key: 'duration_days', label: 'Days', type: 'number', readOnly: true, className: 'min-w-[90px]' },
-    { key: 'position', label: 'Position', className: 'min-w-[170px]' },
     { key: 'vessel_name', label: 'Vessel Name', className: 'min-w-[180px]' },
-    { key: 'type_imo_number', label: 'Type / IMO #', className: 'min-w-[150px]' },
-    { key: 'area_of_operation', label: 'Area of Operation', className: 'min-w-[170px]' },
+    { key: 'ship_owner_manager_contact', label: 'Company (Owners)', type: 'textarea', className: 'min-w-[220px]' },
+    { key: 'position', label: 'Rank', className: 'min-w-[150px]' },
+    { key: 'type_imo_number', label: 'Type of Vessel', className: 'min-w-[150px]' },
+    { key: 'propulsion_type', label: 'Propulsion type AZ, CPP', className: 'min-w-[190px]' },
     { key: 'flag', label: 'Flag', className: 'min-w-[120px]' },
-    { key: 'oilfield_yn', label: 'Oilfield Y/N', className: 'min-w-[130px]' },
-    { key: 'propulsion_type', label: 'Propulsion Type AZ, CPP', className: 'min-w-[190px]' },
-    { key: 'grt', label: 'GRT', className: 'min-w-[120px]' },
-    { key: 'bollard_pull', label: 'Bollard Pull', className: 'min-w-[140px]' },
-    { key: 'main_engine_type_model', label: 'Types/Model', className: 'min-w-[170px]' },
-    { key: 'main_engine_kw', label: 'KW', className: 'min-w-[120px]' },
-    { key: 'ship_owner_manager_contact', label: 'Ship Owner/Management/Company, Tel #, Contact Person & Email ID', type: 'textarea', className: 'min-w-[320px]' },
+    { key: 'area_of_operation', label: 'Area of operation', className: 'min-w-[170px]' },
+    { key: 'grt', label: 'GT', className: 'min-w-[100px]' },
+    { key: 'main_engine_type_model', label: 'Type of Engine', className: 'min-w-[170px]' },
+    { key: 'main_engine_kw', label: 'BHP', className: 'min-w-[110px]' },
+    { key: 'bollard_pull', label: 'Bollard Pull', className: 'min-w-[130px]' },
+    { key: 'from_date', label: 'Sign on Date (DD:MM:YY)', type: 'date', className: 'min-w-[150px]' },
+    { key: 'to_date', label: 'Sign off Date (DD:MM:YY)', type: 'date', className: 'min-w-[150px]' },
+    { key: 'duration', label: 'Duration (Days : Month)', readOnly: true, className: 'min-w-[150px]' },
   ];
-  const groupedHeaderColumns = columns.filter((column) => !['position', 'vessel_name', 'ship_owner_manager_contact'].includes(column.key));
 
   if (!editing && (!items || items.length === 0)) {
     return (
@@ -775,19 +949,18 @@ function SeaServiceTable({ items, editing, onChange, onAdd, onRemove, errors }) 
           <table className="w-full min-w-[2600px] table-fixed border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-center text-xs font-semibold text-slate-600">
-                <th colSpan={2} className="border-r border-slate-200 px-3 py-3">( Day/Month/Year )</th>
-                <th colSpan={2} className="border-r border-slate-200 px-3 py-3">Duration of Sea Service</th>
-                <th rowSpan={2} className="min-w-[170px] border-r border-slate-200 px-3 py-3">Position</th>
-                <th rowSpan={2} className="min-w-[180px] border-r border-slate-200 px-3 py-3">Vessel Name</th>
-                <th colSpan={7} className="border-r border-slate-200 px-3 py-3">Vessel Name</th>
-                <th colSpan={2} className="border-r border-slate-200 px-3 py-3">Main Engine*</th>
-                <th rowSpan={2} className="min-w-[320px] px-3 py-3 text-red-600">Ship Owner/ Ship Management/Company, Tel #, Contact Person & Email ID</th>
-                {editing && <th rowSpan={2} className="w-20 px-3 py-3">Action</th>}
+                <th colSpan={columns.length + (editing ? 1 : 0)} className="border-r border-slate-200 px-3 py-3">
+                  <div>Record of Sea Service</div>
+                  <div className="font-normal italic">(Recent Vessel/MOU First)</div>
+                </th>
               </tr>
               <tr className="border-b border-slate-200 bg-white text-center text-xs font-medium text-slate-500">
-                {groupedHeaderColumns.map((column) => (
-                  <th key={column.key} className={`${column.className} border-r border-slate-200 px-3 py-3`}>{column.label}</th>
+                {columns.map((column) => (
+                  <th key={column.key} className={`${column.className} border-r border-slate-200 px-3 py-3`}>
+                    {column.label}{required && <span className="ml-1 text-red-500">*</span>}
+                  </th>
                 ))}
+                {editing && <th className="w-20 px-3 py-3">Action</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -795,35 +968,57 @@ function SeaServiceTable({ items, editing, onChange, onAdd, onRemove, errors }) 
                 <tr key={index} className="align-top text-sm">
                   {columns.map((column) => {
                     const errKey = `sea_service.${index}.${column.key}`;
+                    const durationError = column.key === 'duration'
+                      ? errors?.[`sea_service.${index}.duration_days`] || errors?.[`sea_service.${index}.duration_months`]
+                      : null;
+                    const fieldError = durationError || errors?.[errKey];
+                    const durationValue = [item.duration_days, item.duration_months]
+                      .filter((part) => part !== null && part !== undefined && part !== '')
+                      .join(' : ');
 
                     return (
                       <td key={column.key} className={`${column.className} border-r border-slate-100 px-3 py-3 text-slate-700`}>
                         {editing ? (
                           <>
-                            {column.type === 'textarea' ? (
+                            {column.key === 'duration' ? (
+                              <div
+                                id={`field-sea_service.${index}.duration_days`}
+                                className={`min-h-10 rounded border bg-slate-100 p-2 text-sm text-slate-600 ${
+                                  fieldError ? 'border-red-300' : 'border-slate-300'
+                                }`}
+                              >
+                                {durationValue || 'Auto'}
+                              </div>
+                            ) : column.type === 'textarea' ? (
                               <textarea
+                                id={`field-sea_service.${index}.${column.key}`}
+                                name={`sea_service.${index}.${column.key}`}
                                 value={item[column.key] ?? ''}
                                 onChange={(e) => onChange(index, column.key, e.target.value)}
                                 rows={2}
+                                required={required}
                                 className={`w-full rounded border p-2 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${
-                                  errors?.[errKey] ? 'border-red-300' : 'border-slate-300'
+                                  fieldError ? 'border-red-300' : 'border-slate-300'
                                 }`}
                               />
                             ) : (
                               <input
+                                id={`field-sea_service.${index}.${column.key}`}
+                                name={`sea_service.${index}.${column.key}`}
                                 type={column.type || 'text'}
                                 value={item[column.key] ?? ''}
                                 onChange={(e) => onChange(index, column.key, e.target.value)}
                                 readOnly={column.readOnly}
+                                required={required}
                                 className={`w-full rounded border p-2 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${
-                                  errors?.[errKey] ? 'border-red-300' : 'border-slate-300'
+                                  fieldError ? 'border-red-300' : 'border-slate-300'
                                 } ${column.readOnly ? 'bg-slate-100 text-slate-600' : ''}`}
                               />
                             )}
-                            {errors?.[errKey] && <p className="mt-1 text-xs text-red-600">{errors[errKey]}</p>}
+                            {fieldError && <p className="mt-1 text-xs text-red-600">{fieldError}</p>}
                           </>
                         ) : (
-                          item[column.key] || 'Not provided'
+                          column.key === 'duration' ? (durationValue || 'Not provided') : (item[column.key] || 'Not provided')
                         )}
                       </td>
                     );
@@ -846,6 +1041,7 @@ function SeaServiceTable({ items, editing, onChange, onAdd, onRemove, errors }) 
           </table>
         </div>
       </div>
+      {errors?.sea_service && <p className="text-sm text-red-600">{errors.sea_service}</p>}
 
       {editing && (
         <button
@@ -987,10 +1183,12 @@ function EmptyTabPanel({ title }) {
   );
 }
 
-export default function Profile({ client, updateRouteName = 'seafarers.update-profile', updateRouteParams = [], methodOverride = null, headerActions = null }) {
-  const { certificateOptions = {} } = usePage().props;
-  const [editing, setEditing] = useState(false);
+export default function Profile({ client, updateRouteName = 'seafarers.update-profile', updateRouteParams = [], methodOverride = null, headerActions = null, onboarding = false }) {
+  const { certificateOptions = {}, rankOptions = [] } = usePage().props;
+  const [editing, setEditing] = useState(onboarding);
   const [activeTab, setActiveTab] = useState('personal');
+  const [requiredAlert, setRequiredAlert] = useState([]);
+  const [requiredModalOpen, setRequiredModalOpen] = useState(false);
 
   const initialValues = FIELD_KEYS.reduce((acc, key) => {
     acc[key] = client?.[key] ?? (key === 'email_address' ? client?.email ?? '' : '');
@@ -1009,8 +1207,9 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
   initialValues.employment_history = client?.employment_history?.length ? client.employment_history : [];
   initialValues.sea_service = client?.sea_service?.length ? client.sea_service : [];
   initialValues.deck_officer_experience = client?.deck_officer_experience?.length ? client.deck_officer_experience : [];
+  initialValues.privacy_act_accepted = Boolean(client?.privacy_act_accepted);
 
-  const { data, setData, post, processing, errors, reset, transform } = useForm(initialValues);
+  const { data, setData, post, processing, errors, reset, transform, setError, clearErrors } = useForm(initialValues);
 
   const fullName = fullNameFor(client);
   const profileTitle = editing ? fullNameFor(data) : fullName;
@@ -1029,6 +1228,25 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
         ? route('admin.seafarers.resume.view', updateRouteParams)
         : route('seafarers.resume.view'))
     : null;
+  const requiresSeaService = data.type_of_job === SEABASED_WORK_EXPERIENCE;
+  const visibleErrors = Object.fromEntries(
+    Object.entries(errors || {}).filter(([key]) => {
+      const value = key.split('.').reduce((current, part) => current?.[part], data);
+      return !hasFormValue(value);
+    })
+  );
+  const submissionErrorList = Array.from(new Set(
+    Object.values(visibleErrors || {})
+      .concat(Object.keys(visibleErrors).length === 0 ? requiredAlert : [])
+      .filter(Boolean)
+      .map((message) => String(message))
+  ));
+
+  useEffect(() => {
+    if (onboarding && Object.keys(visibleErrors || {}).length > 0) {
+      setRequiredModalOpen(true);
+    }
+  }, [errors, onboarding]);
 
   function startEditing() {
     reset();
@@ -1038,6 +1256,107 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
   function cancelEditing() {
     reset();
     setEditing(false);
+  }
+
+  function focusFirstMissingField(missingErrors) {
+    window.requestAnimationFrame(() => {
+      const firstName = Object.keys(missingErrors)[0];
+      const firstField = document.getElementById(`field-${firstName}`) || document.querySelector(`[name="${firstName}"]`);
+      firstField?.focus?.();
+      firstField?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    });
+  }
+
+  function collectMissingRequiredFields(fields) {
+    const missingErrors = {};
+    const missingFields = [];
+
+    const addMissingField = (label, key, message = `${label} is required.`) => {
+      missingErrors[key] = message;
+      missingFields.push(label);
+    };
+
+    fields.forEach(([label, key]) => {
+      if (!String(data[key] ?? '').trim()) {
+        addMissingField(label, key);
+      }
+    });
+
+    return { missingErrors, missingFields, addMissingField };
+  }
+
+  function validateOnboardingRequiredFields() {
+    if (!onboarding) {
+      return true;
+    }
+
+    const { missingErrors, missingFields, addMissingField } = collectMissingRequiredFields(ONBOARDING_REQUIRED_FIELDS);
+
+    if (!client?.avatar && !(data.avatar instanceof File)) {
+      addMissingField('Profile photo', 'avatar');
+    }
+
+    if (!client?.resume_attachment && !(data.resume_attachment instanceof File)) {
+      addMissingField('Resume attachment', 'resume_attachment');
+    }
+
+    if (!data.privacy_act_accepted) {
+      addMissingField('Data Privacy Act consent', 'privacy_act_accepted', 'Please accept the Data Privacy Act consent.');
+    }
+
+    if (Object.keys(missingErrors).length === 0) {
+      clearErrors();
+      setRequiredAlert([]);
+      setRequiredModalOpen(false);
+      return true;
+    }
+
+    setError(missingErrors);
+    setRequiredAlert(missingFields);
+    setRequiredModalOpen(true);
+    setActiveTab('personal');
+    focusFirstMissingField(missingErrors);
+
+    return false;
+  }
+
+  function validateSeaServiceRequiredFields() {
+    if (!requiresSeaService) {
+      return true;
+    }
+
+    const rows = data.sea_service || [];
+    const missingErrors = {};
+    const missingFields = [];
+
+    if (rows.length === 0) {
+      missingErrors.sea_service = 'Sea service is required when Work Experience is Seabased/Seaman.';
+      missingFields.push('Sea Service');
+    }
+
+    rows.forEach((row, index) => {
+      SEA_SERVICE_REQUIRED_FIELDS.forEach(([label, key]) => {
+        if (!String(row?.[key] ?? '').trim()) {
+          missingErrors[`sea_service.${index}.${key}`] = `${label} is required.`;
+          missingFields.push(`Sea Service row ${index + 1}: ${label}`);
+        }
+      });
+    });
+
+    if (Object.keys(missingErrors).length === 0) {
+      clearErrors('sea_service', ...rows.flatMap((_, index) => SEA_SERVICE_REQUIRED_FIELDS.map(([, key]) => `sea_service.${index}.${key}`)));
+      setRequiredAlert([]);
+      setRequiredModalOpen(false);
+      return true;
+    }
+
+    setError(missingErrors);
+    setRequiredAlert(missingFields);
+    setRequiredModalOpen(true);
+    setActiveTab('sea_service');
+    focusFirstMissingField(missingErrors);
+
+    return false;
   }
 
   function stripStoredAttachmentPaths(rows = []) {
@@ -1055,8 +1374,17 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
   function save(e) {
     e.preventDefault();
 
+    if (!validateOnboardingRequiredFields()) {
+      return;
+    }
+
+    if (!validateSeaServiceRequiredFields()) {
+      return;
+    }
+
     transform(({ avatar, resume_attachment, ...payload }) => ({
       ...payload,
+      _token: document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
       dependents: stripStoredAttachmentPaths(payload.dependents),
       travel_documents: stripStoredAttachmentPaths(payload.travel_documents),
       certifications: stripStoredAttachmentPaths(payload.certifications),
@@ -1075,7 +1403,24 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
 
     post(route(updateRouteName, updateRouteParams), {
       forceFormData: true,
-      onSuccess: () => setEditing(false),
+      onSuccess: () => {
+        setRequiredAlert([]);
+        setRequiredModalOpen(false);
+        if (!onboarding) {
+          setEditing(false);
+        }
+      },
+      onError: (submissionErrors) => {
+        const messages = Object.values(submissionErrors || {})
+          .flatMap((message) => Array.isArray(message) ? message : [message])
+          .filter(Boolean)
+          .map((message) => String(message));
+
+        setRequiredAlert(Array.from(new Set(messages.length > 0 ? messages : [
+          'The profile could not be submitted. Please refresh the page and try again.',
+        ])));
+        setRequiredModalOpen(true);
+      },
     });
   }
 
@@ -1223,8 +1568,8 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
 
   return (
     <div className="w-full px-4 py-5 sm:p-6">
-      <form onSubmit={save} encType="multipart/form-data" className="mx-auto max-w-6xl">
-        <div className="mb-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+      <form onSubmit={save} encType="multipart/form-data" noValidate={onboarding} className="mx-auto max-w-6xl">
+        <div id="profile-step-start" className="mb-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               {avatarPreview ? (
@@ -1291,45 +1636,88 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-wrap justify-end gap-2">
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                    <Upload size={16} />
-                    Upload Photo
-                    <input name="avatar" type="file" accept="image/*" onChange={(e) => setData('avatar', e.target.files[0] ?? null)} className="sr-only" />
-                  </label>
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                    <FileText size={16} />
-                    Upload Resume
-                    <input name="resume_attachment" type="file" accept=".pdf,.doc,.docx,image/*" onChange={(e) => setData('resume_attachment', e.target.files[0] ?? null)} className="sr-only" />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={cancelEditing}
-                    disabled={processing}
-                    className="inline-flex items-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                  >
-                    <X size={16} />
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={processing}
-                    className="rounded bg-[#0A2436] px-4 py-2 text-sm font-semibold text-white hover:bg-[#12364F] disabled:opacity-60"
-                  >
-                    {processing ? 'Saving...' : 'Save Changes'}
-                  </button>
+                <div className="flex flex-wrap justify-end gap-3">
+                  <div className="max-w-56">
+                    <label className={`inline-flex cursor-pointer items-center gap-2 rounded border px-4 py-2 text-sm font-medium transition hover:bg-slate-50 ${
+                      visibleErrors.avatar ? 'border-red-300 text-red-700' : 'border-slate-300 text-slate-700'
+                    }`}>
+                      <Upload size={16} />
+                      Upload Photo{onboarding && !client?.avatar && <span className="text-red-500">*</span>}
+                      <input
+                        id="field-avatar"
+                        name="avatar"
+                        type="file"
+                        accept="image/*"
+                        required={onboarding && !client?.avatar}
+                        onChange={(e) => setData('avatar', e.target.files[0] ?? null)}
+                        className="sr-only"
+                      />
+                    </label>
+                    <p className="mt-1 truncate text-xs text-slate-500">
+                      {data.avatar instanceof File ? `Selected: ${data.avatar.name}` : client?.avatar ? 'Current photo uploaded' : 'No photo selected'}
+                    </p>
+                  </div>
+                  <div className="max-w-56">
+                    <label className={`inline-flex cursor-pointer items-center gap-2 rounded border px-4 py-2 text-sm font-medium transition hover:bg-slate-50 ${
+                      visibleErrors.resume_attachment ? 'border-red-300 text-red-700' : 'border-slate-300 text-slate-700'
+                    }`}>
+                      <FileText size={16} />
+                      Upload Resume{onboarding && !client?.resume_attachment && <span className="text-red-500">*</span>}
+                      <input
+                        id="field-resume_attachment"
+                        name="resume_attachment"
+                        type="file"
+                        accept=".pdf,.doc,.docx,image/*"
+                        required={onboarding && !client?.resume_attachment}
+                        onChange={(e) => setData('resume_attachment', e.target.files[0] ?? null)}
+                        className="sr-only"
+                      />
+                    </label>
+                    <p className="mt-1 truncate text-xs text-slate-500">
+                      {data.resume_attachment instanceof File ? `Selected: ${data.resume_attachment.name}` : client?.resume_attachment ? `Current: ${client.resume_attachment.split('/').pop()}` : 'No resume selected'}
+                    </p>
+                  </div>
+                  {!onboarding && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={cancelEditing}
+                        disabled={processing}
+                        className="inline-flex items-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                      >
+                        <X size={16} />
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={processing}
+                        className="rounded bg-[#0A2436] px-4 py-2 text-sm font-semibold text-white hover:bg-[#12364F] disabled:opacity-60"
+                      >
+                        {processing ? 'Saving...' : 'Save Changes'}
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
-              {errors.avatar && <p className="text-xs text-red-600">{errors.avatar}</p>}
-              {errors.resume_attachment && <p className="text-xs text-red-600">{errors.resume_attachment}</p>}
+              {visibleErrors.avatar && <p className="text-xs text-red-600">{visibleErrors.avatar}</p>}
+              {visibleErrors.resume_attachment && <p className="text-xs text-red-600">{visibleErrors.resume_attachment}</p>}
             </div>
           </div>
         </div>
 
-        <TabBar active={activeTab} onChange={setActiveTab} />
+        {onboarding && (
+          <RequiredFieldsModal
+            open={requiredModalOpen}
+            fields={submissionErrorList}
+            onClose={() => setRequiredModalOpen(false)}
+          />
+        )}
 
-        {activeTab === 'personal' && (
+        {!onboarding && <TabBar active={activeTab} onChange={setActiveTab} />}
+
+        {(onboarding || activeTab === 'personal') && (
           <div className="space-y-5">
+            {onboarding && <OnboardingSectionLabel number="1" title="Personal Information" />}
             {GROUPS.map((group) => (
               <Section
                 key={group.title}
@@ -1339,14 +1727,18 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
                 editing={editing}
                 data={data}
                 setData={setData}
-                errors={errors}
+                errors={visibleErrors}
+                rankOptions={rankOptions}
+                requiredFieldNames={onboarding ? ONBOARDING_REQUIRED_FIELD_NAMES : PROFILE_REQUIRED_FIELD_NAMES}
+                showAge={isAdminProfile}
               />
             ))}
           </div>
         )}
 
-        {activeTab === 'dependents' && (
+        {(onboarding || activeTab === 'dependents') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="2" title="Dependents" />}
             <RepeatableList
               items={editing ? data.dependents : (client?.dependents || [])}
               editing={editing}
@@ -1356,24 +1748,26 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={removeDependent}
               emptyLabel="No dependents added yet"
               errorsPrefix="dependents"
-              errors={errors}
+              errors={visibleErrors}
             />
           </>
         )}
 
-        {activeTab === 'travel_documents' && (
+        {(onboarding || activeTab === 'travel_documents') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="3" title="Travel Documents" />}
             <TravelDocumentsTable
               items={editing ? data.travel_documents : buildTravelDocuments(client?.travel_documents)}
               editing={editing}
               onChange={updateTravelDocument}
-              errors={errors}
+              errors={visibleErrors}
             />
           </>
         )}
 
-        {activeTab === 'certifications' && (
+        {(onboarding || activeTab === 'certifications') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="4" title="Certificate of Competency" />}
             <RepeatableList
               items={editing ? data.certifications : (client?.certifications || [])}
               editing={editing}
@@ -1383,14 +1777,15 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={removeCertification}
               emptyLabel="No certifications added yet"
               errorsPrefix="certifications"
-              errors={errors}
+              errors={visibleErrors}
               printableAttachments
             />
           </>
         )}
 
-        {activeTab === 'proficiency' && (
+        {(onboarding || activeTab === 'proficiency') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="5" title="Certificate of Proficiency" />}
             <RepeatableList
               items={editing ? data.proficiency : (client?.proficiency || [])}
               editing={editing}
@@ -1400,13 +1795,14 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={(index) => removeRow('proficiency', index)}
               emptyLabel="No certificate of proficiency added yet"
               errorsPrefix="proficiency"
-              errors={errors}
+              errors={visibleErrors}
               printableAttachments
             />
           </>
         )}
-        {activeTab === 'gmdss_certificates' && (
+        {(onboarding || activeTab === 'gmdss_certificates') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="6" title="GMDSS Certificate" />}
             <RepeatableList
               items={editing ? data.gmdss_certificates : (client?.gmdss_certificates || [])}
               editing={editing}
@@ -1416,13 +1812,14 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={(index) => removeRow('gmdss_certificates', index)}
               emptyLabel="No GMDSS certificate added yet"
               errorsPrefix="gmdss_certificates"
-              errors={errors}
+              errors={visibleErrors}
               printableAttachments
             />
           </>
         )}
-        {activeTab === 'vaccinations' && (
+        {(onboarding || activeTab === 'vaccinations') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="7" title="Vaccinations" />}
             <RepeatableList
               items={editing ? data.vaccinations : (client?.vaccinations || [])}
               editing={editing}
@@ -1432,13 +1829,14 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={(index) => removeRow('vaccinations', index)}
               emptyLabel="No vaccinations added yet"
               errorsPrefix="vaccinations"
-              errors={errors}
+              errors={visibleErrors}
               printableAttachments
             />
           </>
         )}
-        {activeTab === 'flag_documents' && (
+        {(onboarding || activeTab === 'flag_documents') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="8" title="Flag Documents" />}
             <RepeatableList
               items={editing ? data.flag_documents : (client?.flag_documents || [])}
               editing={editing}
@@ -1448,13 +1846,14 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={(index) => removeRow('flag_documents', index)}
               emptyLabel="No flag documents added yet"
               errorsPrefix="flag_documents"
-              errors={errors}
+              errors={visibleErrors}
               printableAttachments
             />
           </>
         )}
-        {activeTab === 'other_certificates' && (
+        {(onboarding || activeTab === 'other_certificates') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="9" title="Other Certificates" />}
             <RepeatableList
               items={editing ? data.other_certificates : (client?.other_certificates || [])}
               editing={editing}
@@ -1464,13 +1863,14 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={(index) => removeRow('other_certificates', index)}
               emptyLabel="No other certificates added yet"
               errorsPrefix="other_certificates"
-              errors={errors}
+              errors={visibleErrors}
               printableAttachments
             />
           </>
         )}
-        {activeTab === 'additional_stcw_certificates' && (
+        {(onboarding || activeTab === 'additional_stcw_certificates') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="10" title="Additional STCW Certificate" />}
             <RepeatableList
               items={editing ? data.additional_stcw_certificates : (client?.additional_stcw_certificates || [])}
               editing={editing}
@@ -1480,13 +1880,14 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={(index) => removeRow('additional_stcw_certificates', index)}
               emptyLabel="No additional STCW certificates added yet"
               errorsPrefix="additional_stcw_certificates"
-              errors={errors}
+              errors={visibleErrors}
               printableAttachments
             />
           </>
         )}
-        {activeTab === 'offshore_training_certificates' && (
+        {(onboarding || activeTab === 'offshore_training_certificates') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="11" title="Offshore Training Certificate" />}
             <RepeatableList
               items={editing ? data.offshore_training_certificates : (client?.offshore_training_certificates || [])}
               editing={editing}
@@ -1496,13 +1897,14 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={(index) => removeRow('offshore_training_certificates', index)}
               emptyLabel="No offshore training certificates added yet"
               errorsPrefix="offshore_training_certificates"
-              errors={errors}
+              errors={visibleErrors}
               printableAttachments
             />
           </>
         )}
-        {activeTab === 'employment_history' && (
+        {(onboarding || activeTab === 'employment_history') && (
           <>
+            {onboarding && <OnboardingSectionLabel number="12" title="Employment History" />}
             <RepeatableList
               items={editing ? data.employment_history : (client?.employment_history || [])}
               editing={editing}
@@ -1512,39 +1914,49 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               onRemove={(index) => removeRow('employment_history', index)}
               emptyLabel="No employment history added yet"
               errorsPrefix="employment_history"
-              errors={errors}
+              errors={visibleErrors}
               printableAttachments
             />
           </>
         )}
-        {activeTab === 'sea_service' && (
-          <SeaServiceTable
-            items={editing ? data.sea_service : (client?.sea_service || [])}
-            editing={editing}
-            onChange={updateSeaService}
-            onAdd={() => addRow('sea_service', EMPTY_SEA_SERVICE)}
-            onRemove={(index) => removeRow('sea_service', index)}
-            errors={errors}
-          />
+        {(onboarding || activeTab === 'sea_service') && (
+          <>
+            {onboarding && <OnboardingSectionLabel number="13" title="Sea Service" />}
+            <SeaServiceTable
+              items={editing ? data.sea_service : (client?.sea_service || [])}
+              editing={editing}
+              onChange={updateSeaService}
+              onAdd={() => addRow('sea_service', EMPTY_SEA_SERVICE)}
+              onRemove={(index) => removeRow('sea_service', index)}
+              errors={visibleErrors}
+              required={requiresSeaService}
+            />
+          </>
         )}
-        {activeTab === 'deck_officer_experience' && (
-          <DeckOfficerExperienceTable
-            items={editing ? data.deck_officer_experience : (client?.deck_officer_experience || [])}
-            editing={editing}
-            onChange={(index, key, value) => updateRows('deck_officer_experience', index, key, value)}
-            onAdd={() => addRow('deck_officer_experience', EMPTY_DECK_OFFICER_EXPERIENCE)}
-            onRemove={(index) => removeRow('deck_officer_experience', index)}
-            errors={errors}
-          />
+        {(onboarding || activeTab === 'deck_officer_experience') && (
+          <>
+            {onboarding && <OnboardingSectionLabel number="14" title="Deck Officer Experience" />}
+            <DeckOfficerExperienceTable
+              items={editing ? data.deck_officer_experience : (client?.deck_officer_experience || [])}
+              editing={editing}
+              onChange={(index, key, value) => updateRows('deck_officer_experience', index, key, value)}
+              onAdd={() => addRow('deck_officer_experience', EMPTY_DECK_OFFICER_EXPERIENCE)}
+              onRemove={(index) => removeRow('deck_officer_experience', index)}
+              errors={visibleErrors}
+            />
+          </>
         )}
 
         <div className="mt-5 rounded border border-slate-200 bg-white p-5 shadow-sm">
+          {onboarding && <OnboardingSectionLabel number="15" title="Data Privacy Consent" />}
           <label className={`flex items-start gap-3 text-sm ${editing ? 'text-slate-800' : 'text-slate-600'}`}>
             <input
               type="checkbox"
               checked={Boolean(editing ? data.privacy_act_accepted : client?.privacy_act_accepted)}
               onChange={(e) => setData('privacy_act_accepted', e.target.checked)}
-              disabled
+              id="field-privacy_act_accepted"
+              name="privacy_act_accepted"
+              disabled={!editing || !requiresPrivacyConsent}
               required={editing && requiresPrivacyConsent}
               className="mt-1 h-4 w-4 rounded border-slate-300 text-[#1F6F5C] focus:ring-[#1F6F5C] disabled:opacity-70"
             />
@@ -1559,8 +1971,23 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               Accepted on {client.privacy_act_accepted_at_human || client.privacy_act_accepted_at}
             </p>
           )}
-          {errors.privacy_act_accepted && <p className="mt-2 text-xs text-red-600">{errors.privacy_act_accepted}</p>}
+          {visibleErrors.privacy_act_accepted && <p className="mt-2 text-xs text-red-600">{visibleErrors.privacy_act_accepted}</p>}
         </div>
+
+        {onboarding && (
+          <div className="sticky bottom-0 z-20 mt-5 border-t border-slate-200 bg-[#EEF2F0]/95 py-4 backdrop-blur">
+            <div className="mx-auto flex max-w-6xl justify-end">
+              <button
+                type="submit"
+                disabled={processing}
+                className="inline-flex items-center justify-center gap-2 rounded bg-[#0A2436] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#12364F] disabled:opacity-60"
+              >
+                <CheckCircle2 size={16} />
+                {processing ? 'Saving...' : 'Submit profile'}
+              </button>
+            </div>
+          </div>
+        )}
       </form>
     </div>
   );

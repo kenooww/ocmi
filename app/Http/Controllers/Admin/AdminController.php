@@ -3,19 +3,26 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\CompanySetting;
 use App\Models\ApplicationStatusLog;
+use App\Models\ApplicantMonitoring;
+use App\Models\ApplicantMonitoringItem;
+use App\Models\CompanySetting;
 use App\Models\OffshoreTraining;
+use App\Models\Principal;
+use App\Models\Rank;
 use App\Models\StcwCertificate;
 use App\Models\User;
 use App\Models\Client;
 use App\Jobs\SendClientVerificationEmail;
 use App\Services\ClientAttachmentArchiveService;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -35,8 +42,27 @@ class AdminController extends Controller
     ];
 
     private const TYPE_OF_JOB_OPTIONS = [
+        'No Experience',
         'Landbased/Skilled/Office Job',
         'Seabased/Seaman',
+    ];
+    private const SEABASED_WORK_EXPERIENCE = 'Seabased/Seaman';
+    private const SEA_SERVICE_REQUIRED_FIELDS = [
+        'from_date',
+        'to_date',
+        'duration_months',
+        'duration_days',
+        'position',
+        'vessel_name',
+        'type_imo_number',
+        'area_of_operation',
+        'flag',
+        'propulsion_type',
+        'grt',
+        'bollard_pull',
+        'main_engine_type_model',
+        'main_engine_kw',
+        'ship_owner_manager_contact',
     ];
 
     private const STATUS_OPTIONS = [
@@ -61,6 +87,12 @@ class AdminController extends Controller
         'APPROVED',
         'DOCUMENT PROCESSING',
         'DISAPPROVED',
+    ];
+
+    private const APPLICANT_MONITORING_STATUS_OPTIONS = [
+        'Pending',
+        'Approved',
+        'Disapproved',
     ];
 
     public function dashboard()
@@ -95,6 +127,321 @@ class AdminController extends Controller
         ]);
     }
 
+    public function applicantMonitoring(Request $request)
+    {
+        return $this->renderApplicantMonitoring($request, 'records');
+    }
+
+    public function createApplicantMonitoring(Request $request)
+    {
+        return $this->renderApplicantMonitoring($request, 'create');
+    }
+
+    private function renderApplicantMonitoring(Request $request, string $pageMode)
+    {
+        $search = trim((string) $request->query('search', ''));
+        $referenceId = $this->applicantMonitoringReferenceId($search);
+
+        $seafarers = $this->visibleSeafarersQuery()
+            ->select('id', 'name', 'first_name', 'middle_name', 'last_name', 'current_position', 'position_applied_for', 'whatsapp_number', 'personal_mobile_no')
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->limit(500)
+            ->get()
+            ->map(fn ($client) => [
+                'id' => $client->id,
+                'name' => $this->clientDisplayName($client),
+                'rank' => $client->current_position ?: $client->position_applied_for,
+                'contact' => $client->whatsapp_number ?: $client->personal_mobile_no,
+            ]);
+
+        return Inertia::render('Admin/ApplicantMonitoring', [
+            'pageMode' => $pageMode,
+            'monitorings' => ApplicantMonitoring::query()
+                ->with(['principal:id,principal_name,principal_code', 'items.client:id,name,first_name,middle_name,last_name'])
+                ->withCount('items')
+                ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search, $referenceId) {
+                    $query
+                        ->where('proposed_by', 'like', "%{$search}%")
+                        ->orWhere('crewing', 'like', "%{$search}%")
+                        ->orWhereHas('principal', fn ($principalQuery) => $principalQuery
+                            ->where('principal_name', 'like', "%{$search}%")
+                            ->orWhere('principal_code', 'like', "%{$search}%"))
+                        ->orWhereHas('items.client', fn ($clientQuery) => $clientQuery
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhere('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%"));
+
+                    if ($referenceId !== null) {
+                        $query->orWhere('id', $referenceId);
+                    }
+                }))
+                ->orderByDesc('id')
+                ->paginate(10)
+                ->withQueryString(),
+            'filters' => [
+                'search' => $search,
+            ],
+            'principals' => Principal::query()
+                ->orderBy('principal_name')
+                ->get(['id', 'principal_name', 'principal_code']),
+            'seafarers' => $seafarers,
+            'countryOptions' => $this->monitoringCountryOptions(),
+            'statusOptions' => self::APPLICANT_MONITORING_STATUS_OPTIONS,
+        ]);
+    }
+
+    public function storeApplicantMonitoring(Request $request)
+    {
+        $data = $request->validate([
+            'proposed_date' => 'required|date',
+            'principal_id' => ['required', 'integer', Rule::exists('principals', 'id')],
+            'crewing' => 'nullable|string|max:255',
+            'items' => 'required|array|min:1',
+            'items.*.client_id' => ['required', 'integer', Rule::exists('clients', 'id')],
+            'items.*.country' => 'required|string|max:255',
+            'items.*.rank' => 'nullable|string|max:255',
+            'items.*.contact' => 'nullable|string|max:255',
+            'items.*.status' => ['required', 'string', Rule::in(self::APPLICANT_MONITORING_STATUS_OPTIONS)],
+            'items.*.remarks' => 'nullable|string|max:2000',
+        ]);
+
+        foreach ($data['items'] as $index => $item) {
+            if (($item['status'] ?? '') === 'Disapproved' && blank($item['remarks'] ?? null)) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.remarks" => 'Remarks are required when status is disapproved.',
+                ]);
+            }
+        }
+
+        $monitoring = ApplicantMonitoring::create([
+            'proposed_date' => $data['proposed_date'],
+            'proposed_by' => $request->user()->name,
+            'principal_id' => $data['principal_id'],
+            'crewing' => $data['crewing'] ?? null,
+        ]);
+
+        foreach ($data['items'] as $item) {
+            $monitoring->items()->create([
+                'client_id' => $item['client_id'],
+                'country' => $item['country'] ?? null,
+                'rank' => $item['rank'] ?? null,
+                'contact' => $item['contact'] ?? null,
+                'status' => $item['status'],
+                'remarks' => $item['remarks'] ?? null,
+            ]);
+        }
+
+        return redirect()
+            ->route('admin.applicant-monitoring.show', $monitoring)
+            ->with('success', 'Applicant monitoring record saved successfully.');
+    }
+
+    public function showApplicantMonitoring(ApplicantMonitoring $monitoring)
+    {
+        $monitoring->load(['principal:id,principal_name,principal_code', 'items.client:id,name,first_name,middle_name,last_name']);
+
+        return Inertia::render('Admin/ApplicantMonitoringView', [
+            'monitoring' => $monitoring,
+            'countryOptions' => $this->monitoringCountryOptions(),
+            'statusOptions' => self::APPLICANT_MONITORING_STATUS_OPTIONS,
+        ]);
+    }
+
+    public function updateApplicantMonitoring(Request $request, ApplicantMonitoring $monitoring)
+    {
+        $data = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.id' => ['required', 'integer', Rule::exists('applicant_monitoring_items', 'id')->where('applicant_monitoring_id', $monitoring->id)],
+            'items.*.country' => 'required|string|max:255',
+            'items.*.status' => ['required', 'string', Rule::in(self::APPLICANT_MONITORING_STATUS_OPTIONS)],
+            'items.*.remarks' => 'nullable|string|max:2000',
+        ]);
+
+        foreach ($data['items'] as $index => $item) {
+            if (($item['status'] ?? '') === 'Disapproved' && blank($item['remarks'] ?? null)) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.remarks" => 'Remarks are required when status is disapproved.',
+                ]);
+            }
+        }
+
+        foreach ($data['items'] as $item) {
+            $monitoring->items()
+                ->whereKey($item['id'])
+                ->update([
+                    'country' => $item['country'] ?? null,
+                    'status' => $item['status'],
+                    'remarks' => $item['remarks'] ?? null,
+                ]);
+        }
+
+        return back()->with('success', 'Applicant monitoring record updated successfully.');
+    }
+
+    public function deleteApplicantMonitoring(ApplicantMonitoring $monitoring)
+    {
+        abort_unless(Auth::user() && Auth::user()->role === 'admin', 403);
+
+        $monitoring->delete();
+
+        return back()->with('success', 'Applicant monitoring record deleted successfully.');
+    }
+
+    public function applicantMonitoringReport(Request $request)
+    {
+        if ($request->boolean('filtered')) {
+            $request->validate([
+                'date_from' => ['required', 'date'],
+                'date_to' => ['required', 'date', 'after_or_equal:date_from'],
+            ]);
+        }
+
+        $filters = [
+            'date_from' => $request->query('date_from', ''),
+            'date_to' => $request->query('date_to', ''),
+            'principal_id' => $request->query('principal_id', ''),
+            'filtered' => $request->boolean('filtered') ? '1' : '',
+        ];
+        $rows = $request->boolean('filtered')
+            ? $this->applicantMonitoringReportQuery($request)
+                ->paginate(10)
+                ->withQueryString()
+                ->through(fn ($item) => $this->applicantMonitoringReportRow($item))
+            : new LengthAwarePaginator([], 0, 10, 1, [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]);
+
+        return Inertia::render('Admin/Reports/ApplicantMonitoringReport', [
+            'rows' => $rows,
+            'printRows' => $request->boolean('filtered') ? $this->applicantMonitoringReportRows($request) : [],
+            'filters' => $filters,
+            'principals' => Principal::query()
+                ->orderBy('principal_name')
+                ->get(['id', 'principal_name', 'principal_code']),
+        ]);
+    }
+
+    public function exportApplicantMonitoringReport(Request $request)
+    {
+        if ($request->boolean('filtered')) {
+            $request->validate([
+                'date_from' => ['required', 'date'],
+                'date_to' => ['required', 'date', 'after_or_equal:date_from'],
+            ]);
+        }
+
+        $rows = $request->boolean('filtered') ? $this->applicantMonitoringReportRows($request) : collect();
+        $filename = 'applicant-monitoring-report-' . now()->format('Ymd-His') . '.csv';
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        return response()->stream(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, [
+                'Reference ID',
+                'Processed Date',
+                'Processed By',
+                'Principal',
+                'Crewing',
+                'Country',
+                'Rank',
+                'Name',
+                'Contact Number',
+                'Status',
+                'Remarks',
+            ]);
+
+            foreach ($rows as $row) {
+                fputcsv($handle, [
+                    $row['reference_id'],
+                    $row['processed_date'],
+                    $row['processed_by'],
+                    $row['principal'],
+                    $row['crewing'],
+                    $row['country'],
+                    $row['rank'],
+                    $row['name'],
+                    $row['contact_number'],
+                    $row['status'],
+                    $row['remarks'],
+                ]);
+            }
+
+            fclose($handle);
+        }, 200, $headers);
+    }
+
+    public function applicantStatusReport(Request $request)
+    {
+        $filters = [
+            'rank' => $request->query('rank', ''),
+            'application_status' => $request->query('application_status', ''),
+            'filtered' => $request->boolean('filtered') ? '1' : '',
+        ];
+        $rows = $request->boolean('filtered')
+            ? $this->applicantStatusReportQuery($request)
+                ->paginate(10)
+                ->withQueryString()
+                ->through(fn ($client) => $this->applicantStatusReportRow($client))
+            : new LengthAwarePaginator([], 0, 10, 1, [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]);
+
+        return Inertia::render('Admin/Reports/ApplicantStatusReport', [
+            'rows' => $rows,
+            'printRows' => $request->boolean('filtered') ? $this->applicantStatusReportRows($request) : [],
+            'filters' => $filters,
+            'ranks' => Rank::query()
+                ->orderByRaw('priority_level IS NULL')
+                ->orderBy('priority_level')
+                ->orderBy('rank_name')
+                ->get(['id', 'rank_name', 'priority_level']),
+            'statusOptions' => self::APPLICATION_STATUS_OPTIONS,
+        ]);
+    }
+
+    public function exportApplicantStatusReport(Request $request)
+    {
+        $rows = $request->boolean('filtered') ? $this->applicantStatusReportRows($request) : collect();
+        $filename = 'applicant-status-report-' . now()->format('Ymd-His') . '.csv';
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        return response()->stream(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, [
+                'Seafarer',
+                'Ranks',
+                'Applied For',
+                'Contact Number',
+                'Processed By',
+                'Application Status (Latest)',
+                'Application Log (Latest)',
+            ]);
+
+            foreach ($rows as $row) {
+                fputcsv($handle, [
+                    $row['seafarer'],
+                    $row['rank'],
+                    $row['applied_for'],
+                    $row['contact_number'],
+                    $row['processed_by'],
+                    $row['application_status'],
+                    $row['application_log'],
+                ]);
+            }
+
+            fclose($handle);
+        }, 200, $headers);
+    }
+
     public function updatePreferences(Request $request)
     {
         $user = $request->user();
@@ -102,7 +449,7 @@ class AdminController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
-            'avatar' => 'nullable|image|max:2048',
+            'avatar' => 'nullable|image',
             'current_password' => 'nullable|required_with:password|current_password',
             'password' => 'nullable|string|min:6|confirmed',
         ]);
@@ -211,7 +558,7 @@ class AdminController extends Controller
 
     public function deleteStcwCertificate(StcwCertificate $certificate)
     {
-        abort_unless(Auth::user()?->role === 'admin', 403);
+        abort_unless(Auth::user() && Auth::user()->role === 'admin', 403);
 
         $certificate->delete();
 
@@ -254,11 +601,114 @@ class AdminController extends Controller
 
     public function deleteOffshoreTraining(OffshoreTraining $training)
     {
-        abort_unless(Auth::user()?->role === 'admin', 403);
+        abort_unless(Auth::user() && Auth::user()->role === 'admin', 403);
 
         $training->delete();
 
         return back()->with('success', 'Offshore training deleted successfully.');
+    }
+
+    public function ranks(Request $request)
+    {
+        $search = trim((string) $request->query('search', ''));
+        return Inertia::render('Admin/CertificateSettings', [
+            'activeType' => 'rank',
+            'title' => 'Rank',
+            'description' => 'Manage seafarer rank names.',
+            'certificates' => Rank::query()
+                ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                    $query
+                        ->where('rank_name', 'like', "%{$search}%");
+
+                    if (Schema::hasColumn('ranks', 'priority_level')) {
+                        $query->orWhere('priority_level', 'like', "%{$search}%");
+                    }
+                }))
+                ->orderBy('rank_name')
+                ->paginate(10)
+                ->withQueryString(),
+            'filters' => [
+                'search' => $search,
+            ],
+            'routeBase' => 'admin.ranks',
+            'nameField' => 'rank_name',
+            'itemLabel' => 'Rank',
+        ]);
+    }
+
+    public function storeRank(Request $request)
+    {
+        Rank::create($this->rankPayload($request));
+
+        return back()->with('success', 'Rank added successfully.');
+    }
+
+    public function updateRank(Request $request, Rank $rank)
+    {
+        $rank->update($this->rankPayload($request, $rank->id));
+
+        return back()->with('success', 'Rank updated successfully.');
+    }
+
+    public function deleteRank(Rank $rank)
+    {
+        abort_unless(Auth::user() && Auth::user()->role === 'admin', 403);
+
+        $rank->delete();
+
+        return back()->with('success', 'Rank deleted successfully.');
+    }
+
+    public function principals(Request $request)
+    {
+        $search = trim((string) $request->query('search', ''));
+
+        return Inertia::render('Admin/CertificateSettings', [
+            'activeType' => 'principal',
+            'title' => 'Principal',
+            'description' => 'Manage principal names.',
+            'certificates' => Principal::query()
+                ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                    $query
+                        ->where('principal_name', 'like', "%{$search}%")
+                        ->orWhere('principal_code', 'like', "%{$search}%")
+                        ->orWhere('address', 'like', "%{$search}%")
+                        ->orWhere('contact', 'like', "%{$search}%")
+                        ->orWhere('email_address', 'like', "%{$search}%");
+                }))
+                ->orderBy('principal_name')
+                ->paginate(10)
+                ->withQueryString(),
+            'filters' => [
+                'search' => $search,
+            ],
+            'routeBase' => 'admin.principals',
+            'nameField' => 'principal_name',
+            'itemLabel' => 'Principal',
+        ]);
+    }
+
+    public function storePrincipal(Request $request)
+    {
+        Principal::create($this->principalPayload($request));
+
+        return back()->with('success', 'Principal added successfully.');
+    }
+
+    public function updatePrincipal(Request $request, Principal $principal)
+    {
+        $principal->update($this->principalPayload($request, $principal->id));
+
+        return back()->with('success', 'Principal updated successfully.');
+    }
+
+    public function deletePrincipal(Principal $principal)
+    {
+        abort_unless(Auth::user() && Auth::user()->role === 'admin', 403);
+
+        $principal->delete();
+
+        return back()->with('success', 'Principal deleted successfully.');
     }
 
     private function validateCertificateName(Request $request, string $table, ?int $ignoreId = null): array
@@ -271,6 +721,56 @@ class AdminController extends Controller
                 Rule::unique($table, 'certification_name')->ignore($ignoreId),
             ],
         ]);
+    }
+
+    private function validateRankName(Request $request, ?int $ignoreId = null): array
+    {
+        return $request->validate([
+            'rank_name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('ranks', 'rank_name')->ignore($ignoreId),
+            ],
+            'priority_level' => 'required|integer|min:0',
+        ]);
+    }
+
+    private function rankPayload(Request $request, ?int $ignoreId = null): array
+    {
+        $data = $this->validateRankName($request, $ignoreId);
+        $data['rank_name'] = $this->titleCaseFormValue('rank_name', $data['rank_name']);
+
+        return $data;
+    }
+
+    private function validatePrincipalName(Request $request, ?int $ignoreId = null): array
+    {
+        return $request->validate([
+            'principal_name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('principals', 'principal_name')->ignore($ignoreId),
+            ],
+            'principal_code' => [
+                'nullable',
+                'string',
+                'max:100',
+                Rule::unique('principals', 'principal_code')->ignore($ignoreId),
+            ],
+            'address' => 'nullable|string|max:2000',
+            'contact' => 'nullable|string|max:255',
+            'email_address' => 'nullable|email|max:255',
+        ]);
+    }
+
+    private function principalPayload(Request $request, ?int $ignoreId = null): array
+    {
+        $data = $this->validatePrincipalName($request, $ignoreId);
+        $data['principal_name'] = $this->titleCaseFormValue('principal_name', $data['principal_name']);
+
+        return $data;
     }
 
     // --- USER MANAGEMENT ---
@@ -309,7 +809,7 @@ class AdminController extends Controller
             'email' => 'required|email|unique:users',
             'role' => ['required', 'string', Rule::in(self::USER_ROLE_OPTIONS)],
             'password' => 'required|min:6',
-            'avatar' => 'nullable|image|max:2048',
+            'avatar' => 'nullable|image',
         ]);
 
         $data = [
@@ -334,7 +834,7 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
             'role' => ['required', 'string', Rule::in(self::USER_ROLE_OPTIONS)],
-            'avatar' => 'nullable|image|max:2048',
+            'avatar' => 'nullable|image',
         ]);
 
         $data = $request->only('name', 'email', 'role');
@@ -369,24 +869,32 @@ class AdminController extends Controller
     public function clientsIndex(Request $request)
     {
         $search = trim((string) $request->query('search', ''));
+        $hasRankPriorityLevel = Schema::hasColumn('ranks', 'priority_level');
 
         return Inertia::render('Admin/Clients', [
             'clients' => $this->visibleSeafarersQuery()
+                ->select('clients.*')
+                ->leftJoin('ranks', 'clients.current_position', '=', 'ranks.rank_name')
                 ->with(['applicationStatusLogs' => fn ($query) => $query->latest()])
                 ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
                     $query
-                        ->where('name', 'like', "%{$search}%")
-                        ->orWhere('first_name', 'like', "%{$search}%")
-                        ->orWhere('middle_name', 'like', "%{$search}%")
-                        ->orWhere('last_name', 'like', "%{$search}%")
-                        ->orWhere('current_position', 'like', "%{$search}%")
-                        ->orWhere('position_applied_for', 'like', "%{$search}%")
-                        ->orWhere('type_of_job', 'like', "%{$search}%")
-                        ->orWhere('whatsapp_number', 'like', "%{$search}%")
-                        ->orWhere('processed_by', 'like', "%{$search}%")
-                        ->orWhere('application_status', 'like', "%{$search}%");
+                        ->where('clients.name', 'like', "%{$search}%")
+                        ->orWhere('clients.first_name', 'like', "%{$search}%")
+                        ->orWhere('clients.middle_name', 'like', "%{$search}%")
+                        ->orWhere('clients.last_name', 'like', "%{$search}%")
+                        ->orWhere('clients.current_position', 'like', "%{$search}%")
+                        ->orWhere('clients.nationality', 'like', "%{$search}%")
+                        ->orWhere('clients.position_applied_for', 'like', "%{$search}%")
+                        ->orWhere('clients.type_of_job', 'like', "%{$search}%")
+                        ->orWhere('clients.whatsapp_number', 'like', "%{$search}%")
+                        ->orWhere('clients.processed_by', 'like', "%{$search}%")
+                        ->orWhere('clients.application_status', 'like', "%{$search}%");
                 }))
-                ->latest()
+                ->when($hasRankPriorityLevel, fn ($query) => $query
+                    ->orderByRaw('ranks.priority_level IS NULL')
+                    ->orderBy('ranks.priority_level'))
+                ->orderBy('clients.current_position')
+                ->orderByDesc('clients.created_at')
                 ->paginate(10)
                 ->withQueryString()
                 ->through(fn ($client) => [
@@ -401,6 +909,7 @@ class AdminController extends Controller
                     'address' => $client->address,
                     'avatar' => $client->avatar,
                     'current_position' => $client->current_position,
+                    'nationality' => $client->nationality,
                     'position_applied_for' => $client->position_applied_for,
                     'type_of_job' => $client->type_of_job,
                     'whatsapp_number' => $client->whatsapp_number,
@@ -428,6 +937,162 @@ class AdminController extends Controller
         return Client::query()
             ->whereNotNull('email_verified_at')
             ->where('privacy_act_accepted', true);
+    }
+
+    private function clientDisplayName(Client $client): string
+    {
+        $profileName = collect([$client->first_name, $client->middle_name, $client->last_name])
+            ->filter()
+            ->join(' ');
+
+        return $profileName ?: ($client->name ?: 'Seafarer');
+    }
+
+    private function monitoringCountryOptions()
+    {
+        return collect([
+            'GCC',
+            'Algeria',
+            'Angola',
+            'Argentina',
+            'Australia',
+            'Bahrain',
+            'Brazil',
+            'Brunei',
+            'Canada',
+            'China',
+            'Denmark',
+            'Egypt',
+            'France',
+            'Germany',
+            'Greece',
+            'India',
+            'Indonesia',
+            'Italy',
+            'Japan',
+            'Kuwait',
+            'Malaysia',
+            'Netherlands',
+            'New Zealand',
+            'Nigeria',
+            'Norway',
+            'Oman',
+            'Philippines',
+            'Qatar',
+            'Saudi Arabia',
+            'Singapore',
+            'South Korea',
+            'Spain',
+            'Thailand',
+            'United Arab Emirates',
+            'United Kingdom',
+            'United States',
+            'Vietnam',
+        ])->values();
+    }
+
+    private function applicantMonitoringReferenceId(string $search): ?int
+    {
+        $normalized = strtoupper(trim($search));
+
+        if (preg_match('/^AM-?0*(\d+)$/', $normalized, $matches)) {
+            return (int) $matches[1];
+        }
+
+        return ctype_digit($normalized) ? (int) $normalized : null;
+    }
+
+    private function applicantMonitoringReportRows(Request $request)
+    {
+        return $this->applicantMonitoringReportQuery($request)
+            ->get()
+            ->map(fn ($item) => $this->applicantMonitoringReportRow($item))
+            ->values();
+    }
+
+    private function applicantMonitoringReportQuery(Request $request)
+    {
+        $dateFrom = $request->query('date_from');
+        $dateTo = $request->query('date_to');
+        $principalId = $request->query('principal_id');
+
+        return ApplicantMonitoringItem::query()
+            ->with(['applicantMonitoring.principal:id,principal_name,principal_code', 'client:id,name,first_name,middle_name,last_name'])
+            ->whereHas('applicantMonitoring', function ($query) use ($dateFrom, $dateTo, $principalId) {
+                $query
+                    ->when($dateFrom, fn ($query) => $query->whereDate('proposed_date', '>=', $dateFrom))
+                    ->when($dateTo, fn ($query) => $query->whereDate('proposed_date', '<=', $dateTo))
+                    ->when($principalId, fn ($query) => $query->where('principal_id', $principalId));
+            })
+            ->orderByDesc('applicant_monitoring_id')
+            ->orderBy('id');
+    }
+
+    private function applicantMonitoringReportRow(ApplicantMonitoringItem $item): array
+    {
+        $monitoring = $item->applicantMonitoring;
+
+        return [
+            'reference_id' => optional($monitoring)->monitoring_reference,
+            'processed_date' => optional(optional($monitoring)->proposed_date)->format('Y-m-d'),
+            'processed_by' => optional($monitoring)->proposed_by,
+            'principal' => optional(optional($monitoring)->principal)->principal_name,
+            'crewing' => optional($monitoring)->crewing,
+            'country' => $item->country,
+            'rank' => $item->rank,
+            'name' => $item->client ? $this->clientDisplayName($item->client) : '',
+            'contact_number' => $item->contact,
+            'status' => $item->status,
+            'remarks' => $item->remarks,
+        ];
+    }
+
+    private function applicantStatusReportRows(Request $request)
+    {
+        return $this->applicantStatusReportQuery($request)
+            ->get()
+            ->map(fn ($client) => $this->applicantStatusReportRow($client))
+            ->values();
+    }
+
+    private function applicantStatusReportQuery(Request $request)
+    {
+        $rank = $request->query('rank');
+        $applicationStatus = $request->query('application_status');
+        $hasRankPriorityLevel = Schema::hasColumn('ranks', 'priority_level');
+
+        return $this->visibleSeafarersQuery()
+            ->select('clients.*')
+            ->leftJoin('ranks', 'clients.current_position', '=', 'ranks.rank_name')
+            ->with(['applicationStatusLogs' => fn ($query) => $query->latest()])
+            ->when($rank, fn ($query) => $query->where('clients.current_position', $rank))
+            ->when($applicationStatus, fn ($query) => $query->where('clients.application_status', $applicationStatus))
+            ->when($hasRankPriorityLevel, fn ($query) => $query
+                ->orderByRaw('ranks.priority_level IS NULL')
+                ->orderBy('ranks.priority_level'))
+            ->orderBy('clients.current_position')
+            ->orderByDesc('clients.created_at');
+    }
+
+    private function applicantStatusReportRow(Client $client): array
+    {
+        $latestLog = $client->applicationStatusLogs->first();
+        $latestLogParts = $latestLog
+            ? array_filter([
+                optional($latestLog->created_at)->format('Y-m-d H:i'),
+                $latestLog->remarks ?: null,
+            ])
+            : [];
+
+        return [
+            'seafarer' => $this->clientDisplayName($client),
+            'rank' => $client->current_position,
+            'applied_for' => $client->position_applied_for,
+            'contact_number' => $client->personal_mobile_no ?: $client->whatsapp_number ?: $client->phone,
+            'processed_by' => $latestLog->processed_by ?? $client->processed_by,
+            'application_status' => $client->application_status,
+            'application_log' => $latestLog ? implode(' - ', $latestLogParts) : '',
+        ];
     }
 
     public function showClient(Client $client)
@@ -566,7 +1231,7 @@ class AdminController extends Controller
             'password' => 'required|min:6',
             'phone' => 'nullable|string',
             'address' => 'nullable|string',
-            'avatar' => 'nullable|image|max:2048',
+            'avatar' => 'nullable|image',
             'resume_attachment' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
             'privacy_act_accepted' => 'nullable|boolean',
         ]);
@@ -600,13 +1265,20 @@ class AdminController extends Controller
 
     public function updateClient(Request $request, Client $client)
     {
+        $request->merge([
+            'sea_service' => $this->applySeaServiceDurations((array) $request->input('sea_service', [])),
+        ]);
+
+        $seaServiceIsRequired = $request->input('type_of_job') === self::SEABASED_WORK_EXPERIENCE;
+        $seaServicePresenceRule = $seaServiceIsRequired ? 'required' : 'nullable';
+
         $data = $request->validate([
             'first_name' => 'nullable|string|max:255',
             'middle_name' => 'nullable|string|max:255',
             'last_name' => 'nullable|string|max:255',
             'gender' => ['nullable', 'string', Rule::in(self::GENDER_OPTIONS)],
-            'status' => ['nullable', 'string', Rule::in(self::STATUS_OPTIONS)],
-            'type_of_job' => ['nullable', 'string', Rule::in(self::TYPE_OF_JOB_OPTIONS)],
+            'status' => ['required', 'string', Rule::in(self::STATUS_OPTIONS)],
+            'type_of_job' => ['required', 'string', Rule::in(self::TYPE_OF_JOB_OPTIONS)],
             'date_applied' => 'nullable|date',
             'place_of_birth' => 'nullable|string|max:255',
             'date_of_birth' => 'nullable|date',
@@ -653,7 +1325,7 @@ class AdminController extends Controller
             'socso_no' => 'nullable|string|max:100',
             'blood' => 'nullable|string|max:100',
             'philhealth_no' => 'nullable|string|max:100',
-            'avatar' => 'nullable|image|max:2048',
+            'avatar' => 'nullable|image',
             'resume_attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
             'privacy_act_accepted' => 'nullable|boolean',
 
@@ -759,24 +1431,24 @@ class AdminController extends Controller
             'employment_history.*.country' => 'nullable|string|max:255',
             'employment_history.*.attachment' => 'nullable',
 
-            'sea_service' => 'nullable|array',
+            'sea_service' => [$seaServicePresenceRule, 'array', $seaServiceIsRequired ? 'min:1' : 'nullable'],
             'sea_service.*.id' => ['nullable', 'integer', Rule::exists('client_sea_services', 'id')->where('client_id', $client->id)],
-            'sea_service.*.from_date' => 'nullable|date',
-            'sea_service.*.to_date' => 'nullable|date',
-            'sea_service.*.duration_months' => 'nullable|integer|min:0',
-            'sea_service.*.duration_days' => 'nullable|integer|min:0',
-            'sea_service.*.position' => 'nullable|string|max:255',
-            'sea_service.*.vessel_name' => 'nullable|string|max:255',
-            'sea_service.*.type_imo_number' => 'nullable|string|max:255',
-            'sea_service.*.area_of_operation' => 'nullable|string|max:255',
-            'sea_service.*.flag' => 'nullable|string|max:255',
+            'sea_service.*.from_date' => [$seaServicePresenceRule, 'date'],
+            'sea_service.*.to_date' => [$seaServicePresenceRule, 'date'],
+            'sea_service.*.duration_months' => 'exclude',
+            'sea_service.*.duration_days' => 'exclude',
+            'sea_service.*.position' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.vessel_name' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.type_imo_number' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.area_of_operation' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.flag' => [$seaServicePresenceRule, 'string', 'max:255'],
             'sea_service.*.oilfield_yn' => 'nullable|string|max:255',
-            'sea_service.*.propulsion_type' => 'nullable|string|max:255',
-            'sea_service.*.grt' => 'nullable|string|max:255',
-            'sea_service.*.bollard_pull' => 'nullable|string|max:255',
-            'sea_service.*.main_engine_type_model' => 'nullable|string|max:255',
-            'sea_service.*.main_engine_kw' => 'nullable|string|max:255',
-            'sea_service.*.ship_owner_manager_contact' => 'nullable|string|max:2000',
+            'sea_service.*.propulsion_type' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.grt' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.bollard_pull' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.main_engine_type_model' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.main_engine_kw' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.ship_owner_manager_contact' => [$seaServicePresenceRule, 'string', 'max:2000'],
 
             'deck_officer_experience' => 'nullable|array',
             'deck_officer_experience.*.id' => ['nullable', 'integer', Rule::exists('client_deck_officer_experiences', 'id')->where('client_id', $client->id)],
@@ -863,7 +1535,7 @@ class AdminController extends Controller
         $this->syncRows($client, 'offshoreTrainingCertificates', $offshoreTrainingCertificateRows, ['name', 'date_of_issue', 'date_of_expiry', 'place_of_issue'], 'offshore-training-certificate-attachments', 'offshore_training_certificates');
         $this->syncRows($client, 'employmentHistories', $employmentHistoryRows, ['company', 'contact_person_name', 'designation', 'contact_person_number', 'country'], 'employment-history-attachments', 'employment_history');
         $seaServiceRows = $this->applySeaServiceDurations($seaServiceRows);
-        $this->syncRows($client, 'seaServices', $seaServiceRows, ['from_date', 'to_date', 'duration_months', 'duration_days', 'position', 'vessel_name', 'type_imo_number', 'area_of_operation', 'flag', 'oilfield_yn', 'propulsion_type', 'grt', 'bollard_pull', 'main_engine_type_model', 'main_engine_kw', 'ship_owner_manager_contact']);
+        $this->syncRows($client, 'seaServices', $seaServiceRows, self::SEA_SERVICE_REQUIRED_FIELDS);
         $this->syncRows($client, 'deckOfficerExperiences', $deckOfficerExperienceRows, ['vessel_name', 'charterer', 'area_of_operation', 'dp_operation_hours', 'supply', 'dsv', 'survey', 'anchor_type', 'anchor_weight', 'barges', 'rig_move', 'propelled', 'non_propelled']);
 
         $client->update($data);
@@ -1166,8 +1838,14 @@ class AdminController extends Controller
                 return $row;
             }
 
-            $from = Carbon::parse($fromDate)->startOfDay();
-            $to = Carbon::parse($toDate)->startOfDay();
+            try {
+                $from = Carbon::parse($fromDate)->startOfDay();
+                $to = Carbon::parse($toDate)->startOfDay();
+            } catch (\Exception $e) {
+                $row['duration_months'] = null;
+                $row['duration_days'] = null;
+                return $row;
+            }
 
             if ($to->lt($from)) {
                 $row['duration_months'] = null;

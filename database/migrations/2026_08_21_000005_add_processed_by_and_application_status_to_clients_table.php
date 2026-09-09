@@ -9,7 +9,7 @@ return new class extends Migration {
     {
         Schema::table('clients', function (Blueprint $table) {
             $table->string('processed_by')->nullable()->after('type_of_job');
-            $table->string('application_status')->nullable()->default('PENDING/ONHOLD')->after('processed_by');
+            $table->string('application_status')->nullable()->default('NEW APPLICANT')->after('processed_by');
         });
     }
 

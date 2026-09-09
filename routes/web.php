@@ -21,6 +21,16 @@ Route::middleware(['auth'])->get('admin/dashboard', [AdminController::class, 'da
 // Admin Panel Routes (Protected by standard 'auth' middleware)
 Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard.index');
+    Route::get('/applicant-monitoring', [AdminController::class, 'applicantMonitoring'])->name('applicant-monitoring.index');
+    Route::get('/applicant-monitoring/create', [AdminController::class, 'createApplicantMonitoring'])->name('applicant-monitoring.create');
+    Route::post('/applicant-monitoring', [AdminController::class, 'storeApplicantMonitoring'])->name('applicant-monitoring.store');
+    Route::get('/applicant-monitoring/{monitoring}', [AdminController::class, 'showApplicantMonitoring'])->name('applicant-monitoring.show');
+    Route::put('/applicant-monitoring/{monitoring}', [AdminController::class, 'updateApplicantMonitoring'])->name('applicant-monitoring.update');
+    Route::delete('/applicant-monitoring/{monitoring}', [AdminController::class, 'deleteApplicantMonitoring'])->name('applicant-monitoring.destroy');
+    Route::get('/reports/applicant-monitoring', [AdminController::class, 'applicantMonitoringReport'])->name('reports.applicant-monitoring.index');
+    Route::get('/reports/applicant-monitoring/export', [AdminController::class, 'exportApplicantMonitoringReport'])->name('reports.applicant-monitoring.export');
+    Route::get('/reports/applicant-status', [AdminController::class, 'applicantStatusReport'])->name('reports.applicant-status.index');
+    Route::get('/reports/applicant-status/export', [AdminController::class, 'exportApplicantStatusReport'])->name('reports.applicant-status.export');
     Route::get('/preferences', [AdminController::class, 'preferences'])->name('preferences.edit');
     Route::put('/preferences', [AdminController::class, 'updatePreferences'])->name('preferences.update');
     Route::post('/logout', [AdminController::class, 'logout'])->name('logout');
@@ -32,6 +42,14 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::post('/certificates/offshore-training', [AdminController::class, 'storeOffshoreTraining'])->name('certificates.offshore-training.store');
     Route::put('/certificates/offshore-training/{training}', [AdminController::class, 'updateOffshoreTraining'])->name('certificates.offshore-training.update');
     Route::delete('/certificates/offshore-training/{training}', [AdminController::class, 'deleteOffshoreTraining'])->name('certificates.offshore-training.destroy');
+    Route::get('/ranks', [AdminController::class, 'ranks'])->name('ranks.index');
+    Route::post('/ranks', [AdminController::class, 'storeRank'])->name('ranks.store');
+    Route::put('/ranks/{rank}', [AdminController::class, 'updateRank'])->name('ranks.update');
+    Route::delete('/ranks/{rank}', [AdminController::class, 'deleteRank'])->name('ranks.destroy');
+    Route::get('/principals', [AdminController::class, 'principals'])->name('principals.index');
+    Route::post('/principals', [AdminController::class, 'storePrincipal'])->name('principals.store');
+    Route::put('/principals/{principal}', [AdminController::class, 'updatePrincipal'])->name('principals.update');
+    Route::delete('/principals/{principal}', [AdminController::class, 'deletePrincipal'])->name('principals.destroy');
 
     Route::middleware('admin.role')->group(function () {
         Route::get('/company-settings', [AdminController::class, 'companySettings'])->name('company-settings.edit');

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
-import { Anchor, Award, Bell, ChevronDown, LayoutDashboard, LogOut, Menu, Settings, Ship, UserRound, X } from 'lucide-react';
+import { Anchor, Award, Bell, ChevronDown, ClipboardList, FileText, LayoutDashboard, LogOut, Menu, Settings, Ship, UserRound, X } from 'lucide-react';
 
 const PALETTE = {
     navyDeep: '#0A2436',
@@ -30,13 +30,27 @@ export default function AdminTabs({ activeTab, title, children }) {
     const company = companySettings || {};
     const [profileOpen, setProfileOpen] = useState(false);
     const [openMenus, setOpenMenus] = useState({
+        applicantMonitoring: activeTab === 'applicant-monitoring' || activeTab.startsWith('applicant-monitoring-'),
         certificates: activeTab === 'certificates' || activeTab.startsWith('certificates-'),
+        reports: activeTab === 'reports' || activeTab.startsWith('reports-'),
     });
 
     const tabs = [
         { key: 'dashboard', label: 'Dashboard', href: route('admin.dashboard.index'), icon: LayoutDashboard },
+        {
+            key: 'applicant-monitoring',
+            label: 'Applicant Monitoring',
+            href: route('admin.applicant-monitoring.index'),
+            icon: ClipboardList,
+            children: [
+                { key: 'applicant-monitoring-create', label: 'Add Monitoring', href: route('admin.applicant-monitoring.create') },
+                { key: 'applicant-monitoring-records', label: 'Monitoring Records', href: route('admin.applicant-monitoring.index') },
+            ],
+        },
         { key: 'users', label: 'Users', href: route('admin.users.index'), icon: UserRound, adminOnly: true },
         { key: 'clients', label: 'Seafarers', href: route('admin.seafarers.index'), icon: Ship },
+        { key: 'ranks', label: 'Ranks', href: route('admin.ranks.index'), icon: Award },
+        { key: 'principals', label: 'Principal', href: route('admin.principals.index'), icon: Anchor },
         {
             key: 'certificates',
             label: 'Certificates',
@@ -45,6 +59,16 @@ export default function AdminTabs({ activeTab, title, children }) {
             children: [
                 { key: 'certificates-stcw', label: 'STCW Certificate', href: route('admin.certificates.stcw.index') },
                 { key: 'certificates-offshore', label: 'Offshore Training', href: route('admin.certificates.offshore-training.index') },
+            ],
+        },
+        {
+            key: 'reports',
+            label: 'Report',
+            href: route('admin.reports.applicant-monitoring.index'),
+            icon: FileText,
+            children: [
+                { key: 'reports-applicant-monitoring', label: 'Applicant Monitoring', href: route('admin.reports.applicant-monitoring.index') },
+                { key: 'reports-applicant-status', label: 'Applicant Status', href: route('admin.reports.applicant-status.index') },
             ],
         },
         { key: 'company-settings', label: 'Company Settings', href: route('admin.company-settings.edit'), icon: Settings, adminOnly: true },

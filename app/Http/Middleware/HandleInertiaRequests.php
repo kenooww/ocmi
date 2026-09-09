@@ -4,8 +4,10 @@ namespace App\Http\Middleware;
 
 use App\Models\CompanySetting;
 use App\Models\OffshoreTraining;
+use App\Models\Rank;
 use App\Models\StcwCertificate;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -62,6 +64,21 @@ class HandleInertiaRequests extends Middleware
                     ])
                     ->values(),
             ],
+            'rankOptions' => fn () => Schema::hasTable('ranks')
+                ? Rank::query()
+                    ->when(Schema::hasColumn('ranks', 'priority_level'), fn ($query) => $query->orderBy('priority_level'))
+                    ->latest()
+                    ->get(Schema::hasColumn('ranks', 'priority_level')
+                        ? ['id', 'rank_name', 'priority_level', 'created_at']
+                        : ['id', 'rank_name', 'created_at'])
+                    ->map(fn ($rank) => [
+                        'value' => $rank->rank_name,
+                        'label' => $rank->rank_name,
+                        'priority_level' => $rank->priority_level ?? 0,
+                        'created_at' => optional($rank->created_at)->toISOString(),
+                    ])
+                    ->values()
+                : [],
         ];
     }
 }

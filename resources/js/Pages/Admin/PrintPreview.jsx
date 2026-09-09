@@ -60,6 +60,25 @@ function rowsWithMinimum(rows = [], count = 4) {
     return [...sortedRows, ...blankRows];
 }
 
+function rowsWithMinimumInOrder(rows = [], count = 4) {
+    const orderedRows = [...(rows || [])];
+    const blankRows = Array.from({ length: Math.max(count - orderedRows.length, 0) }, () => ({}));
+    return [...orderedRows, ...blankRows];
+}
+
+function sortRowsBySignOffDate(rows = []) {
+    return [...(rows || [])].sort((a, b) => {
+        const aTime = Date.parse(a?.to_date || '') || 0;
+        const bTime = Date.parse(b?.to_date || '') || 0;
+
+        if (aTime !== bTime) {
+            return bTime - aTime;
+        }
+
+        return Number(b?.id || 0) - Number(a?.id || 0);
+    });
+}
+
 function Header({ client, page }) {
     const { companySettings } = usePage().props;
     const company = companySettings || {};
@@ -126,42 +145,50 @@ function SimpleTable({ title, columns, rows, minRows = 4, rowLabelKey }) {
     );
 }
 
-function SeaServiceTable({ rows }) {
+function SeaServiceTable({ rows, preserveOrder = false }) {
     const columns = [
-        ['from_date', 'From'], ['to_date', 'To'], ['duration_months', 'Mos.'], ['duration_days', 'Days'],
-        ['position', 'Position'], ['vessel_name', 'Vessel Name'], ['type_imo_number', 'Type / IMO #'],
-        ['area_of_operation', 'Area of Operation'], ['flag', 'Flag'], ['oilfield_yn', 'Oilfield Y/N'],
-        ['propulsion_type', 'Propulsion Type AZ, CPP'], ['grt', 'GRT'], ['bollard_pull', 'Bollard Pull'],
-        ['main_engine_type_model', 'Types/Model'], ['main_engine_kw', 'KW'], ['ship_owner_manager_contact', 'Ship Owner/Management/Company'],
+        ['vessel_name', 'Vessel Name'],
+        ['ship_owner_manager_contact', 'Company (Owners)'],
+        ['position', 'Rank'],
+        ['type_imo_number', 'Type of Vessel'],
+        ['propulsion_type', 'Propulsion type AZ, CPP'],
+        ['flag', 'Flag'],
+        ['area_of_operation', 'Area of operation'],
+        ['grt', 'GT'],
+        ['main_engine_type_model', 'Type of Engine'],
+        ['main_engine_kw', 'BHP'],
+        ['bollard_pull', 'Bollard Pull'],
+        ['from_date', 'Sign on Date (DD:MM:YY)'],
+        ['to_date', 'Sign off Date (DD:MM:YY)'],
     ];
 
     return (
         <section className="mt-3">
-            <h3 className="text-center text-sm font-bold">Sea Service</h3>
             <div className="print-table-scroll overflow-x-auto">
                 <table className="print-wide-table w-full min-w-[1700px] border-collapse text-[10px]">
                     <thead>
                         <tr>
-                            <th colSpan={2} className="border border-black px-1 py-1">( Day/Month/Year )</th>
-                            <th colSpan={2} className="border border-black px-1 py-1">Duration of Sea Service</th>
-                            <th rowSpan={2} className="border border-black px-1 py-1">Position</th>
-                            <th rowSpan={2} className="border border-black px-1 py-1">Vessel Name</th>
-                            <th colSpan={7} className="border border-black px-1 py-1">Vessel Name</th>
-                            <th colSpan={2} className="border border-black px-1 py-1">Main Engine*</th>
-                            <th rowSpan={2} className="border border-black px-1 py-1 text-red-600">Ship Owner/Management/Company</th>
+                            <th colSpan={14} className="border border-black px-1 py-1 text-center font-normal">
+                                <div>Record of Sea Service</div>
+                                <div className="italic">(Recent Vessel/MOU First)</div>
+                            </th>
                         </tr>
                         <tr>
-                            {columns.filter(([key]) => !['position', 'vessel_name', 'ship_owner_manager_contact'].includes(key)).map(([key, label]) => (
+                            {columns.map(([key, label]) => (
                                 <th key={key} className="border border-black px-1 py-1">{label}</th>
                             ))}
+                            <th className="border border-black px-1 py-1">Duration (Days : Month)</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {rowsWithMinimum(rows, 5).map((row, index) => (
+                        {(preserveOrder ? rowsWithMinimumInOrder(rows, 5) : rowsWithMinimum(rows, 5)).map((row, index) => (
                             <tr key={index}>
                                 {columns.map(([key]) => (
                                     <td key={key} className="h-8 border border-black px-1 py-1">{value(row, key)}</td>
                                 ))}
+                                <td className="h-8 border border-black px-1 py-1">
+                                    {[row.duration_days, row.duration_months].filter((item) => item !== null && item !== undefined && item !== '').join(' : ')}
+                                </td>
                             </tr>
                         ))}
                     </tbody>
@@ -221,6 +248,19 @@ function DeckOfficerTable({ rows }) {
                 </table>
             </div>
         </section>
+    );
+}
+
+function ConfirmationBlock() {
+    return (
+        <div className="mb-3 text-xs">
+            <p className="italic">I hereby confirm that all the above furnished details are true.</p>
+            <div className="mt-4 grid grid-cols-3 gap-24">
+                <div>Name: <span className="inline-block w-40 border-b border-black">&nbsp;</span></div>
+                <div>Rank: <span className="inline-block w-40 border-b border-black">&nbsp;</span></div>
+                <div>Signature: <span className="inline-block w-44 border-b border-black">&nbsp;</span></div>
+            </div>
+        </div>
     );
 }
 
@@ -582,12 +622,14 @@ function ZmiApplicationForm({ client }) {
     const stcwSourceRows = [...allCertificates, ...additionalStcwRows];
     const offshoreSourceRows = [...allCertificates, ...offshoreTrainingRows];
     const namedStcwRows = stcwNames.map((name) => ({ ...findRowByName(stcwSourceRows, [name]), name }));
+    const competencyStcwRows = (client?.certifications || []).filter((row) => ! stcwNames.some((name) => String(row?.name || '').toLowerCase() === name.toLowerCase()));
     const extraStcwRows = additionalStcwRows.filter((row) => ! stcwNames.some((name) => String(row?.name || '').toLowerCase() === name.toLowerCase()));
     const namedOffshoreRows = offshoreNames.map((name) => ({ ...findRowByName(offshoreSourceRows, [name]), name }));
     const extraOffshoreRows = offshoreTrainingRows.filter((row) => ! offshoreNames.some((name) => String(row?.name || '').toLowerCase() === name.toLowerCase()));
-    const stcwRows = [...namedStcwRows, ...extraStcwRows];
+    const stcwRows = [...namedStcwRows, ...competencyStcwRows, ...extraStcwRows];
     const offshoreRows = [...namedOffshoreRows, ...extraOffshoreRows];
     const referenceRows = rowsWithMinimum(client?.employment_history || [], 2);
+    const seaServiceRows = sortRowsBySignOffDate(client?.sea_service || []);
     const ZmiHeader = ({ page }) => (
         <div className="mb-3 grid grid-cols-[145px_1fr_265px] border-l border-t border-black text-xs text-slate-600">
             <div className="flex items-center justify-center border-b border-r border-black px-3 py-2">
@@ -657,7 +699,7 @@ function ZmiApplicationForm({ client }) {
     return (
         <>
             <section className="zmi-page zmi-page-portrait print-page print-page-portrait relative min-h-[1120px] bg-white p-8 pb-20 shadow-sm">
-                <ZmiHeader page="1 of 3" />
+                <ZmiHeader page="1 of 4" />
                 <table className="w-full table-fixed border-collapse text-[10px]">
                     <tbody>
                         <tr>
@@ -712,7 +754,7 @@ function ZmiApplicationForm({ client }) {
             </section>
 
             <section className="zmi-page zmi-page-portrait print-page print-page-portrait relative min-h-[1120px] bg-white p-8 pb-20 shadow-sm">
-                <ZmiHeader page="2 of 3" />
+                <ZmiHeader page="2 of 4" />
                 <table className="w-full table-fixed border-collapse text-[10px]">
                     <tbody>
                         <ZmiTitleRow colSpan={7}>Flag Documents (If the document is available, provide the expiry date)</ZmiTitleRow>
@@ -757,14 +799,16 @@ function ZmiApplicationForm({ client }) {
             </section>
 
             <section className="zmi-page zmi-page-landscape print-page print-page-landscape relative min-h-[790px] w-[1120px] max-w-full bg-white p-8 pb-20 shadow-sm print:w-full">
-                <ZmiHeader page="3 of 3" />
-                <SeaServiceTable rows={client?.sea_service || []} />
+                <ZmiHeader page="3 of 4" />
+                <SeaServiceTable rows={seaServiceRows} preserveOrder />
+                <p className="mt-4 text-xs font-bold">Note: Type of Engines &amp; BHP: Mandatory for Engineers</p>
+                <ZmiFooter />
+            </section>
+
+            <section className="zmi-page zmi-page-landscape print-page print-page-landscape relative min-h-[790px] w-[1120px] max-w-full bg-white p-8 pb-20 shadow-sm print:w-full">
+                <ZmiHeader page="4 of 4" />
+                <ConfirmationBlock />
                 <DeckOfficerTable rows={client?.deck_officer_experience || []} />
-                <div className="mt-6 grid grid-cols-3 gap-8 text-xs">
-                    <div className="border-t border-black pt-1">Name: {upper(fullName)}</div>
-                    <div className="border-t border-black pt-1">Rank: {upper(client?.current_position)}</div>
-                    <div className="border-t border-black pt-1">Signature:</div>
-                </div>
                 <ZmiFooter />
             </section>
         </>
@@ -935,9 +979,10 @@ export default function PrintPreview({ client, printForm = 'complete' }) {
     const visiblePageCount = [showPersonal, showCertificates, showSeaService, showDeckOfficer].filter(Boolean).length;
     const pageLabel = (pageNumber) => `Page ${pageNumber} of ${visiblePageCount}`;
     const personalFields = [
+        ['Current Position', client?.current_position],
         ['First Name', client?.first_name], ['Middle Name', client?.middle_name], ['Last Name', client?.last_name],
-        ['Gender', client?.gender], ['Status', client?.status], ['Type of Job', client?.type_of_job],
-        ['Place Of Birth', client?.place_of_birth], ['Current Position', client?.current_position], ['Date of Birth', client?.date_of_birth],
+        ['Gender', client?.gender], ['Status', client?.status], ['Work Experience', client?.type_of_job],
+        ['Place Of Birth', client?.place_of_birth], ['Date of Birth', client?.date_of_birth],
         ['Position applied for', client?.position_applied_for], ["Mother's Maiden Name", client?.mothers_maiden_name],
         ['Religion', client?.religion], ['Sector / Sub caste', client?.sector_sub_caste], ["Father's Name", client?.fathers_name], ['Next of Kin', client?.next_of_kin],
         ['Current Home Address', client?.current_home_address], ['Relationship', client?.relationship],
@@ -1108,10 +1153,7 @@ export default function PrintPreview({ client, printForm = 'complete' }) {
                 <section className="print-page print-page-landscape min-h-[790px] w-[1120px] max-w-full bg-white p-8 shadow-sm print:w-full">
                     <Header client={client} page={isComplete ? 'Page 3 of 4' : pageLabel(1)} />
                     <SeaServiceTable rows={client?.sea_service || []} />
-                    <div className="mt-5 text-xs">
-                        <div className="font-semibold">SUMMARY:</div>
-                        <div className="mt-8 border-t border-black pt-1">Candidate Signature:</div>
-                    </div>
+                    <p className="mt-4 text-xs font-bold">Note: Type of Engines &amp; BHP: Mandatory for Engineers</p>
                 </section>
                 )}
 
