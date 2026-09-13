@@ -583,7 +583,7 @@ function DynamicApplicationForm({ client }) {
     );
 }
 
-function ZmiApplicationForm({ client }) {
+function ZmiApplicationForm({ client, cvOnly = false, showCvPage = false }) {
     const { companySettings, certificateOptions = {} } = usePage().props;
     const company = companySettings || {};
     const fullName = fullNameFor(client);
@@ -623,14 +623,15 @@ function ZmiApplicationForm({ client }) {
     const offshoreSourceRows = [...allCertificates, ...offshoreTrainingRows];
     const namedStcwRows = stcwNames.map((name) => ({ ...findRowByName(stcwSourceRows, [name]), name }));
     const competencyStcwRows = (client?.certifications || []).filter((row) => ! stcwNames.some((name) => String(row?.name || '').toLowerCase() === name.toLowerCase()));
+    const proficiencyStcwRows = (client?.proficiency || []).filter((row) => ! stcwNames.some((name) => String(row?.name || '').toLowerCase() === name.toLowerCase()));
     const extraStcwRows = additionalStcwRows.filter((row) => ! stcwNames.some((name) => String(row?.name || '').toLowerCase() === name.toLowerCase()));
     const namedOffshoreRows = offshoreNames.map((name) => ({ ...findRowByName(offshoreSourceRows, [name]), name }));
     const extraOffshoreRows = offshoreTrainingRows.filter((row) => ! offshoreNames.some((name) => String(row?.name || '').toLowerCase() === name.toLowerCase()));
-    const stcwRows = [...namedStcwRows, ...competencyStcwRows, ...extraStcwRows];
+    const stcwRows = [...namedStcwRows, ...competencyStcwRows, ...proficiencyStcwRows, ...extraStcwRows];
     const offshoreRows = [...namedOffshoreRows, ...extraOffshoreRows];
     const referenceRows = rowsWithMinimum(client?.employment_history || [], 2);
     const seaServiceRows = sortRowsBySignOffDate(client?.sea_service || []);
-    const ZmiHeader = ({ page }) => (
+    const ZmiHeader = ({ page, showTitle = false }) => (
         <div className="mb-3 grid grid-cols-[145px_1fr_265px] border-l border-t border-black text-xs text-slate-600">
             <div className="flex items-center justify-center border-b border-r border-black px-3 py-2">
                 <img src="/images/zmi-holdings-header.jpeg" alt="ZMI Holdings" className="h-9 w-full object-contain" />
@@ -648,6 +649,11 @@ function ZmiApplicationForm({ client }) {
                 <div className="border-b border-r border-black px-2 py-1">Page</div>
                 <div className="border-b border-r border-black px-2 py-1">{page}</div>
             </div>
+                {showTitle && (
+                    <div className="col-span-3 border-b border-r border-black px-3 py-2 text-center text-base font-bold leading-5 text-black">
+                        EMPLOYMENT APPLICATION FORM
+                    </div>
+                )}
         </div>
     );
     const ZmiFooter = () => (
@@ -663,10 +669,27 @@ function ZmiApplicationForm({ client }) {
     );
     const ZmiTitleRow = ({ children, colSpan = 4 }) => (
         <tr>
-            <td colSpan={colSpan} className="border border-black bg-slate-100 px-2 py-1 text-center text-xs font-bold">
+            <td
+                colSpan={colSpan}
+                className="border border-black px-2 py-1 text-left text-xs font-bold text-black"
+                style={{ backgroundColor: '#d9d9d9', printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
+            >
                 {children}
             </td>
         </tr>
+    );
+    const ZmiFieldPair = ({ label, valueText, children, colSpan = 2 }) => (
+        <>
+            <td className="border border-black px-2 py-1 align-top font-medium text-black">{label}</td>
+            <td colSpan={colSpan - 1} className="border border-black px-2 py-1 align-top text-black">
+                {children || upper(valueText)}
+            </td>
+        </>
+    );
+    const ZmiCvCell = ({ label, valueText = '', colSpan = 1 }) => (
+        <td colSpan={colSpan} className="border border-black px-2 py-1 align-top">
+            <span className="font-medium">{label}</span>{valueText ? ` ${upper(valueText)}` : ''}
+        </td>
     );
     const ZmiCertificateTable = ({ title, rows, minRows }) => (
         <section className="mt-3">
@@ -698,31 +721,49 @@ function ZmiApplicationForm({ client }) {
 
     return (
         <>
-            <section className="zmi-page zmi-page-portrait print-page print-page-portrait relative min-h-[1120px] bg-white p-8 pb-20 shadow-sm">
-                <ZmiHeader page="1 of 4" />
-                <table className="w-full table-fixed border-collapse text-[10px]">
+            <section className={cvOnly ? 'hidden' : 'zmi-page zmi-page-portrait print-page print-page-portrait relative min-h-[1120px] bg-white p-8 pb-20 shadow-sm'}>
+                <ZmiHeader page="1 of 3" showTitle />
+                <div className="grid grid-cols-[minmax(0,1fr)_145px] gap-5">
+                    <table className="w-full table-fixed border-collapse text-[10px]">
+                        <colgroup>
+                            <col style={{ width: '27%' }} />
+                            <col style={{ width: '24%' }} />
+                            <col style={{ width: '24%' }} />
+                            <col style={{ width: '25%' }} />
+                        </colgroup>
+                        <tbody>
+                            <tr>
+                                <ZmiCell label="Name of Applicant" />
+                                <td colSpan={3} className="border border-black px-2 py-1 text-center font-medium text-black">
+                                    {upper([client?.last_name, client?.first_name, client?.middle_name].filter(Boolean).join(' '))}
+                                </td>
+                            </tr>
+                            <tr><ZmiCell label="Rank Applied for" valueText={client?.position_applied_for} colSpan={4} /></tr>
+                            <tr><ZmiCell label="Date of Application" valueText={client?.date_applied} colSpan={4} /></tr>
+                            <tr><ZmiCell label="Direct Application" colSpan={4}><CheckBox label="Yes" /><CheckBox label="No" checked /> <span className="text-[9px]">(if No, indicate below the agency name)</span></ZmiCell></tr>
+                            <tr><ZmiCell label="Agency Name" valueText={company.company_name || 'Alpha Omega Crewing Mgmt Inc.'} colSpan={4} /></tr>
+                            <tr><ZmiCell label="Availability" valueText="Anytime" colSpan={4} /></tr>
+                        </tbody>
+                    </table>
+                    <div className="flex min-h-[166px] items-center justify-center border border-black p-1 text-center text-[9px]">
+                        {client?.avatar ? <img src={`/storage/${client.avatar}`} alt={fullName} className="h-full max-h-40 w-full object-cover" /> : 'Photo'}
+                    </div>
+                </div>
+                <table className="mt-3 w-full table-fixed border-collapse text-[10px]">
+                    <colgroup>
+                        <col style={{ width: '21%' }} />
+                        <col style={{ width: '29%' }} />
+                        <col style={{ width: '28%' }} />
+                        <col style={{ width: '22%' }} />
+                    </colgroup>
                     <tbody>
-                        <tr>
-                            <ZmiCell label="Name of Applicant" valueText={client?.last_name} />
-                            <ZmiCell valueText={client?.first_name} />
-                            <ZmiCell valueText={client?.middle_name} />
-                            <td rowSpan={7} className="w-28 border border-black p-1 text-center text-[9px]">
-                                {client?.avatar ? <img src={`/storage/${client.avatar}`} alt={fullName} className="h-32 w-full object-cover" /> : 'Photo'}
-                            </td>
-                        </tr>
-                        <tr className="text-center text-[9px]"><td className="border border-black">(Surname)</td><td className="border border-black">(Given Name)</td><td className="border border-black">(Middle Name)</td></tr>
-                        <tr><ZmiCell label="Rank Applied for" valueText={client?.position_applied_for} colSpan={3} /></tr>
-                        <tr><ZmiCell label="Date of Application" valueText={client?.date_applied} colSpan={3} /></tr>
-                        <tr><ZmiCell label="Direct Application" colSpan={3}><CheckBox label="Yes" /><CheckBox label="No" checked /> <span className="text-[9px]">(if No, indicate below the agency name)</span></ZmiCell></tr>
-                        <tr><ZmiCell label="Agency Name" valueText={company.company_name || 'Alpha Omega Crewing Mgmt Inc.'} colSpan={3} /></tr>
-                        <tr><ZmiCell label="Availability" valueText="Anytime" colSpan={3} /></tr>
                         <ZmiTitleRow>Basic Information</ZmiTitleRow>
-                        <tr><ZmiCell label="Nationality" valueText={client?.nationality} colSpan={2} /><ZmiCell label="Mother Full Name" valueText={client?.mothers_maiden_name} colSpan={2} /></tr>
-                        <tr><ZmiCell label="Religion" valueText={client?.religion} colSpan={2} /><ZmiCell label="Sector / Sub caste" valueText={client?.sector_sub_caste} colSpan={2} /></tr>
-                        <tr><ZmiCell label="Date of Birth & Age" valueText={client?.date_of_birth} colSpan={2} /><ZmiCell label="Place & Country Of Birth" valueText={client?.place_of_birth} colSpan={2} /></tr>
-                        <tr><ZmiCell label="Permanent Address" valueText={client?.current_home_address} colSpan={4} /></tr>
-                        <tr><ZmiCell label="Telephone Numbers" valueText={client?.telephone_numbers || client?.fax_no} colSpan={2} /><ZmiCell label="Mobile No. (Home)" valueText={client?.personal_mobile_no} colSpan={2} /></tr>
-                        <tr><ZmiCell label="Email" valueText={client?.email_address || client?.email} colSpan={2} /><ZmiCell label="WhatsApp No." valueText={client?.whatsapp_number} colSpan={2} /></tr>
+                        <tr><ZmiFieldPair label="Nationality" valueText={client?.nationality} /><ZmiFieldPair label="Mother Full Name" valueText={client?.mothers_maiden_name} /></tr>
+                        <tr><ZmiFieldPair label="Religion" valueText={client?.religion} /><ZmiFieldPair label="Sector / Sub caste" valueText={client?.sector_sub_caste} /></tr>
+                        <tr><ZmiFieldPair label="Date of Birth & Age" valueText={[client?.date_of_birth, ageFromDate(client?.date_of_birth)].filter(Boolean).join(' - ')} /><ZmiFieldPair label="Place & Country Of Birth" valueText={client?.place_of_birth} /></tr>
+                        <tr><ZmiFieldPair label="Permanent Address" valueText={client?.current_home_address} colSpan={4} /></tr>
+                        <tr><ZmiFieldPair label="Telephone Numbers" valueText={client?.telephone_numbers || client?.fax_no} /><ZmiFieldPair label="Mobile No. (Home)" valueText={client?.personal_mobile_no} /></tr>
+                        <tr><ZmiFieldPair label="Email" valueText={client?.email_address || client?.email} /><ZmiFieldPair label="WhatsApp No." valueText={client?.whatsapp_number} /></tr>
                         <tr>
                             <ZmiCell label="Marital Status (please mark)" colSpan={4}>
                                 <CheckBox label="Married" checked={String(client?.status || '').toLowerCase() === 'married'} />
@@ -734,30 +775,30 @@ function ZmiApplicationForm({ client }) {
                         <tr><ZmiCell label="Next of kin / Relative to be contacted (in case of emergency)" colSpan={4}>Name: {upper(client?.next_of_kin)} &nbsp;&nbsp; Relation: {upper(client?.relationship)}</ZmiCell></tr>
                         <tr><ZmiCell label="Emergency Contact Person" valueText={client?.contact_person} colSpan={2} /><ZmiCell label="Emergency Contact Number" valueText={client?.emergency_contact} colSpan={2} /></tr>
                         <tr><ZmiCell label="Nearest International Airport, Country" valueText={client?.nearest_airport} colSpan={4} /></tr>
-                        <tr><ZmiCell label="Passport Number" valueText={passport.number} colSpan={2} /><ZmiCell label="Date Issued" valueText={passport.date_of_issue} colSpan={2} /></tr>
-                        <tr><ZmiCell label="Country of Issue" valueText={passport.place_of_issue} colSpan={2} /><ZmiCell label="Expiry Date" valueText={passport.date_of_expiry} colSpan={2} /></tr>
-                        <tr><ZmiCell label="Seaman Book Number" valueText={seamanBook.number} colSpan={2} /><ZmiCell label="Date Issued" valueText={seamanBook.date_of_issue} colSpan={2} /></tr>
-                        <tr><ZmiCell label="Country of Issue" valueText={seamanBook.place_of_issue} colSpan={2} /><ZmiCell label="Expiry Date" valueText={seamanBook.date_of_expiry} colSpan={2} /></tr>
+                        <tr><ZmiFieldPair label="Passport Number" valueText={passport.number} /><ZmiFieldPair label="Date Issued" valueText={passport.date_of_issue} /></tr>
+                        <tr><ZmiFieldPair label="Country of Issue" valueText={passport.place_of_issue} /><ZmiFieldPair label="Expiry Date" valueText={passport.date_of_expiry} /></tr>
+                        <tr><ZmiFieldPair label="Seaman Book Number" valueText={seamanBook.number} /><ZmiFieldPair label="Date Issued" valueText={seamanBook.date_of_issue} /></tr>
+                        <tr><ZmiFieldPair label="Country of Issue" valueText={seamanBook.place_of_issue} /><ZmiFieldPair label="Expiry Date" valueText={seamanBook.date_of_expiry} /></tr>
                         <ZmiTitleRow>PPE Details</ZmiTitleRow>
-                        <tr><ZmiCell label="Boiler Suite Size" valueText={boilerSuitSize} colSpan={2} /><ZmiCell label="Safety Shoe Size" valueText={safetyShoeSize} colSpan={2} /></tr>
+                        <tr><ZmiFieldPair label="Boiler Suite Size" valueText={boilerSuitSize} /><ZmiFieldPair label="Safety Shoe Size" valueText={safetyShoeSize} /></tr>
                         <ZmiTitleRow>Certificate of Competency Details</ZmiTitleRow>
-                        <tr><ZmiCell label="Certificate Grade" valueText={coc.name} colSpan={2} /><ZmiCell label="Expiry Date" valueText={coc.date_of_expiry} colSpan={2} /></tr>
-                        <tr><ZmiCell label="Certificate Number" valueText={coc.certificate_number} colSpan={2} /><ZmiCell label="Country Of Issue" valueText={coc.place_of_issue} colSpan={2} /></tr>
-                        <tr><ZmiCell label="STCW Regulation" valueText={coc.stcw_regulation} colSpan={2} /><ZmiCell label="Revalidation Date" valueText={coc.revalidation_date} colSpan={2} /></tr>
-                        <tr><ZmiCell label="Endorsement Number" valueText={coc.endorsement_number} colSpan={2} /><ZmiCell label="Expiry Date" valueText={coc.endorsement_expiry_date} colSpan={2} /></tr>
+                        <tr><ZmiFieldPair label="Certificate Grade" valueText={coc.name} /><ZmiFieldPair label="Expiry Date" valueText={coc.date_of_expiry} /></tr>
+                        <tr><ZmiFieldPair label="Certificate Number" valueText={coc.certificate_number} /><ZmiFieldPair label="Country Of Issue" valueText={coc.place_of_issue} /></tr>
+                        <tr><ZmiFieldPair label="STCW Regulation" valueText={coc.stcw_regulation} /><ZmiFieldPair label="Revalidation Date" valueText={coc.revalidation_date} /></tr>
+                        <tr><ZmiFieldPair label="Endorsement Number" valueText={coc.endorsement_number} /><ZmiFieldPair label="Expiry Date" valueText={coc.endorsement_expiry_date} /></tr>
                         <ZmiTitleRow>GMDSS Certificate Details</ZmiTitleRow>
-                        <tr><ZmiCell label="Certificate Number" valueText={gmdss.certificate_number || gmdss.number} colSpan={2} /><ZmiCell label="Expiry Date" valueText={gmdss.date_of_expiry} colSpan={2} /></tr>
-                        <tr><ZmiCell label="Endorsement Number" valueText={gmdss.endorsement_number} colSpan={2} /><ZmiCell label="Expiry Date" valueText={gmdss.endorsement_expiry_date} colSpan={2} /></tr>
+                        <tr><ZmiFieldPair label="Certificate Number" valueText={gmdss.certificate_number || gmdss.number} /><ZmiFieldPair label="Expiry Date" valueText={gmdss.date_of_expiry} /></tr>
+                        <tr><ZmiFieldPair label="Endorsement Number" valueText={gmdss.endorsement_number} /><ZmiFieldPair label="Expiry Date" valueText={gmdss.endorsement_expiry_date} /></tr>
+                        <ZmiTitleRow>Flag Documents (If the document is available, provide the expiry date)</ZmiTitleRow>
                     </tbody>
                 </table>
                 <ZmiFooter />
             </section>
 
-            <section className="zmi-page zmi-page-portrait print-page print-page-portrait relative min-h-[1120px] bg-white p-8 pb-20 shadow-sm">
-                <ZmiHeader page="2 of 4" />
+            <section className={cvOnly ? 'hidden' : 'zmi-page zmi-page-portrait print-page print-page-portrait relative min-h-[1120px] bg-white p-8 pb-20 shadow-sm'}>
+                <ZmiHeader page="2 of 3" showTitle />
                 <table className="w-full table-fixed border-collapse text-[10px]">
                     <tbody>
-                        <ZmiTitleRow colSpan={7}>Flag Documents (If the document is available, provide the expiry date)</ZmiTitleRow>
                         <tr className="text-center font-bold"><td className="border border-black px-1 py-1">Flag</td><td colSpan={2} className="border border-black px-1 py-1">COC</td><td colSpan={2} className="border border-black px-1 py-1">Endorsement</td><td colSpan={2} className="border border-black px-1 py-1">Seaman's Book</td></tr>
                         <tr className="text-center font-bold"><td className="border border-black px-1 py-1" /><td className="border border-black px-1 py-1">Available</td><td className="border border-black px-1 py-1">Expiry Date</td><td className="border border-black px-1 py-1">Available</td><td className="border border-black px-1 py-1">Expiry Date</td><td className="border border-black px-1 py-1">Available</td><td className="border border-black px-1 py-1">Expiry Date</td></tr>
                         {['St. Vincent', 'Panama', 'Others: (Specify)'].map((flag) => {
@@ -798,21 +839,205 @@ function ZmiApplicationForm({ client }) {
                 <ZmiFooter />
             </section>
 
-            <section className="zmi-page zmi-page-landscape print-page print-page-landscape relative min-h-[790px] w-[1120px] max-w-full bg-white p-8 pb-20 shadow-sm print:w-full">
-                <ZmiHeader page="3 of 4" />
-                <SeaServiceTable rows={seaServiceRows} preserveOrder />
-                <p className="mt-4 text-xs font-bold">Note: Type of Engines &amp; BHP: Mandatory for Engineers</p>
-                <ZmiFooter />
+            <section className={!showCvPage ? 'hidden' : 'print-page print-page-portrait min-h-[1120px] bg-white p-8 shadow-sm'}>
+                <div className="mx-auto max-w-[980px]">
+                    <div className="mb-2 flex items-center gap-3 pl-1">
+                        <div className="flex h-11 items-center justify-center">
+                            <img src="/images/zmi-holdings-header.jpeg" alt="ZMI Holdings" className="h-12 w-32 object-contain object-left" />
+                        </div>
+                        <div className="text-[9px] font-bold uppercase leading-[1.1] text-slate-700">
+                            <div>HOLDINGS</div>
+                            <div>ZAKHER MARINE INTERNATIONAL</div>
+                        </div>
+                    </div>
+
+                    <h2 className="mb-4 text-center text-[20px] font-black uppercase tracking-[0.08em] text-black">A SUMMARY OF C.V. DETAILS</h2>
+
+                    <table className="w-full border-collapse table-fixed text-[10px] text-black">
+                        <colgroup>
+                            <col style={{ width: '25%' }} />
+                            <col style={{ width: '25%' }} />
+                            <col style={{ width: '25%' }} />
+                            <col style={{ width: '25%' }} />
+                        </colgroup>
+                        <tbody>
+                            <tr>
+                                <td className="border border-black px-2 py-2 align-top">
+                                    <span className="font-bold">Position applied for:</span>
+                                    {client?.position_applied_for ? ` ${upper(client.position_applied_for)}` : ''}
+                                </td>
+                                <td className="border border-black px-2 py-2 align-top" />
+                                <td colSpan={2} className="border border-black px-2 py-2 align-top">
+                                    <span className="font-bold">Manning Agent:</span>
+                                    {company?.company_name ? ` ${upper(company.company_name)}` : ''}
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td className="border border-black px-2 py-2 align-top" style={{ width: '25%' }}>
+                                    <span className="font-bold">Surname:</span>
+                                    {client?.last_name ? ` ${upper(client.last_name)}` : ''}
+                                </td>
+                                <td className="border border-black px-2 py-2 align-top" style={{ width: '25%' }}>
+                                    <span className="font-bold">First Name:</span>
+                                    {client?.first_name ? ` ${upper(client.first_name)}` : ''}
+                                </td>
+                                <td colSpan={2} className="border border-black px-2 py-2 align-top">
+                                    <span className="font-bold">Middle Name:</span>
+                                    {client?.middle_name ? ` ${upper(client.middle_name)}` : ''}
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td className="border border-black px-2 py-2 align-top" style={{ width: '25%' }}>
+                                    <span className="font-bold">Date of Birth:</span>
+                                    {client?.date_of_birth ? ` ${upper(client.date_of_birth)}` : ''}
+                                </td>
+                                <td className="border border-black px-2 py-2 align-top" style={{ width: '25%' }}>
+                                    <span className="font-bold">Place of Birth:</span>
+                                    {client?.place_of_birth ? ` ${upper(client.place_of_birth)}` : ''}
+                                </td>
+                                <td colSpan={2} className="border border-black px-2 py-2 align-top">
+                                    <span className="font-bold">Nationality:</span>
+                                    {client?.nationality ? ` ${upper(client.nationality)}` : ''}
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td className="border border-black px-2 py-2 align-top" style={{ width: '25%' }}>
+                                    <span className="font-bold">Religion:</span>
+                                    {client?.religion ? ` ${upper(client.religion)}` : ''}
+                                </td>
+                                <td className="border border-black px-2 py-2 align-top" style={{ width: '25%' }}>
+                                    <span className="font-bold">Marital Status:</span>
+                                    {client?.status ? ` ${upper(client.status)}` : ''}
+                                </td>
+                                <td colSpan={2} className="border border-black px-2 py-2 align-top">
+                                    <span className="font-bold">No. of Child under 12 years:</span>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td className="border border-black px-2 py-2 align-top">
+                                    <span className="font-bold">Passport No.:</span>
+                                    {passport?.number ? ` ${upper(passport.number)}` : ''}
+                                </td>
+                                <td className="border border-black px-2 py-2 align-top">
+                                    <span className="font-bold">Date of Issue:</span>
+                                    {passport?.date_of_issue ? ` ${upper(passport.date_of_issue)}` : ''}
+                                </td>
+                                <td className="border border-black px-2 py-2 align-top">
+                                    <span className="font-bold">Expiry Date:</span>
+                                    {passport?.date_of_expiry ? ` ${upper(passport.date_of_expiry)}` : ''}
+                                </td>
+                                <td className="border border-black px-2 py-2 align-top">
+                                    <span className="font-bold">Place of Issue:</span>
+                                    {passport?.place_of_issue ? ` ${upper(passport.place_of_issue)}` : ''}
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td className="border border-black px-2 py-2 align-top">
+                                    <span className="font-bold">SSB No.:</span>
+                                    {seamanBook?.number ? ` ${upper(seamanBook.number)}` : ''}
+                                </td>
+                                <td className="border border-black px-2 py-2 align-top">
+                                    <span className="font-bold">Date of Issue:</span>
+                                    {seamanBook?.date_of_issue ? ` ${upper(seamanBook.date_of_issue)}` : ''}
+                                </td>
+                                <td className="border border-black px-2 py-2 align-top">
+                                    <span className="font-bold">Expiry Date:</span>
+                                    {seamanBook?.date_of_expiry ? ` ${upper(seamanBook.date_of_expiry)}` : ''}
+                                </td>
+                                <td className="border border-black px-2 py-2 align-top">
+                                    <span className="font-bold">Place of Issue:</span>
+                                    {seamanBook?.place_of_issue ? ` ${upper(seamanBook.place_of_issue)}` : ''}
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td className="border border-black px-2 py-2 align-top" colSpan={4}>
+                                    <span className="font-bold">Email:</span>
+                                    {client?.email_address || client?.email ? ` ${upper(client.email_address || client.email)}` : ''}
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td className="border border-black px-2 py-2 align-top" colSpan={4}>
+                                    <span className="font-bold">Home Address:</span>
+                                    {client?.current_home_address ? ` ${upper(client.current_home_address)}` : ''}
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td className="border border-black px-2 py-2 align-top" colSpan={4}>
+                                    <span className="font-bold">Qualification:</span>
+                                    {client?.educational_attainment ? ` ${upper(client.educational_attainment)}` : ''}
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td className="border border-black px-2 py-2 align-top">
+                                    <span className="font-bold">COC no.:</span>
+                                    {coc?.certificate_number ? ` ${upper(coc.certificate_number)}` : ''}
+                                </td>
+                                <td className="border border-black px-2 py-2 align-top">
+                                    <span className="font-bold">Date of Issue:</span>
+                                    {coc?.date_of_issue ? ` ${upper(coc.date_of_issue)}` : ''}
+                                </td>
+                                <td className="border border-black px-2 py-2 align-top">
+                                    <span className="font-bold">Expiry Date:</span>
+                                    {coc?.date_of_expiry ? ` ${upper(coc.date_of_expiry)}` : ''}
+                                </td>
+                                <td className="border border-black px-2 py-2 align-top">
+                                    <span className="font-bold">Place of Issue:</span>
+                                    {coc?.place_of_issue ? ` ${upper(coc.place_of_issue)}` : ''}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3 className="mt-5 text-center text-[13px] font-black uppercase tracking-[0.08em] text-black">SEA SERVICE</h3>
+                    <table className="mt-2 w-full border-collapse table-fixed text-[9px] text-black">
+                        <thead>
+                            <tr>
+                                <th className="border border-black px-1 py-1 text-center font-bold">VESSEL NAME</th>
+                                <th className="border border-black px-1 py-1 text-center font-bold">TYPE OF VESSEL</th>
+                                <th className="border border-black px-1 py-1 text-center font-bold">POSITION</th>
+                                <th colSpan={2} className="border border-black px-1 py-1 text-center font-bold">PERIOD</th>
+                                <th className="border border-black px-1 py-1 text-center font-bold">NO. OF DAYS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rowsWithMinimum(seaServiceRows, 7).map((row, index) => (
+                                <tr key={index}>
+                                    <td className="h-6 border border-black px-1 py-1">{upper(row.vessel_name)}</td>
+                                    <td className="border border-black px-1 py-1">{upper(row.type_imo_number)}</td>
+                                    <td className="border border-black px-1 py-1">{upper(row.position)}</td>
+                                    <td className="border border-black px-1 py-1">{upper(row.from_date)}</td>
+                                    <td className="border border-black px-1 py-1">{upper(row.to_date)}</td>
+                                    <td className="border border-black px-1 py-1">{row.duration_days || ''}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+
+                    <div className="mt-24 px-1 text-[18px] font-bold underline">Name &amp; Signature</div>
+                </div>
             </section>
 
-            <section className="zmi-page zmi-page-landscape print-page print-page-landscape relative min-h-[790px] w-[1120px] max-w-full bg-white p-8 pb-20 shadow-sm print:w-full">
-                <ZmiHeader page="4 of 4" />
+            <section className={cvOnly ? 'hidden' : 'zmi-page zmi-page-landscape print-page print-page-landscape relative min-h-[790px] w-[1120px] max-w-full bg-white p-8 pb-20 shadow-sm print:w-full'}>
+                <ZmiHeader page="3 of 3" showTitle />
                 <ConfirmationBlock />
                 <DeckOfficerTable rows={client?.deck_officer_experience || []} />
                 <ZmiFooter />
             </section>
         </>
     );
+}
+
+function ZmiCvDetailsForm({ client }) {
+    return <ZmiApplicationForm client={client} cvOnly showCvPage />;
 }
 
 function FleetApplicationForm({ client, title, heading = title, showDocumentHeader = true }) {
@@ -961,6 +1186,7 @@ const FORM_TITLES = {
     sea_service: 'Sea Service Printout',
     deck_officer: 'Deck Officer Experience Printout',
     zmi: 'ZMI Application Form',
+    zmi_cv: 'ZMI C.V. Details',
     flex_fleet: 'Flex Fleet Application Form',
     dynamic: 'Dynamic Application Form',
 };
@@ -974,6 +1200,7 @@ export default function PrintPreview({ client, printForm = 'complete' }) {
     const showSeaService = isComplete || selectedForm === 'sea_service';
     const showDeckOfficer = isComplete || selectedForm === 'deck_officer';
     const showZmi = selectedForm === 'zmi';
+    const showZmiCv = selectedForm === 'zmi_cv';
     const showFlexFleet = selectedForm === 'flex_fleet';
     const showDynamic = selectedForm === 'dynamic';
     const visiblePageCount = [showPersonal, showCertificates, showSeaService, showDeckOfficer].filter(Boolean).length;
@@ -1079,6 +1306,7 @@ export default function PrintPreview({ client, printForm = 'complete' }) {
 
             <main className="print-document mx-auto max-w-5xl space-y-5 px-4 print:max-w-none print:space-y-0 print:px-0">
                 {showZmi && <ZmiApplicationForm client={client} />}
+                {showZmiCv && <ZmiCvDetailsForm client={client} />}
                 {showFlexFleet && <FleetApplicationForm client={client} title="FLEX FLEET APPLICATION FORM" heading="FLEX FLEET SHIP MANAGEMENT SERVIVES LLC" showDocumentHeader={false} />}
                 {showDynamic && <DynamicApplicationForm client={client} />}
 

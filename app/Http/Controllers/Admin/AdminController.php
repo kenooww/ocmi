@@ -1107,7 +1107,7 @@ class AdminController extends Controller
     public function printPreview(Request $request, Client $client)
     {
         $printForm = $request->query('form', 'complete');
-        if (! in_array($printForm, ['complete', 'personal', 'certificates', 'sea_service', 'deck_officer', 'zmi', 'flex_fleet', 'dynamic'], true)) {
+        if (! in_array($printForm, ['complete', 'personal', 'certificates', 'sea_service', 'deck_officer', 'zmi', 'zmi_cv', 'flex_fleet', 'dynamic'], true)) {
             $printForm = 'complete';
         }
 
