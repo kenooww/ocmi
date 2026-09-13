@@ -86,6 +86,11 @@ const PRINTOUT_FORMS = [
         description: 'ZMI applicant details, certificates, offshore training, references, sea service, and deck experience.',
     },
     {
+        key: 'zmi_cv',
+        title: 'ZMI C.V. Details',
+        description: 'ZMI applicant summary and sea service details.',
+    },
+    {
         key: 'flex_fleet',
         title: 'Flex Fleet Application Form',
         description: 'Flex Fleet personal particulars, documents, certificate courses, and sea service.',
