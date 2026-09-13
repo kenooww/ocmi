@@ -1153,7 +1153,9 @@ function FleetApplicationForm({ client, title, heading = title, showDocumentHead
                                     row.ship_owner_manager_contact,
                                     row.from_date,
                                     row.to_date,
-                                    row.duration_days,
+                                    [row.duration_months, row.duration_days]
+                                        .filter((item) => item !== null && item !== undefined && item !== '')
+                                        .join(' : '),
                                     row.position,
                                     row.type_imo_number,
                                 ].map((text, cellIndex) => (
