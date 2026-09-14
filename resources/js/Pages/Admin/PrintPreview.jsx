@@ -619,15 +619,17 @@ function ZmiApplicationForm({ client, cvOnly = false, showCvPage = false }) {
         : defaultOffshoreNames;
     const additionalStcwRows = client?.additional_stcw_certificates || [];
     const offshoreTrainingRows = client?.offshore_training_certificates || [];
-    const stcwSourceRows = [...allCertificates, ...additionalStcwRows];
+    const stcwSourceRows = [
+        ...(client?.gmdss_certificates || []),
+        ...(client?.vaccinations || []),
+        ...additionalStcwRows,
+    ];
     const offshoreSourceRows = [...allCertificates, ...offshoreTrainingRows];
     const namedStcwRows = stcwNames.map((name) => ({ ...findRowByName(stcwSourceRows, [name]), name }));
-    const competencyStcwRows = (client?.certifications || []).filter((row) => ! stcwNames.some((name) => String(row?.name || '').toLowerCase() === name.toLowerCase()));
-    const proficiencyStcwRows = (client?.proficiency || []).filter((row) => ! stcwNames.some((name) => String(row?.name || '').toLowerCase() === name.toLowerCase()));
     const extraStcwRows = additionalStcwRows.filter((row) => ! stcwNames.some((name) => String(row?.name || '').toLowerCase() === name.toLowerCase()));
     const namedOffshoreRows = offshoreNames.map((name) => ({ ...findRowByName(offshoreSourceRows, [name]), name }));
     const extraOffshoreRows = offshoreTrainingRows.filter((row) => ! offshoreNames.some((name) => String(row?.name || '').toLowerCase() === name.toLowerCase()));
-    const stcwRows = [...namedStcwRows, ...competencyStcwRows, ...proficiencyStcwRows, ...extraStcwRows];
+    const stcwRows = [...namedStcwRows, ...extraStcwRows];
     const offshoreRows = [...namedOffshoreRows, ...extraOffshoreRows];
     const referenceRows = rowsWithMinimum(client?.employment_history || [], 2);
     const seaServiceRows = sortRowsBySignOffDate(client?.sea_service || []);
