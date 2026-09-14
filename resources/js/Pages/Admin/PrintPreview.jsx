@@ -253,12 +253,12 @@ function DeckOfficerTable({ rows }) {
 
 function ConfirmationBlock() {
     return (
-        <div className="mb-3 text-xs">
+        <div className="mb-4 text-xs text-black">
             <p className="italic">I hereby confirm that all the above furnished details are true.</p>
-            <div className="mt-4 grid grid-cols-3 gap-24">
-                <div>Name: <span className="inline-block w-40 border-b border-black">&nbsp;</span></div>
-                <div>Rank: <span className="inline-block w-40 border-b border-black">&nbsp;</span></div>
-                <div>Signature: <span className="inline-block w-44 border-b border-black">&nbsp;</span></div>
+            <div className="mt-5 grid grid-cols-3 gap-20">
+                <div>Name: <span className="inline-block w-48 border-b border-black">&nbsp;</span></div>
+                <div>Rank: <span className="inline-block w-44 border-b border-black">&nbsp;</span></div>
+                <div>Signature:<span className="inline-block w-52 border-b border-black">&nbsp;</span></div>
             </div>
         </div>
     );
@@ -722,7 +722,7 @@ function ZmiApplicationForm({ client, cvOnly = false, showCvPage = false }) {
     return (
         <>
             <section className={cvOnly ? 'hidden' : 'zmi-page zmi-page-portrait print-page print-page-portrait relative min-h-[1120px] bg-white p-8 pb-20 shadow-sm'}>
-                <ZmiHeader page="1 of 3" showTitle />
+                <ZmiHeader page="1 of 4" showTitle />
                 <div className="grid grid-cols-[minmax(0,1fr)_145px] gap-5">
                     <table className="w-full table-fixed border-collapse text-[10px]">
                         <colgroup>
@@ -796,7 +796,7 @@ function ZmiApplicationForm({ client, cvOnly = false, showCvPage = false }) {
             </section>
 
             <section className={cvOnly ? 'hidden' : 'zmi-page zmi-page-portrait print-page print-page-portrait relative min-h-[1120px] bg-white p-8 pb-20 shadow-sm'}>
-                <ZmiHeader page="2 of 3" showTitle />
+                <ZmiHeader page="2 of 4" showTitle />
                 <table className="w-full table-fixed border-collapse text-[10px]">
                     <tbody>
                         <tr className="text-center font-bold"><td className="border border-black px-1 py-1">Flag</td><td colSpan={2} className="border border-black px-1 py-1">COC</td><td colSpan={2} className="border border-black px-1 py-1">Endorsement</td><td colSpan={2} className="border border-black px-1 py-1">Seaman's Book</td></tr>
@@ -1027,7 +1027,13 @@ function ZmiApplicationForm({ client, cvOnly = false, showCvPage = false }) {
             </section>
 
             <section className={cvOnly ? 'hidden' : 'zmi-page zmi-page-landscape print-page print-page-landscape relative min-h-[790px] w-[1120px] max-w-full bg-white p-8 pb-20 shadow-sm print:w-full'}>
-                <ZmiHeader page="3 of 3" showTitle />
+                <ZmiHeader page="3 of 4" showTitle />
+                <SeaServiceTable rows={client?.sea_service || []} />
+                <ZmiFooter />
+            </section>
+
+            <section className={cvOnly ? 'hidden' : 'zmi-page zmi-page-landscape print-page print-page-landscape relative min-h-[790px] w-[1120px] max-w-full bg-white p-8 pb-20 shadow-sm print:w-full'}>
+                <ZmiHeader page="4 of 4" showTitle />
                 <ConfirmationBlock />
                 <DeckOfficerTable rows={client?.deck_officer_experience || []} />
                 <ZmiFooter />
