@@ -70,9 +70,15 @@ function sortRowsBySignOffDate(rows = []) {
     return [...(rows || [])].sort((a, b) => {
         const aTime = Date.parse(a?.to_date || '') || 0;
         const bTime = Date.parse(b?.to_date || '') || 0;
+        const aStartTime = Date.parse(a?.from_date || '') || 0;
+        const bStartTime = Date.parse(b?.from_date || '') || 0;
 
         if (aTime !== bTime) {
             return bTime - aTime;
+        }
+
+        if (aStartTime !== bStartTime) {
+            return bStartTime - aStartTime;
         }
 
         return Number(b?.id || 0) - Number(a?.id || 0);
@@ -473,7 +479,7 @@ function DynamicApplicationForm({ client }) {
             place_of_issue: match.place_of_issue,
         };
     });
-    const seaServiceRows = (client?.sea_service || []).map((row) => ({
+    const seaServiceRows = sortRowsBySignOffDate(client?.sea_service || []).map((row) => ({
         ...row,
         type_make: row.type_imo_number,
         grt_hp_kw: [row.grt, row.main_engine_kw].filter(Boolean).join(' / '),
@@ -558,7 +564,7 @@ function DynamicApplicationForm({ client }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {rowsWithMinimum(seaServiceRows, 12).map((row, index) => (
+                        {rowsWithMinimumInOrder(seaServiceRows, 12).map((row, index) => (
                             <tr key={index}>
                                 {[
                                     row.vessel_name,
@@ -1011,7 +1017,7 @@ function ZmiApplicationForm({ client, cvOnly = false, showCvPage = false }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {rowsWithMinimum(seaServiceRows, 7).map((row, index) => (
+                            {rowsWithMinimumInOrder(seaServiceRows, 7).map((row, index) => (
                                 <tr key={index}>
                                     <td className="h-6 border border-black px-1 py-1">{upper(row.vessel_name)}</td>
                                     <td className="border border-black px-1 py-1">{upper(row.type_imo_number)}</td>
@@ -1030,7 +1036,7 @@ function ZmiApplicationForm({ client, cvOnly = false, showCvPage = false }) {
 
             <section className={cvOnly ? 'hidden' : 'zmi-page zmi-page-landscape print-page print-page-landscape relative min-h-[790px] w-[1120px] max-w-full bg-white p-8 pb-20 shadow-sm print:w-full'}>
                 <ZmiHeader page="3 of 4" showTitle />
-                <SeaServiceTable rows={client?.sea_service || []} />
+                <SeaServiceTable rows={seaServiceRows} preserveOrder />
                 <ZmiFooter />
             </section>
 
@@ -1053,7 +1059,7 @@ function FleetApplicationForm({ client, title, heading = title, showDocumentHead
     const documentRows = flexFleetDocumentRows(client);
     const courseRows = flexFleetCourseRows(client);
     const isFlexFleet = !showDocumentHeader;
-    const seaServiceRows = (client?.sea_service || []).map((row, index) => ({
+    const seaServiceRows = sortRowsBySignOffDate(client?.sea_service || []).map((row, index) => ({
         ...row,
         no: index + 1,
     }));
@@ -1153,7 +1159,7 @@ function FleetApplicationForm({ client, title, heading = title, showDocumentHead
                         </tr>
                     </thead>
                     <tbody>
-                        {rowsWithMinimum(seaServiceRows, 8).map((row, index) => (
+                        {rowsWithMinimumInOrder(seaServiceRows, 8).map((row, index) => (
                             <tr key={index}>
                                 {[
                                     row.no,
