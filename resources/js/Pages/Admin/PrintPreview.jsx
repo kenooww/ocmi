@@ -679,7 +679,7 @@ function ZmiApplicationForm({ client, cvOnly = false, showCvPage = false }) {
         <tr>
             <td
                 colSpan={colSpan}
-                className="border border-black px-2 py-1 text-left text-xs font-bold text-black"
+                className="border border-black px-2 py-1 text-left text-[12px] font-bold text-black"
                 style={{ backgroundColor: '#d9d9d9', printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
             >
                 {children}
@@ -701,7 +701,7 @@ function ZmiApplicationForm({ client, cvOnly = false, showCvPage = false }) {
     );
     const ZmiCertificateTable = ({ title, rows, minRows }) => (
         <section className="mt-3">
-            <table className="w-full border-collapse text-[10px]">
+            <table className="w-full border-collapse text-[12px]">
                 <thead>
                     <tr>
                         <th colSpan={4} className="border border-black bg-slate-100 px-2 py-1 text-center font-bold">{title}</th>
@@ -732,7 +732,7 @@ function ZmiApplicationForm({ client, cvOnly = false, showCvPage = false }) {
             <section className={cvOnly ? 'hidden' : 'zmi-page zmi-page-portrait print-page print-page-portrait relative min-h-[1120px] bg-white p-8 pb-20 shadow-sm'}>
                 <ZmiHeader page="1 of 4" showTitle />
                 <div className="grid grid-cols-[minmax(0,1fr)_145px] gap-5">
-                    <table className="w-full table-fixed border-collapse text-[10px]">
+                    <table className="w-full table-fixed border-collapse text-[12px]">
                         <colgroup>
                             <col style={{ width: '27%' }} />
                             <col style={{ width: '24%' }} />
@@ -748,16 +748,16 @@ function ZmiApplicationForm({ client, cvOnly = false, showCvPage = false }) {
                             </tr>
                             <tr><ZmiCell label="Rank Applied for" valueText={client?.position_applied_for} colSpan={4} /></tr>
                             <tr><ZmiCell label="Date of Application" valueText={client?.date_applied} colSpan={4} /></tr>
-                            <tr><ZmiCell label="Direct Application" colSpan={4}><CheckBox label="Yes" /><CheckBox label="No" checked /> <span className="text-[9px]">(if No, indicate below the agency name)</span></ZmiCell></tr>
+                            <tr><ZmiCell label="Direct Application" colSpan={4}><CheckBox label="Yes" /><CheckBox label="No" checked /> <span className="text-[11px]">(if No, indicate below the agency name)</span></ZmiCell></tr>
                             <tr><ZmiCell label="Agency Name" valueText={company.company_name || 'Alpha Omega Crewing Mgmt Inc.'} colSpan={4} /></tr>
                             <tr><ZmiCell label="Availability" valueText="Anytime" colSpan={4} /></tr>
                         </tbody>
                     </table>
-                    <div className="flex min-h-[166px] items-center justify-center border border-black p-1 text-center text-[9px]">
+                    <div className="flex min-h-[166px] items-center justify-center border border-black p-1 text-center text-[11px]">
                         {client?.avatar ? <img src={`/storage/${client.avatar}`} alt={fullName} className="h-full max-h-40 w-full object-cover" /> : 'Photo'}
                     </div>
                 </div>
-                <table className="mt-3 w-full table-fixed border-collapse text-[10px]">
+                <table className="mt-3 w-full table-fixed border-collapse text-[12px]">
                     <colgroup>
                         <col style={{ width: '21%' }} />
                         <col style={{ width: '29%' }} />
@@ -805,7 +805,7 @@ function ZmiApplicationForm({ client, cvOnly = false, showCvPage = false }) {
 
             <section className={cvOnly ? 'hidden' : 'zmi-page zmi-page-portrait print-page print-page-portrait relative min-h-[1120px] bg-white p-8 pb-20 shadow-sm'}>
                 <ZmiHeader page="2 of 4" showTitle />
-                <table className="w-full table-fixed border-collapse text-[10px]">
+                    <table className="w-full table-fixed border-collapse text-[12px]">
                     <tbody>
                         <tr className="text-center font-bold"><td className="border border-black px-1 py-1">Flag</td><td colSpan={2} className="border border-black px-1 py-1">COC</td><td colSpan={2} className="border border-black px-1 py-1">Endorsement</td><td colSpan={2} className="border border-black px-1 py-1">Seaman's Book</td></tr>
                         <tr className="text-center font-bold"><td className="border border-black px-1 py-1" /><td className="border border-black px-1 py-1">Available</td><td className="border border-black px-1 py-1">Expiry Date</td><td className="border border-black px-1 py-1">Available</td><td className="border border-black px-1 py-1">Expiry Date</td><td className="border border-black px-1 py-1">Available</td><td className="border border-black px-1 py-1">Expiry Date</td></tr>
@@ -831,7 +831,7 @@ function ZmiApplicationForm({ client, cvOnly = false, showCvPage = false }) {
                 <ZmiCertificateTable title="STCW Certificate Details - All must be valid. If validity of certificate is not mentioned, expiry dates to be considered as 3 years from date of issue." rows={stcwRows} minRows={12} />
                 <ZmiCertificateTable title="Offshore Training Certificate Details" rows={offshoreRows} minRows={4} />
                 <section className="mt-3">
-                    <table className="w-full border-collapse text-[10px]">
+                        <table className="w-full border-collapse text-[12px]">
                         <tbody>
                             <tr><td colSpan={5} className="border border-black bg-slate-100 px-2 py-1 text-center font-bold">Reference From Last Two Employers [All details are Mandatory]</td></tr>
                             {referenceRows.slice(0, 2).map((row, index) => (
