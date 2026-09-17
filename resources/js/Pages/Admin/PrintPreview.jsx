@@ -460,8 +460,10 @@ function DynamicApplicationForm({ client }) {
     const stcwRows = [
         ...(client?.gmdss_certificates || []),
         ...(client?.proficiency || []),
-        ...(client?.vaccinations || []),
-    ];
+    ].map((certificate) => ({
+        ...certificate,
+        number: certificate.number || certificate.certificate_number,
+    }));
     const namedStcwRows = [
         'T-BOSIET (OPITO Approved)',
         'H2S Training (OPITO Approved)',
