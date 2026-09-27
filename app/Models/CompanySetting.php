@@ -50,6 +50,7 @@ class CompanySetting extends Model
     public function publicData(): array
     {
         return array_merge(self::defaults(), $this->only(array_keys(self::defaults())), [
+            'logo_url' => $this->logo ? asset('storage/'.ltrim($this->logo, '/')) : null,
             'seafarer_maintenance_enabled' => (bool) $this->seafarer_maintenance_enabled,
         ]);
     }

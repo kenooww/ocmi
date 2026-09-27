@@ -79,7 +79,7 @@ function NoticeModal({ type, message, onClose }) {
 export default function ContinueProfile({ client }) {
     const { props } = usePage();
     const company = props?.companySettings || {};
-    const logoUrl = company.logo ? `/storage/${company.logo}` : null;
+    const logoUrl = company.logo_url;
     const notice = props?.flash?.notice ?? null;
     const profileError = props?.errors?.profile ?? null;
     const [modal, setModal] = useState(null);

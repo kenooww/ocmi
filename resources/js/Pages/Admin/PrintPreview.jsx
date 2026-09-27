@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link, usePage } from '@inertiajs/react';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft, Download, Printer } from 'lucide-react';
 import AdminTabs from '@/Components/Admin/AdminTabs';
+import { seaServiceDays } from '@/Utils/seaServiceDays';
 
 const TRAVEL_DOCUMENT_TYPES = [
     { key: 'passport', label: 'Passport' },
@@ -487,7 +488,6 @@ function DynamicApplicationForm({ client }) {
         grt_hp_kw: [row.grt, row.main_engine_kw].filter(Boolean).join(' / '),
         operation_details: [row.area_of_operation, row.oilfield_yn, row.propulsion_type].filter(Boolean).join(' / '),
         company: row.ship_owner_manager_contact,
-        end_client: '',
     }));
     const documentColumns = [
         { key: 'number', label: 'NUMBER' },
@@ -1026,7 +1026,7 @@ function ZmiApplicationForm({ client, cvOnly = false, showCvPage = false }) {
                                     <td className="border border-black px-1 py-1">{upper(row.position)}</td>
                                     <td className="border border-black px-1 py-1">{upper(row.from_date)}</td>
                                     <td className="border border-black px-1 py-1">{upper(row.to_date)}</td>
-                                    <td className="border border-black px-1 py-1">{row.duration_days || ''}</td>
+                                    <td className="border border-black px-1 py-1">{seaServiceDays(row.from_date, row.to_date)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -1306,11 +1306,20 @@ export default function PrintPreview({ client, printForm = 'complete' }) {
                     <ArrowLeft size={16} />
                     Back to Seafarers
                 </Link>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center justify-end gap-3">
                     <div className="hidden text-right sm:block">
                         <p className="text-sm font-semibold text-slate-900">{FORM_TITLES[selectedForm]}</p>
                         <p className="text-xs text-slate-500">{fullName}</p>
                     </div>
+                    {showFlexFleet && (
+                        <a
+                            href={route('admin.seafarers.flex-fleet.sea-service', client.id)}
+                            className="inline-flex items-center gap-2 rounded bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+                        >
+                            <Download size={16} />
+                            Export Sea Service Excel
+                        </a>
+                    )}
                     <button
                         type="button"
                         onClick={() => window.print()}

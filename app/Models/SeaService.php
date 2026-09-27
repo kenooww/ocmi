@@ -17,6 +17,7 @@ class SeaService extends Model
         'duration_days',
         'position',
         'vessel_name',
+        'end_client',
         'type_imo_number',
         'area_of_operation',
         'flag',

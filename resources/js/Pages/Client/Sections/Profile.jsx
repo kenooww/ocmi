@@ -66,6 +66,7 @@ const EMPTY_SEA_SERVICE = {
   main_engine_type_model: '',
   main_engine_kw: '',
   ship_owner_manager_contact: '',
+  end_client: '',
 };
 const SEA_SERVICE_REQUIRED_FIELDS = [
   ['Vessel Name', 'vessel_name'],
@@ -920,6 +921,7 @@ function SeaServiceTable({ items, editing, onChange, onAdd, onRemove, errors, re
   const columns = [
     { key: 'vessel_name', label: 'Vessel Name', className: 'min-w-[180px]' },
     { key: 'ship_owner_manager_contact', label: 'Company (Owners)', type: 'textarea', className: 'min-w-[220px]' },
+    { key: 'end_client', label: 'End Client', optional: true, className: 'min-w-[180px]' },
     { key: 'position', label: 'Rank', className: 'min-w-[150px]' },
     { key: 'type_imo_number', label: 'Type of Vessel', className: 'min-w-[150px]' },
     { key: 'propulsion_type', label: 'Propulsion type AZ, CPP', className: 'min-w-[190px]' },
@@ -957,7 +959,7 @@ function SeaServiceTable({ items, editing, onChange, onAdd, onRemove, errors, re
               <tr className="border-b border-slate-200 bg-white text-center text-xs font-medium text-slate-500">
                 {columns.map((column) => (
                   <th key={column.key} className={`${column.className} border-r border-slate-200 px-3 py-3`}>
-                    {column.label}{required && <span className="ml-1 text-red-500">*</span>}
+                    {column.label}{required && !column.optional && <span className="ml-1 text-red-500">*</span>}
                   </th>
                 ))}
                 {editing && <th className="w-20 px-3 py-3">Action</th>}
@@ -996,7 +998,7 @@ function SeaServiceTable({ items, editing, onChange, onAdd, onRemove, errors, re
                                 value={item[column.key] ?? ''}
                                 onChange={(e) => onChange(index, column.key, e.target.value)}
                                 rows={2}
-                                required={required}
+                                required={required && !column.optional}
                                 className={`w-full rounded border p-2 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${
                                   fieldError ? 'border-red-300' : 'border-slate-300'
                                 }`}
@@ -1009,7 +1011,7 @@ function SeaServiceTable({ items, editing, onChange, onAdd, onRemove, errors, re
                                 value={item[column.key] ?? ''}
                                 onChange={(e) => onChange(index, column.key, e.target.value)}
                                 readOnly={column.readOnly}
-                                required={required}
+                                required={required && !column.optional}
                                 className={`w-full rounded border p-2 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${
                                   fieldError ? 'border-red-300' : 'border-slate-300'
                                 } ${column.readOnly ? 'bg-slate-100 text-slate-600' : ''}`}

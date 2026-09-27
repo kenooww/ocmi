@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Models\Client;
 use App\Jobs\SendClientVerificationEmail;
 use App\Services\ClientAttachmentArchiveService;
+use App\Services\FlexFleetSeaServiceExport;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -1104,6 +1105,15 @@ class AdminController extends Controller
         ]);
     }
 
+    public function exportFlexFleetSeaService(Client $client, FlexFleetSeaServiceExport $export)
+    {
+        $filename = 'Flex-Fleet-Sea-Service-'.\Illuminate\Support\Str::slug($this->clientDisplayName($client)).'.xlsx';
+
+        return response()->download($export->generate($client), $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
+    }
+
     public function printPreview(Request $request, Client $client)
     {
         $printForm = $request->query('form', 'complete');
@@ -1448,6 +1458,7 @@ class AdminController extends Controller
             'sea_service.*.bollard_pull' => [$seaServicePresenceRule, 'string', 'max:255'],
             'sea_service.*.main_engine_type_model' => [$seaServicePresenceRule, 'string', 'max:255'],
             'sea_service.*.main_engine_kw' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.end_client' => ['nullable', 'string', 'max:255'],
             'sea_service.*.ship_owner_manager_contact' => [$seaServicePresenceRule, 'string', 'max:2000'],
 
             'deck_officer_experience' => 'nullable|array',
@@ -1535,7 +1546,7 @@ class AdminController extends Controller
         $this->syncRows($client, 'offshoreTrainingCertificates', $offshoreTrainingCertificateRows, ['name', 'date_of_issue', 'date_of_expiry', 'place_of_issue'], 'offshore-training-certificate-attachments', 'offshore_training_certificates');
         $this->syncRows($client, 'employmentHistories', $employmentHistoryRows, ['company', 'contact_person_name', 'designation', 'contact_person_number', 'country'], 'employment-history-attachments', 'employment_history');
         $seaServiceRows = $this->applySeaServiceDurations($seaServiceRows);
-        $this->syncRows($client, 'seaServices', $seaServiceRows, self::SEA_SERVICE_REQUIRED_FIELDS);
+        $this->syncRows($client, 'seaServices', $seaServiceRows, [...self::SEA_SERVICE_REQUIRED_FIELDS, 'end_client']);
         $this->syncRows($client, 'deckOfficerExperiences', $deckOfficerExperienceRows, ['vessel_name', 'charterer', 'area_of_operation', 'dp_operation_hours', 'supply', 'dsv', 'survey', 'anchor_type', 'anchor_weight', 'barges', 'rig_move', 'propelled', 'non_propelled']);
 
         $client->update($data);

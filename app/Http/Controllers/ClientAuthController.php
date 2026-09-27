@@ -533,6 +533,7 @@ class ClientAuthController extends Controller
             'sea_service.*.bollard_pull' => [$seaServicePresenceRule, 'string', 'max:255'],
             'sea_service.*.main_engine_type_model' => [$seaServicePresenceRule, 'string', 'max:255'],
             'sea_service.*.main_engine_kw' => [$seaServicePresenceRule, 'string', 'max:255'],
+            'sea_service.*.end_client' => ['nullable', 'string', 'max:255'],
             'sea_service.*.ship_owner_manager_contact' => [$seaServicePresenceRule, 'string', 'max:2000'],
 
             'deck_officer_experience' => 'nullable|array',
@@ -774,7 +775,7 @@ class ClientAuthController extends Controller
             'country',
         ], 'employment-history-attachments', 'employment_history');
         $seaServiceRows = $this->applySeaServiceDurations($seaServiceRows);
-        $this->syncRows($client, 'seaServices', $seaServiceRows, self::SEA_SERVICE_REQUIRED_FIELDS);
+        $this->syncRows($client, 'seaServices', $seaServiceRows, [...self::SEA_SERVICE_REQUIRED_FIELDS, 'end_client']);
         $this->syncRows($client, 'deckOfficerExperiences', $deckOfficerExperienceRows, [
             'vessel_name',
             'charterer',

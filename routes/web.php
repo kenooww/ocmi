@@ -6,6 +6,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+Route::get('/', fn () => Inertia::render('Homepage'))->name('home');
+Route::get('/homepage', fn () => Inertia::render('Homepage'))->name('homepage');
+
+Route::get('/inquiry', [\App\Http\Controllers\InquiryController::class, 'create'])->name('inquiry.create');
+Route::post('/inquiry', [\App\Http\Controllers\InquiryController::class, 'store'])->middleware('throttle:5,1')->name('inquiry.store');
+
 // Admin login (serve Breeze login at /admin/login)
 Route::middleware('guest')->get('/admin/login', [AuthenticatedSessionController::class, 'create'])->name('admin.login');
 Route::middleware('guest')->post('/admin/login', [AuthenticatedSessionController::class, 'store'])->name('admin.login.submit');
@@ -20,6 +26,7 @@ Route::middleware(['auth'])->get('admin/dashboard', [AdminController::class, 'da
  
 // Admin Panel Routes (Protected by standard 'auth' middleware)
 Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/inquiries', [\App\Http\Controllers\Admin\InquiryController::class, 'index'])->name('inquiries.index');
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard.index');
     Route::get('/applicant-monitoring', [AdminController::class, 'applicantMonitoring'])->name('applicant-monitoring.index');
     Route::get('/applicant-monitoring/create', [AdminController::class, 'createApplicantMonitoring'])->name('applicant-monitoring.create');
@@ -64,6 +71,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('/seafarers', [AdminController::class, 'clientsIndex'])->name('seafarers.index');
     Route::post('/seafarers', [AdminController::class, 'storeClient'])->name('seafarers.store');
     Route::get('/seafarers/{client}/print-preview', [AdminController::class, 'printPreview'])->name('seafarers.print-preview');
+    Route::get('/seafarers/{client}/flex-fleet/sea-service.xlsx', [AdminController::class, 'exportFlexFleetSeaService'])->name('seafarers.flex-fleet.sea-service');
     Route::get('/seafarers/{client}/resume', [AdminController::class, 'viewClientResume'])->name('seafarers.resume.view');
     Route::get('/seafarers/{client}/resume/file', [AdminController::class, 'inlineClientResume'])->name('seafarers.resume.file');
     Route::get('/seafarers/{client}/resume/download', [AdminController::class, 'downloadClientResume'])->name('seafarers.resume.download');
