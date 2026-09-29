@@ -24,9 +24,46 @@ class InquiryTest extends TestCase
     {
         $this->get(route('inquiry.create'))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Inquiry')->where('submitted', false));
         $this->post(route('inquiry.store'), $this->details())->assertRedirect(route('inquiry.create'))->assertSessionHasNoErrors();
-        $this->assertDatabaseHas('inquiries', ['first_name' => 'Juan', 'middle_name' => null, 'present_salary' => 'USD 2,000/month']);
+        $this->assertDatabaseHas('inquiries', ['first_name' => 'Juan', 'middle_name' => null, 'present_salary' => 'Usd 2,000/month']);
         $this->get(route('inquiry.create'))->assertInertia(fn (Assert $page) => $page->component('Inquiry')->where('submitted', true));
         $this->get(route('inquiry.create'))->assertInertia(fn (Assert $page) => $page->where('submitted', false));
+    }
+
+    public function test_additional_details_are_saved(): void
+    {
+        $details = array_merge($this->details(), [
+            'present_rank' => 'Master', 'years_in_present_rank' => '2.5',
+            'applied_rank' => 'Master', 'whatsapp_number' => '+63 917 123 4567',
+            'email' => 'officer@example.com', 'facebook_account' => 'Officer Profile',
+            'last_salary' => 'USD 2500', 'valid_visa_on_hand' => 'US visa',
+            'nationality' => 'Filipino', 'vessel_information' => 'Supply vessel',
+            'offshore_vessel_type' => 'AHTS', 'years_of_experience' => '10',
+            'place_of_operation' => 'UAE', 'offshore_approval' => 'ARAMCO',
+            'vessel_system' => 'DP', 'latest_vessel_experience' => 'Master on AHTS',
+            'latest_sign_off_date' => '2025-01-01', 'other_vessel_experience' => 'Tanker',
+            'additional_skills' => 'Welding',
+        ]);
+        $this->post(route('inquiry.store'), $details)->assertSessionHasNoErrors();
+        $saved = \App\Models\Inquiry::firstOrFail();
+        $this->assertSame($details['birthday'], $saved->birthday->format('Y-m-d'));
+        $this->assertSame($details['latest_sign_off_date'], $saved->latest_sign_off_date->format('Y-m-d'));
+        unset($details['middle_name'], $details['birthday'], $details['latest_sign_off_date']);
+        foreach ($details as $field => $value) {
+            if (is_string($value) && ! in_array($field, ['vessel_system', 'offshore_approval', 'email', 'facebook_account'], true)) {
+                $details[$field] = \Illuminate\Support\Str::ucfirst(mb_strtolower($value, 'UTF-8'));
+            }
+        }
+        $this->assertDatabaseHas('inquiries', $details);
+    }
+
+    public function test_invalid_additional_details_are_rejected(): void
+    {
+        $this->post(route('inquiry.store'), array_merge($this->details(), [
+            'offshore_approval' => 'Invalid', 'vessel_system' => 'Invalid',
+            'years_in_present_rank' => -1, 'years_of_experience' => 'invalid',
+            'email' => 'invalid', 'latest_sign_off_date' => now()->addDay()->format('Y-m-d'),
+        ]))->assertSessionHasErrors(['offshore_approval', 'vessel_system', 'years_in_present_rank', 'years_of_experience', 'email', 'latest_sign_off_date']);
+        $this->assertDatabaseCount('inquiries', 0);
     }
 
     public function test_required_fields_are_validated_without_saving(): void

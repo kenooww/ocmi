@@ -1,4 +1,5 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { inquiryText } from '@/Utils/inquiryText';
 import { Anchor, ArrowLeft, CheckCircle2, Send } from 'lucide-react';
 
 const fields = [
@@ -11,6 +12,25 @@ const fields = [
     { name: 'current_location', label: 'Current location', placeholder: 'City and country' },
     { name: 'present_salary', label: 'Present salary', placeholder: 'e.g. USD 2,000/month or Not applicable', maxLength: 100 },
     { name: 'document_status', label: 'Document status', textarea: true, placeholder: 'Describe the availability or renewal status of your maritime documents.', maxLength: 2000 },
+    {"name": "present_rank", "label": "Present rank", "optional": true},
+    {"name": "years_in_present_rank", "label": "Years of experience on present rank", "optional": true, "type": "number"},
+    {"name": "applied_rank", "label": "Applied rank", "optional": true},
+    {"name": "whatsapp_number", "label": "WhatsApp number", "optional": true, "type": "tel"},
+    {"name": "email", "label": "Email", "optional": true, "type": "email"},
+    {"name": "facebook_account", "label": "Facebook account", "optional": true},
+    {"name": "last_salary", "label": "Last salary", "optional": true},
+    {"name": "valid_visa_on_hand", "label": "Valid visa on hand", "optional": true},
+    {"name": "nationality", "label": "Nationality", "optional": true},
+    {"name": "vessel_information", "label": "Vessel information", "optional": true, "textarea": true, "maxLength": 2000},
+    {"name": "offshore_vessel_type", "label": "Type of offshore vessel", "optional": true},
+    {"name": "years_of_experience", "label": "Years of experience", "optional": true, "type": "number"},
+    {"name": "place_of_operation", "label": "Place of operation", "optional": true},
+    {"name": "offshore_approval", "label": "Offshore approval (offshore only)", "optional": true, "options": ["QE", "ARAMCO", "ADNOC"]},
+    {"name": "vessel_system", "label": "Vessel system", "optional": true, "options": ["DP", "Non DP"]},
+    {"name": "latest_vessel_experience", "label": "Latest vessel experience", "optional": true, "textarea": true, "maxLength": 2000},
+    {"name": "latest_sign_off_date", "label": "Latest sign-off date", "optional": true, "type": "date"},
+    {"name": "other_vessel_experience", "label": "Other vessel experience", "optional": true, "textarea": true, "maxLength": 2000},
+    {"name": "additional_skills", "label": "Additional skills (if any)", "optional": true, "textarea": true, "maxLength": 2000},
 ];
 
 export default function Inquiry({ submitted = false }) {
@@ -27,8 +47,10 @@ export default function Inquiry({ submitted = false }) {
     };
 
     const sections = [
-        { title: 'Personal Information', description: 'Your name, birthday, and contact details.', names: ['first_name', 'middle_name', 'last_name', 'birthday', 'contact_number', 'current_location'] },
-        { title: 'Vessel & Documents', description: 'Your vessel, current salary, and document status.', names: ['vessel', 'present_salary', 'document_status'] },
+        { title: 'Personal Information', description: 'Your name, birthday, and contact details.', names: ['first_name', 'middle_name', 'last_name', 'birthday', 'contact_number', 'current_location', 'whatsapp_number', 'email', 'facebook_account', 'nationality'] },
+        { title: 'Rank & Experience', description: 'Your present rank, experience, and applied rank.', names: ['present_rank', 'years_in_present_rank', 'applied_rank', 'years_of_experience', 'last_salary', 'additional_skills'] },
+        { title: 'Vessel & Documents', description: 'Your vessel, current salary, and document status.', names: ['vessel', 'present_salary', 'document_status', 'valid_visa_on_hand', 'vessel_information', 'place_of_operation', 'vessel_system', 'latest_vessel_experience', 'latest_sign_off_date', 'other_vessel_experience'] },
+        { title: 'Offshore Experience', description: 'For offshore applicants only. Select an approval if you hold one, or leave it blank.', names: ['offshore_vessel_type', 'offshore_approval'] },
     ];
     const primaryButton = 'inline-flex items-center justify-center gap-2 rounded bg-[#0A2436] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#12364F] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F3049] disabled:cursor-wait disabled:opacity-60';
 
@@ -73,16 +95,17 @@ export default function Inquiry({ submitted = false }) {
                                     <div className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
                                         {section.names.map((name) => {
                                             const field = fields.find((item) => item.name === name);
-                                            const Input = field.textarea ? 'textarea' : 'input';
+                                            const Input = field.options ? 'select' : field.textarea ? 'textarea' : 'input';
                                             return (
                                                 <div key={name} className={field.textarea ? 'sm:col-span-2' : ''}>
                                                     <label htmlFor={`inquiry-${name}`} className="block text-xs font-medium text-slate-500">{field.label}{field.optional ? <span className="ml-1 font-normal">(optional)</span> : <span className="ml-1 text-red-500">*</span>}</label>
-                                                    <Input id={`inquiry-${name}`} name={name} type={field.textarea ? undefined : field.type || 'text'} rows={field.textarea ? 4 : undefined}
-                                                        value={data[name]} onChange={(event) => setData(name, event.target.value)} required={!field.optional}
-                                                        maxLength={field.maxLength || 255} max={name === 'birthday' ? maximumBirthday : undefined}
+                                                    <Input id={`inquiry-${name}`} name={name} type={field.textarea || field.options ? undefined : field.type || 'text'} rows={field.textarea ? 4 : undefined}
+                                                        value={data[name]} onChange={(event) => setData(name, event.target.value)} onBlur={() => setData(name, inquiryText(data[name], name))} required={!field.optional}
+                                                        maxLength={field.maxLength || 255} max={field.type === 'date' ? maximumBirthday : field.type === 'number' ? 100 : undefined}
+                                                        min={field.type === 'number' ? 0 : undefined} step={field.type === 'number' ? '0.01' : undefined}
                                                         autoComplete={field.autoComplete} placeholder={field.placeholder} aria-invalid={!!errors[name]}
                                                         aria-describedby={errors[name] ? `inquiry-${name}-error` : undefined}
-                                                        className={`mt-1 w-full rounded border bg-white p-2.5 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${errors[name] ? 'border-red-300' : 'border-slate-300'}`} />
+                                                        className={`mt-1 w-full rounded border bg-white p-2.5 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${errors[name] ? 'border-red-300' : 'border-slate-300'}`} >{field.options ? <><option value="">Select if applicable</option>{field.options.map((option) => <option key={option} value={option}>{option}</option>)}</> : undefined}</Input>
                                                     {errors[name] && <p id={`inquiry-${name}-error`} className="mt-1 text-xs text-red-600" role="alert">{errors[name]}</p>}
                                                 </div>
                                             );

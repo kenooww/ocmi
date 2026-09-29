@@ -1,0 +1,1 @@
+function s(e,t=""){return typeof e!="string"||!e||["email","facebook_account","offshore_approval","vessel_system"].includes(t)?e:e.toLowerCase().replace(new RegExp("\\p{L}","u"),r=>r.toUpperCase())}export{s as i};

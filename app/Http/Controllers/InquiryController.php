@@ -27,7 +27,32 @@ class InquiryController extends Controller
             'document_status' => ['required', 'string', 'max:2000'],
             'current_location' => ['required', 'string', 'max:255'],
             'present_salary' => ['required', 'string', 'max:100'],
+            'present_rank' => ['nullable', 'string', 'max:255'],
+            'years_in_present_rank' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'applied_rank' => ['nullable', 'string', 'max:255'],
+            'whatsapp_number' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'facebook_account' => ['nullable', 'string', 'max:255'],
+            'last_salary' => ['nullable', 'string', 'max:255'],
+            'valid_visa_on_hand' => ['nullable', 'string', 'max:255'],
+            'nationality' => ['nullable', 'string', 'max:255'],
+            'vessel_information' => ['nullable', 'string', 'max:2000'],
+            'offshore_vessel_type' => ['nullable', 'string', 'max:255'],
+            'years_of_experience' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'place_of_operation' => ['nullable', 'string', 'max:255'],
+            'offshore_approval' => ['nullable', 'string', 'in:QE,ARAMCO,ADNOC'],
+            'vessel_system' => ['nullable', 'string', 'in:DP,Non DP'],
+            'latest_vessel_experience' => ['nullable', 'string', 'max:2000'],
+            'latest_sign_off_date' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'other_vessel_experience' => ['nullable', 'string', 'max:2000'],
+            'additional_skills' => ['nullable', 'string', 'max:2000'],
         ]);
+
+        foreach ($data as $field => $value) {
+            if (is_string($value) && ! in_array($field, ['vessel_system', 'offshore_approval', 'email', 'facebook_account'], true)) {
+                $data[$field] = \Illuminate\Support\Str::ucfirst(mb_strtolower($value, 'UTF-8'));
+            }
+        }
 
         Inquiry::create($data);
 

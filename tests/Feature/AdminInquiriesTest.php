@@ -41,6 +41,54 @@ class AdminInquiriesTest extends TestCase
                 ->where('inquiries.data.0.present_salary', 'USD 2,000/month'));
     }
 
+    public function test_status_defaults_to_new_and_all_supported_statuses_can_be_saved(): void
+    {
+        $inquiry = $this->inquiry();
+        $this->assertSame('NEW', $inquiry->fresh()->status);
+        $this->actingAs(User::factory()->create());
+        foreach (array_keys(Inquiry::STATUSES) as $status) {
+            $this->from(route('admin.inquiries.index'))
+                ->patch(route('admin.inquiries.status.update', $inquiry), ['status' => $status])
+                ->assertSessionHasNoErrors()->assertRedirect(route('admin.inquiries.index'));
+            $this->assertSame($status, $inquiry->fresh()->status);
+        }
+        $this->patch(route('admin.inquiries.status.update', $inquiry), ['status' => 'Invalid'])
+            ->assertSessionHasErrors('status');
+        $this->assertSame('For application processing', $inquiry->fresh()->status);
+    }
+
+    public function test_guests_cannot_update_status(): void
+    {
+        $inquiry = $this->inquiry();
+        $this->patch(route('admin.inquiries.status.update', $inquiry), ['status' => 'Failed'])->assertRedirect();
+        $this->assertSame('NEW', $inquiry->fresh()->status);
+    }
+
+    public function test_updates_record_remarks_and_actor_in_history(): void
+    {
+        $inquiry = $this->inquiry();
+        $user = User::factory()->create();
+        $this->actingAs($user)->patch(route('admin.inquiries.status.update', $inquiry), [
+            'status' => 'Pending', 'remarks' => 'Awaiting documents',
+        ])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('inquiry_status_logs', [
+            'inquiry_id' => $inquiry->id, 'user_id' => $user->id, 'updated_by' => $user->name,
+            'from_status' => 'NEW', 'to_status' => 'Pending', 'remarks' => 'Awaiting documents',
+        ]);
+        $this->patch(route('admin.inquiries.status.update', $inquiry), [
+            'status' => 'Pending', 'remarks' => 'Follow-up received',
+        ])->assertSessionHasNoErrors();
+        $this->get(route('admin.inquiries.index'))->assertInertia(fn (Assert $page) => $page
+            ->has('inquiries.data.0.status_logs', 2)
+            ->where('inquiries.data.0.status_logs.0.remarks', 'Follow-up received')
+            ->where('inquiries.data.0.status_logs.1.remarks', 'Awaiting documents'));
+        $this->patch(route('admin.inquiries.status.update', $inquiry), [
+            'status' => 'Failed', 'remarks' => str_repeat('x', 5001),
+        ])->assertSessionHasErrors('remarks');
+        $this->assertSame('Pending', $inquiry->fresh()->status);
+        $this->assertDatabaseCount('inquiry_status_logs', 2);
+    }
+
     public function test_records_are_paginated_newest_first(): void
     {
         for ($i = 0; $i < 16; $i++) {
