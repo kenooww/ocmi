@@ -10,9 +10,16 @@ class InquiryTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        \Illuminate\Support\Facades\Mail::fake();
+    }
+
     private function details(): array
     {
         return [
+            'present_rank' => 'Master', 'years_of_experience' => 0, 'email' => 'juan@example.com',
             'first_name' => 'Juan', 'middle_name' => '', 'last_name' => 'Cruz',
             'birthday' => '1990-06-15', 'contact_number' => '+63 917 123 4567',
             'vessel' => 'Supply Vessel', 'document_status' => 'Ready',
@@ -64,6 +71,30 @@ class InquiryTest extends TestCase
             'email' => 'invalid', 'latest_sign_off_date' => now()->addDay()->format('Y-m-d'),
         ]))->assertSessionHasErrors(['offshore_approval', 'vessel_system', 'years_in_present_rank', 'years_of_experience', 'email', 'latest_sign_off_date']);
         $this->assertDatabaseCount('inquiries', 0);
+    }
+
+    public function test_duplicates_are_rejected_and_only_one_email_is_queued(): void
+    {
+        $this->post(route('inquiry.store'), $this->details())->assertSessionHasNoErrors();
+        foreach ([['email' => 'JUAN@EXAMPLE.COM', 'contact_number' => '09181111111'], ['email' => 'different@example.com', 'contact_number' => '09171234567']] as $duplicate) {
+            $this->post(route('inquiry.store'), array_merge($this->details(), $duplicate))
+                ->assertSessionHasErrors(['duplicate' => 'Inquiry already submitted.']);
+        }
+        $this->assertDatabaseCount('inquiries', 1);
+        \Illuminate\Support\Facades\Mail::assertQueued(\App\Mail\InquiryReceivedMail::class, fn ($mail) => $mail->hasTo('juan@example.com') && $mail->connection === null && $mail->afterCommit === true);
+        \Illuminate\Support\Facades\Mail::assertQueuedCount(1);
+        $mail = new \App\Mail\InquiryReceivedMail(\App\Models\Inquiry::firstOrFail(), \App\Models\CompanySetting::defaults());
+        $this->assertStringContainsString('Hi Juan', $mail->render());
+        $this->assertStringContainsString('INQUIRY SUMMARY', $mail->render());
+    }
+
+    public function test_rank_experience_and_email_are_required(): void
+    {
+        $this->post(route('inquiry.store'), array_merge($this->details(), [
+            'present_rank' => '', 'years_of_experience' => '', 'email' => '',
+        ]))->assertSessionHasErrors(['present_rank', 'years_of_experience', 'email']);
+        $this->assertDatabaseCount('inquiries', 0);
+        \Illuminate\Support\Facades\Mail::assertNothingQueued();
     }
 
     public function test_required_fields_are_validated_without_saving(): void

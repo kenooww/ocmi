@@ -12,18 +12,18 @@ const fields = [
     { name: 'current_location', label: 'Current location', placeholder: 'City and country' },
     { name: 'present_salary', label: 'Present salary', placeholder: 'e.g. USD 2,000/month or Not applicable', maxLength: 100 },
     { name: 'document_status', label: 'Document status', textarea: true, placeholder: 'Describe the availability or renewal status of your maritime documents.', maxLength: 2000 },
-    {"name": "present_rank", "label": "Present rank", "optional": true},
+    {"name": "present_rank", "label": "Present rank", "optional": false},
     {"name": "years_in_present_rank", "label": "Years of experience on present rank", "optional": true, "type": "number"},
     {"name": "applied_rank", "label": "Applied rank", "optional": true},
     {"name": "whatsapp_number", "label": "WhatsApp number", "optional": true, "type": "tel"},
-    {"name": "email", "label": "Email", "optional": true, "type": "email"},
+    {"name": "email", "label": "Email", "optional": false, "type": "email"},
     {"name": "facebook_account", "label": "Facebook account", "optional": true},
     {"name": "last_salary", "label": "Last salary", "optional": true},
     {"name": "valid_visa_on_hand", "label": "Valid visa on hand", "optional": true},
     {"name": "nationality", "label": "Nationality", "optional": true},
     {"name": "vessel_information", "label": "Vessel information", "optional": true, "textarea": true, "maxLength": 2000},
     {"name": "offshore_vessel_type", "label": "Type of offshore vessel", "optional": true},
-    {"name": "years_of_experience", "label": "Years of experience", "optional": true, "type": "number"},
+    {"name": "years_of_experience", "label": "Years of experience", "optional": false, "type": "number"},
     {"name": "place_of_operation", "label": "Place of operation", "optional": true},
     {"name": "offshore_approval", "label": "Offshore approval (offshore only)", "optional": true, "options": ["QE", "ARAMCO", "ADNOC"]},
     {"name": "vessel_system", "label": "Vessel system", "optional": true, "options": ["DP", "Non DP"]},
@@ -83,6 +83,7 @@ export default function Inquiry({ submitted = false }) {
                     </section>
                 ) : (
                     <form onSubmit={submit} className="mt-6">
+                        {errors.duplicate && <div id="inquiry-duplicate" tabIndex={-1} role="alert" className="mb-4 rounded border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">{errors.duplicate}</div>}
                         <p className="text-xs leading-6 text-[#5B6B70]">Fields marked <span className="text-red-500">*</span> are required. Middle name is optional. Enter “Not applicable” for vessel, salary, or document details that do not apply.</p>
                         {sections.map((section, index) => (
                             <section key={section.title} aria-labelledby={`inquiry-section-${index}`}>
