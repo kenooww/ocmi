@@ -23,6 +23,7 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
-        "lucide-react": "^1.31.0"
+        "lucide-react": "^1.31.0",
+        "pdf-lib": "^1.17.1"
     }
 }

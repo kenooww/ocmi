@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import { ArrowLeft, Download, Printer } from 'lucide-react';
 import AdminTabs from '@/Components/Admin/AdminTabs';
+import ZmiPdfPreview from '@/Components/Admin/ZmiPdfPreview';
 import { seaServiceDays } from '@/Utils/seaServiceDays';
 
 const TRAVEL_DOCUMENT_TYPES = [
@@ -1204,12 +1205,14 @@ const FORM_TITLES = {
     sea_service: 'Sea Service Printout',
     deck_officer: 'Deck Officer Experience Printout',
     zmi: 'ZMI Application Form',
+    zmi_pdf: 'ZMI Application Form (PDF)',
     zmi_cv: 'ZMI C.V. Details',
     flex_fleet: 'Flex Fleet Application Form',
     dynamic: 'Dynamic Application Form',
 };
 
 export default function PrintPreview({ client, printForm = 'complete' }) {
+    if (printForm === 'zmi_pdf') return <ZmiPdfPreview client={client} />;
     const fullName = fullNameFor(client);
     const selectedForm = FORM_TITLES[printForm] ? printForm : 'complete';
     const isComplete = selectedForm === 'complete';

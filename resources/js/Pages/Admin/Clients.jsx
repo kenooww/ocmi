@@ -86,6 +86,11 @@ const PRINTOUT_FORMS = [
         description: 'ZMI applicant details, certificates, offshore training, references, sea service, and deck experience.',
     },
     {
+        key: 'zmi_pdf',
+        title: 'ZMI Application Form (PDF)',
+        description: 'Applicant details overlaid on the original ZMI employment application PDF.',
+    },
+    {
         key: 'zmi_cv',
         title: 'ZMI C.V. Details',
         description: 'ZMI applicant summary and sea service details.',
