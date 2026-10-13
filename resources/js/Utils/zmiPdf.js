@@ -34,7 +34,7 @@ export async function buildZmiPdf(templateBytes, client, company = {}) {
     const clean = (value) => [...String(value ?? '').normalize('NFC').toUpperCase()].map((c) => {
         try { font.encodeText(c); return c; } catch { warnings.add('Some unsupported characters were replaced with ?; review names and addresses.'); return '?'; }
     }).join('').replace(/\s+/g, ' ').trim();
-    const box = (page, x, top, width, height, value, maxSize = 8) => {
+    const box = (page, x, top, width, height, value, maxSize = 8, align = 'left') => {
         const text = clean(value);
         if (!text) return;
         const scale = page.getWidth() / (page.getWidth() > 700 ? 1000 : 990);
@@ -56,7 +56,11 @@ export async function buildZmiPdf(templateBytes, client, company = {}) {
         } while (size >= 3);
         if (lines.length * size * 1.12 > (height - 4) * scale) warnings.add('Some long values do not fit the form; review the PDF before printing.');
         const capacity = Math.max(1, Math.floor((height - 4) * scale / (size * 1.12)));
-        lines.slice(0, capacity).forEach((line, i) => page.drawText(line, { x: (x + 3) * scale, y: page.getHeight() - (top + 3) * scale - size - i * size * 1.12, size, font }));
+        lines.slice(0, capacity).forEach((line, i) => page.drawText(line, {
+            x: align === 'center' ? x * scale + (width * scale - font.widthOfTextAtSize(line, size)) / 2 : (x + 3) * scale,
+            y: page.getHeight() - (top + 3) * scale - size - i * size * 1.12,
+            size, font,
+        }));
     };
     const erase = (page, x, top, width, height) => {
         const s = page.getWidth() / (page.getWidth() > 700 ? 1000 : 990);
@@ -86,7 +90,14 @@ export async function buildZmiPdf(templateBytes, client, company = {}) {
     const coc = recent(client.certifications || [])[0] || {};
     const gmdss = recent(client.gmdss_certificates || [])[0] || {};
     const name = [client.last_name, client.first_name, client.middle_name].filter(Boolean).join(', ') || client.name;
-    box(p, 270, 187, 444, 30, name, 10);
+    // Center each name above its corresponding printed label.
+    if (client.last_name || client.first_name || client.middle_name) {
+        box(p, 280, 187, 150, 30, client.last_name, 10, 'center');
+        box(p, 425, 187, 126, 30, client.first_name, 10, 'center');
+        box(p, 548, 187, 156, 30, client.middle_name, 10, 'center');
+    } else {
+        box(p, 270, 187, 444, 30, client.name, 10, 'center');
+    }
     box(p, 270, 240, 444, 29, client.position_applied_for);
     box(p, 270, 270, 444, 27, client.date_applied);
     box(p, 341, 302, 16, 20, 'X');
