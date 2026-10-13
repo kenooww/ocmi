@@ -5,6 +5,25 @@ const recent = (rows = []) => [...rows].sort((a, b) => (Date.parse(b.created_at)
 const find = (rows, names) => recent(rows).find((row) => names.some((name) => normalize(row.name) === normalize(name))) || {};
 const date = (value) => value ? String(value).slice(0, 10).split('-').reverse().join(':') : '';
 
+// Convert uploaded image formats (including WebP) to PNG for PDF embedding.
+const photoBytes = async (avatar) => {
+    const response = await fetch(`/storage/${avatar}`);
+    if (!response.ok) throw new Error('Unable to load the seafarer photo.');
+    const bitmap = await createImageBitmap(await response.blob());
+    try {
+        const canvas = document.createElement('canvas');
+        const scale = Math.min(1, 1200 / Math.max(bitmap.width, bitmap.height));
+        canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+        canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+        canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        if (!blob) throw new Error('Unable to prepare the seafarer photo.');
+        return blob.arrayBuffer();
+    } finally {
+        bitmap.close();
+    }
+};
+
 // Coordinates use the inspected template at 990px portrait / 1000px landscape.
 // Each cell scales to PDF points; text is fitted inside its original borders.
 export async function buildZmiPdf(templateBytes, client, company = {}) {
@@ -44,6 +63,23 @@ export async function buildZmiPdf(templateBytes, client, company = {}) {
         page.drawRectangle({ x: x * s, y: page.getHeight() - (top + height) * s, width: width * s, height: height * s, color: rgb(1, 1, 1) });
     };
     const p = pages[0];
+    if (client.avatar) {
+        try {
+            const photo = await pdf.embedPng(await photoBytes(client.avatar));
+            const scale = p.getWidth() / 990;
+            // First-page photo box: x 734–905, top 184–389, with an inset for its border.
+            const frame = { x: 737 * scale, top: 187 * scale, width: 165 * scale, height: 199 * scale };
+            const size = photo.scale(Math.min(frame.width / photo.width, frame.height / photo.height));
+            p.drawImage(photo, {
+                x: frame.x + (frame.width - size.width) / 2,
+                y: p.getHeight() - frame.top - (frame.height + size.height) / 2,
+                width: size.width,
+                height: size.height,
+            });
+        } catch {
+            warnings.add('The seafarer photo could not be included; review the uploaded photo and retry.');
+        }
+    }
     const travel = client.travel_documents || [];
     const passport = travel.find((r) => r.document_type === 'passport') || {};
     const book = travel.find((r) => r.document_type === 'seamans_book') || {};
