@@ -185,7 +185,9 @@ export async function buildZmiPdf(templateBytes, client, company = {}) {
     fillDeck(pages[3], deck.slice(0, 7));
     const original = await PDFDocument.load(templateBytes);
     for (let i = 15; i < sea.length; i += 15) {
-        const [page] = await pdf.copyPages(original, [2]); pdf.addPage(page); fillSea(page, sea.slice(i, i + 15));
+        const [page] = await pdf.copyPages(original, [2]);
+        pdf.insertPage(2 + i / 15, page);
+        fillSea(page, sea.slice(i, i + 15));
     }
     for (let i = 7; i < deck.length; i += 7) {
         const [page] = await pdf.copyPages(original, [3]); pdf.addPage(page); fillDeck(page, deck.slice(i, i + 7));
