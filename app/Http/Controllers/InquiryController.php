@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Inquiry;
+use App\Models\Rank;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -12,6 +13,11 @@ class InquiryController extends Controller
     {
         return Inertia::render('Inquiry', [
             'submitted' => (bool) $request->session()->get('inquiry_submitted', false),
+            'ranks' => Rank::query()
+                ->orderByRaw('priority_level IS NULL')
+                ->orderBy('priority_level')
+                ->orderBy('rank_name')
+                ->pluck('rank_name'),
         ]);
     }
 
@@ -27,9 +33,10 @@ class InquiryController extends Controller
             'document_status' => ['required', 'string', 'max:2000'],
             'current_location' => ['required', 'string', 'max:255'],
             'present_salary' => ['required', 'string', 'max:100'],
-            'present_rank' => ['required', 'string', 'max:255'],
+            'company_type' => ['required', 'string', 'in:Principal,Manning Agent'],
+            'present_rank' => ['required', 'string', 'exists:ranks,rank_name'],
             'years_in_present_rank' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'applied_rank' => ['nullable', 'string', 'max:255'],
+            'applied_rank' => ['nullable', 'string', 'exists:ranks,rank_name'],
             'whatsapp_number' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'facebook_account' => ['nullable', 'string', 'max:255'],
@@ -49,7 +56,7 @@ class InquiryController extends Controller
         ]);
 
         foreach ($data as $field => $value) {
-            if (is_string($value) && ! in_array($field, ['vessel_system', 'offshore_approval', 'email', 'facebook_account'], true)) {
+            if (is_string($value) && ! in_array($field, ['company_type', 'present_rank', 'applied_rank', 'vessel_system', 'offshore_approval', 'email', 'facebook_account'], true)) {
                 $data[$field] = \Illuminate\Support\Str::ucfirst(mb_strtolower($value, 'UTF-8'));
             }
         }

@@ -25,12 +25,46 @@ class AdminInquiriesTest extends TestCase
     public function test_guests_cannot_access_inquiries(): void
     {
         $this->get(route('admin.inquiries.index'))->assertRedirect();
+        $this->post(route('admin.inquiries.store'), [])->assertRedirect();
+    }
+
+    public function test_admin_can_manually_add_an_inquiry_without_sending_a_receipt_email(): void
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+        \App\Models\Rank::create(['rank_name' => 'Master']);
+        $details = [
+            'first_name' => 'Maria', 'middle_name' => '', 'last_name' => 'Santos',
+            'birthday' => '1990-06-15', 'contact_number' => '+63 917 123 4567',
+            'vessel' => 'Supply Vessel', 'document_status' => 'Documents ready',
+            'current_location' => 'Manila', 'present_salary' => 'USD 2,000/month',
+            'company_type' => 'Principal', 'present_rank' => 'Master',
+            'years_of_experience' => '8', 'email' => 'MARIA@example.com',
+            'status' => 'Floating',
+        ];
+
+        $this->actingAs(User::factory()->create())
+            ->from(route('admin.inquiries.index'))
+            ->post(route('admin.inquiries.store'), $details)
+            ->assertRedirect(route('admin.inquiries.index'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('inquiries', [
+            'first_name' => 'Maria', 'company_type' => 'Principal',
+            'present_rank' => 'Master', 'email' => 'maria@example.com', 'status' => 'Floating',
+        ]);
+        $this->assertDatabaseCount('inquiry_identities', 2);
+        \Illuminate\Support\Facades\Mail::assertNothingQueued();
+
+        $this->from(route('admin.inquiries.index'))
+            ->post(route('admin.inquiries.store'), $details)
+            ->assertSessionHasErrors(['duplicate' => 'Inquiry already submitted.']);
+        $this->assertDatabaseCount('inquiries', 1);
     }
 
     public function test_authenticated_users_can_search_and_receive_details_for_the_modal(): void
     {
         $this->inquiry(['first_name' => 'Maria', 'vessel' => 'Tanker']);
-        $match = $this->inquiry();
+        $match = $this->inquiry(['company_type' => 'Principal']);
         $this->actingAs(User::factory()->create())
             ->get(route('admin.inquiries.index', ['search' => 'Supply']))
             ->assertOk()->assertInertia(fn (Assert $page) => $page->component('Admin/Inquiries')
@@ -38,7 +72,36 @@ class AdminInquiriesTest extends TestCase
                 ->where('inquiries.data.0.id', $match->id)
                 ->where('inquiries.data.0.middle_name', 'Santos')
                 ->where('inquiries.data.0.document_status', 'Documents ready')
+                ->where('inquiries.data.0.company_type', 'Principal')
                 ->where('inquiries.data.0.present_salary', 'USD 2,000/month'));
+    }
+
+    public function test_search_matches_requested_inquiry_fields(): void
+    {
+        $searchCases = [
+            ['offshore_vessel_type' => 'Anchor Handler'],
+            ['applied_rank' => 'Chief Officer'],
+            ['present_rank' => 'Second Engineer'],
+            ['valid_visa_on_hand' => 'Schengen visa'],
+            ['company_type' => 'Manning Agent'],
+            ['current_location' => 'Rotterdam'],
+            ['status' => 'Pending'],
+        ];
+
+        foreach ($searchCases as $overrides) {
+            $inquiry = $this->inquiry($overrides);
+            if (isset($overrides['status'])) {
+                $inquiry->status = $overrides['status'];
+                $inquiry->save();
+            }
+            $searchValue = reset($overrides);
+
+            $this->actingAs(User::factory()->create())
+                ->get(route('admin.inquiries.index', ['search' => $searchValue]))
+                ->assertOk()
+                ->assertInertia(fn (Assert $page) => $page->where('inquiries.total', 1)
+                    ->where('inquiries.data.0.id', $inquiry->id));
+        }
     }
 
     public function test_status_defaults_to_new_and_all_supported_statuses_can_be_saved(): void

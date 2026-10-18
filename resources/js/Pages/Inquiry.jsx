@@ -12,6 +12,7 @@ const fields = [
     { name: 'current_location', label: 'Current location', placeholder: 'City and country' },
     { name: 'present_salary', label: 'Present salary', placeholder: 'e.g. USD 2,000/month or Not applicable', maxLength: 100 },
     { name: 'document_status', label: 'Document status', textarea: true, placeholder: 'Describe the availability or renewal status of your maritime documents.', maxLength: 2000 },
+    { name: 'company_type', label: 'Company type', optional: false, options: ['Principal', 'Manning Agent'] },
     {"name": "present_rank", "label": "Present rank", "optional": false},
     {"name": "years_in_present_rank", "label": "Years of experience on present rank", "optional": true, "type": "number"},
     {"name": "applied_rank", "label": "Applied rank", "optional": true},
@@ -34,7 +35,7 @@ const fields = [
 ];
 
 export default function Inquiry({ submitted = false }) {
-    const { companySettings: company = {} } = usePage().props;
+    const { companySettings: company = {}, ranks = [] } = usePage().props;
     const { data, setData, post, processing, errors, reset } = useForm(Object.fromEntries(fields.map(({ name }) => [name, ''])));
     const today = new Date();
     const maximumBirthday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -48,7 +49,7 @@ export default function Inquiry({ submitted = false }) {
 
     const sections = [
         { title: 'Personal Information', description: 'Your name, birthday, and contact details.', names: ['first_name', 'middle_name', 'last_name', 'birthday', 'contact_number', 'current_location', 'whatsapp_number', 'email', 'facebook_account', 'nationality'] },
-        { title: 'Rank & Experience', description: 'Your present rank, experience, and applied rank.', names: ['present_rank', 'years_in_present_rank', 'applied_rank', 'years_of_experience', 'last_salary', 'additional_skills'] },
+        { title: 'Rank & Experience', description: 'Your company type, present rank, experience, and applied rank.', names: ['company_type', 'present_rank', 'years_in_present_rank', 'applied_rank', 'years_of_experience', 'last_salary', 'additional_skills'] },
         { title: 'Vessel & Documents', description: 'Your vessel, current salary, and document status.', names: ['vessel', 'present_salary', 'document_status', 'valid_visa_on_hand', 'vessel_information', 'place_of_operation', 'vessel_system', 'latest_vessel_experience', 'latest_sign_off_date', 'other_vessel_experience'] },
         { title: 'Offshore Experience', description: 'For offshore applicants only. Select an approval if you hold one, or leave it blank.', names: ['offshore_vessel_type', 'offshore_approval'] },
     ];
@@ -96,17 +97,18 @@ export default function Inquiry({ submitted = false }) {
                                     <div className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
                                         {section.names.map((name) => {
                                             const field = fields.find((item) => item.name === name);
-                                            const Input = field.options ? 'select' : field.textarea ? 'textarea' : 'input';
+                                            const options = ['present_rank', 'applied_rank'].includes(name) ? ranks : field.options;
+                                            const Input = options ? 'select' : field.textarea ? 'textarea' : 'input';
                                             return (
                                                 <div key={name} className={field.textarea ? 'sm:col-span-2' : ''}>
                                                     <label htmlFor={`inquiry-${name}`} className="block text-xs font-medium text-slate-500">{field.label}{field.optional ? <span className="ml-1 font-normal">(optional)</span> : <span className="ml-1 text-red-500">*</span>}</label>
-                                                    <Input id={`inquiry-${name}`} name={name} type={field.textarea || field.options ? undefined : field.type || 'text'} rows={field.textarea ? 4 : undefined}
+                                                    <Input id={`inquiry-${name}`} name={name} type={field.textarea || options ? undefined : field.type || 'text'} rows={field.textarea ? 4 : undefined}
                                                         value={data[name]} onChange={(event) => setData(name, event.target.value)} onBlur={() => setData(name, inquiryText(data[name], name))} required={!field.optional}
                                                         maxLength={field.maxLength || 255} max={field.type === 'date' ? maximumBirthday : field.type === 'number' ? 100 : undefined}
                                                         min={field.type === 'number' ? 0 : undefined} step={field.type === 'number' ? '0.01' : undefined}
                                                         autoComplete={field.autoComplete} placeholder={field.placeholder} aria-invalid={!!errors[name]}
                                                         aria-describedby={errors[name] ? `inquiry-${name}-error` : undefined}
-                                                        className={`mt-1 w-full rounded border bg-white p-2.5 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${errors[name] ? 'border-red-300' : 'border-slate-300'}`} >{field.options ? <><option value="">Select if applicable</option>{field.options.map((option) => <option key={option} value={option}>{option}</option>)}</> : undefined}</Input>
+                                                        className={`mt-1 w-full rounded border bg-white p-2.5 text-sm text-slate-900 shadow-sm focus:border-[#B8863B] focus:ring-[#B8863B] ${errors[name] ? 'border-red-300' : 'border-slate-300'}`} >{options ? <><option value="">{field.optional ? 'Select if applicable' : ['present_rank', 'applied_rank'].includes(name) ? 'Select a rank' : 'Select an option'}</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</> : undefined}</Input>
                                                     {errors[name] && <p id={`inquiry-${name}-error`} className="mt-1 text-xs text-red-600" role="alert">{errors[name]}</p>}
                                                 </div>
                                             );

@@ -14,12 +14,13 @@ class InquiryTest extends TestCase
     {
         parent::setUp();
         \Illuminate\Support\Facades\Mail::fake();
+        \App\Models\Rank::create(['rank_name' => 'Master']);
     }
 
     private function details(): array
     {
         return [
-            'present_rank' => 'Master', 'years_of_experience' => 0, 'email' => 'juan@example.com',
+            'present_rank' => 'Master', 'years_of_experience' => 0, 'company_type' => 'Manning Agent', 'email' => 'juan@example.com',
             'first_name' => 'Juan', 'middle_name' => '', 'last_name' => 'Cruz',
             'birthday' => '1990-06-15', 'contact_number' => '+63 917 123 4567',
             'vessel' => 'Supply Vessel', 'document_status' => 'Ready',
@@ -29,7 +30,7 @@ class InquiryTest extends TestCase
 
     public function test_guest_can_submit_an_inquiry_and_see_confirmation(): void
     {
-        $this->get(route('inquiry.create'))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Inquiry')->where('submitted', false));
+        $this->get(route('inquiry.create'))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Inquiry')->where('submitted', false)->where('ranks', ['Master']));
         $this->post(route('inquiry.store'), $this->details())->assertRedirect(route('inquiry.create'))->assertSessionHasNoErrors();
         $this->assertDatabaseHas('inquiries', ['first_name' => 'Juan', 'middle_name' => null, 'present_salary' => 'Usd 2,000/month']);
         $this->get(route('inquiry.create'))->assertInertia(fn (Assert $page) => $page->component('Inquiry')->where('submitted', true));
@@ -56,7 +57,7 @@ class InquiryTest extends TestCase
         $this->assertSame($details['latest_sign_off_date'], $saved->latest_sign_off_date->format('Y-m-d'));
         unset($details['middle_name'], $details['birthday'], $details['latest_sign_off_date']);
         foreach ($details as $field => $value) {
-            if (is_string($value) && ! in_array($field, ['vessel_system', 'offshore_approval', 'email', 'facebook_account'], true)) {
+            if (is_string($value) && ! in_array($field, ['company_type', 'vessel_system', 'offshore_approval', 'email', 'facebook_account'], true)) {
                 $details[$field] = \Illuminate\Support\Str::ucfirst(mb_strtolower($value, 'UTF-8'));
             }
         }
@@ -97,11 +98,18 @@ class InquiryTest extends TestCase
         \Illuminate\Support\Facades\Mail::assertNothingQueued();
     }
 
+    public function test_rank_values_must_exist_in_the_ranks_table(): void
+    {
+        $this->post(route('inquiry.store'), array_merge($this->details(), ['present_rank' => 'Unlisted rank']))
+            ->assertSessionHasErrors(['present_rank']);
+        $this->assertDatabaseCount('inquiries', 0);
+    }
+
     public function test_required_fields_are_validated_without_saving(): void
     {
         $this->post(route('inquiry.store'), [])->assertSessionHasErrors([
             'first_name', 'last_name', 'birthday', 'contact_number', 'vessel',
-            'document_status', 'current_location', 'present_salary',
+            'document_status', 'current_location', 'present_salary', 'company_type',
         ]);
         $this->assertDatabaseCount('inquiries', 0);
     }
@@ -109,9 +117,9 @@ class InquiryTest extends TestCase
     public function test_invalid_values_are_rejected(): void
     {
         $this->post(route('inquiry.store'), array_merge($this->details(), [
-            'birthday' => now()->addDay()->format('Y-m-d'), 'contact_number' => 'not a phone',
+            'birthday' => now()->addDay()->format('Y-m-d'), 'contact_number' => 'not a phone', 'company_type' => 'Other',
             'document_status' => str_repeat('x', 2001), 'present_salary' => str_repeat('x', 101),
-        ]))->assertSessionHasErrors(['birthday', 'contact_number', 'document_status', 'present_salary']);
+        ]))->assertSessionHasErrors(['birthday', 'contact_number', 'document_status', 'present_salary', 'company_type']);
         $this->assertDatabaseCount('inquiries', 0);
     }
 }

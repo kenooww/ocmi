@@ -27,6 +27,7 @@ Route::middleware(['auth'])->get('admin/dashboard', [AdminController::class, 'da
 // Admin Panel Routes (Protected by standard 'auth' middleware)
 Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/inquiries', [\App\Http\Controllers\Admin\InquiryController::class, 'index'])->name('inquiries.index');
+    Route::post('/inquiries', [\App\Http\Controllers\Admin\InquiryController::class, 'store'])->name('inquiries.store');
     Route::patch('/inquiries/{inquiry}/status', [\App\Http\Controllers\Admin\InquiryController::class, 'updateStatus'])->name('inquiries.status.update');
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard.index');
     Route::get('/applicant-monitoring', [AdminController::class, 'applicantMonitoring'])->name('applicant-monitoring.index');

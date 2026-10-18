@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { Dialog, DialogPanel, DialogTitle, Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
-import { ClipboardCheck, Eye, Mail, Search, X } from 'lucide-react';
+import { ClipboardCheck, Eye, Mail, Plus, Search, X } from 'lucide-react';
 import AdminTabs from '@/Components/Admin/AdminTabs';
 import { inquiryText } from '@/Utils/inquiryText';
 import { ageFromBirthday } from '@/Utils/ageFromBirthday';
@@ -24,6 +24,7 @@ const detailFields = [
     ['First name', 'first_name'], ['Middle name', 'middle_name'], ['Last name', 'last_name'],
     ['Birthday', 'birthday'], ['Age', 'age'], ['Contact number', 'contact_number'], ['Vessel', 'vessel'],
     ['Current location', 'current_location'], ['Present salary', 'present_salary'],
+    ['Company type', 'company_type'],
     ['Inquiry status', 'status'],
     ['Document status', 'document_status'],
     ["Present rank", "present_rank"],
@@ -47,13 +48,50 @@ const detailFields = [
     ["Additional skills (if any)", "additional_skills"],
 ];
 
-export default function Inquiries({ inquiries, filters, statusOptions }) {
+const manualFields = [
+    { name: 'first_name', label: 'First name' },
+    { name: 'middle_name', label: 'Middle name', optional: true },
+    { name: 'last_name', label: 'Last name' },
+    { name: 'birthday', label: 'Birthday', type: 'date' },
+    { name: 'contact_number', label: 'Contact number', type: 'tel' },
+    { name: 'email', label: 'Email', type: 'email' },
+    { name: 'company_type', label: 'Company type', options: ['Principal', 'Manning Agent'] },
+    { name: 'present_rank', label: 'Present rank', options: 'ranks' },
+    { name: 'years_in_present_rank', label: 'Years in present rank', type: 'number', optional: true },
+    { name: 'applied_rank', label: 'Applied rank', options: 'ranks', optional: true },
+    { name: 'years_of_experience', label: 'Years of experience', type: 'number' },
+    { name: 'vessel', label: 'Vessel' },
+    { name: 'offshore_vessel_type', label: 'Type of offshore vessel', optional: true },
+    { name: 'current_location', label: 'Current location' },
+    { name: 'present_salary', label: 'Present salary' },
+    { name: 'last_salary', label: 'Last salary', optional: true },
+    { name: 'document_status', label: 'Document status', textarea: true },
+    { name: 'valid_visa_on_hand', label: 'Valid visa on hand', optional: true },
+    { name: 'nationality', label: 'Nationality', optional: true },
+    { name: 'whatsapp_number', label: 'WhatsApp number', type: 'tel', optional: true },
+    { name: 'facebook_account', label: 'Facebook account', optional: true },
+    { name: 'vessel_information', label: 'Vessel information', textarea: true, optional: true },
+    { name: 'place_of_operation', label: 'Place of operation', optional: true },
+    { name: 'offshore_approval', label: 'Offshore approval', options: ['QE', 'ARAMCO', 'ADNOC'], optional: true },
+    { name: 'vessel_system', label: 'Vessel system', options: ['DP', 'Non DP'], optional: true },
+    { name: 'latest_vessel_experience', label: 'Latest vessel experience', textarea: true, optional: true },
+    { name: 'latest_sign_off_date', label: 'Latest sign-off date', type: 'date', optional: true },
+    { name: 'other_vessel_experience', label: 'Other vessel experience', textarea: true, optional: true },
+    { name: 'additional_skills', label: 'Additional skills', textarea: true, optional: true },
+    { name: 'status', label: 'Initial status', options: 'statuses' },
+];
+
+const manualDefaults = Object.fromEntries(manualFields.map(({ name }) => [name, name === 'status' ? 'NEW' : '']));
+
+export default function Inquiries({ inquiries, filters, statusOptions, ranks = [] }) {
     const [search, setSearch] = useState(filters.search || '');
     const [selected, setSelected] = useState(null);
     const [statusInquiry, setStatusInquiry] = useState(null);
     const [statusTab, setStatusTab] = useState(0);
     const [notice, setNotice] = useState('');
+    const [manualOpen, setManualOpen] = useState(false);
     const statusForm = useForm({ status: 'NEW', remarks: '' });
+    const manualForm = useForm(manualDefaults);
     const openStatus = (item) => {
         setNotice('');
         setStatusTab(0);
@@ -77,26 +115,38 @@ export default function Inquiries({ inquiries, filters, statusOptions }) {
         event.preventDefault();
         router.get(route('admin.inquiries.index'), search.trim() ? { search: search.trim() } : {}, { preserveState: true, replace: true });
     };
+    const submitManual = (event) => {
+        event.preventDefault();
+        manualForm.post(route('admin.inquiries.store'), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setManualOpen(false);
+                manualForm.reset();
+                setNotice('Inquiry added successfully.');
+            },
+        });
+    };
 
     return (
         <AdminTabs activeTab="inquiries" title="Inquiries">
             <Head title="Inquiries" />
             <div className="mx-auto w-full min-w-0 space-y-5 p-3 sm:p-4">
-                <div><p className="text-sm font-medium uppercase tracking-wider text-[#8A642C]">Admin console</p><h2 className="mt-1 text-2xl font-semibold text-slate-900">Website inquiries</h2><p className="mt-2 text-sm text-slate-500">Review submissions from the public inquiry form.</p></div>
+                <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-sm font-medium uppercase tracking-wider text-[#8A642C]">Admin console</p><h2 className="mt-1 text-2xl font-semibold text-slate-900">Website inquiries</h2><p className="mt-2 text-sm text-slate-500">Review submissions from the public inquiry form.</p></div><button type="button" onClick={() => { setNotice(''); manualForm.clearErrors(); manualForm.reset(); setManualOpen(true); }} className="inline-flex items-center gap-2 rounded bg-[#0A2436] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#12364F]"><Plus size={16} />Add inquiry</button></div>
                 {notice && <p role="status" className="rounded border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
                 <form onSubmit={submitSearch} className="flex flex-wrap items-end gap-3 rounded border border-slate-200 bg-white p-4 shadow-sm">
-                    <div className="min-w-0 flex-1"><label htmlFor="inquiry-search" className="mb-1 block text-xs font-medium text-slate-600">Search inquiries</label><input id="inquiry-search" value={search} onChange={(event) => setSearch(event.target.value)} maxLength={255} placeholder="Name, contact number, vessel, or location" className="w-full rounded border-slate-300 text-sm focus:border-[#B8863B] focus:ring-[#B8863B]" /></div>
+                    <div className="min-w-0 flex-1"><label htmlFor="inquiry-search" className="mb-1 block text-xs font-medium text-slate-600">Search inquiries</label><input id="inquiry-search" value={search} onChange={(event) => setSearch(event.target.value)} maxLength={255} placeholder="Name, contact, vessel type, rank, company type, visa, location, or status" className="w-full rounded border-slate-300 text-sm focus:border-[#B8863B] focus:ring-[#B8863B]" /></div>
                     <button type="submit" className="inline-flex items-center gap-2 rounded bg-[#0A2436] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#12364F]"><Search size={16} />Search</button>
                     {filters.search && <Link href={route('admin.inquiries.index')} className="rounded border border-slate-300 px-4 py-2.5 text-sm text-slate-600">Clear</Link>}
                 </form>
                 <div className="overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
                     <div className="border-b border-slate-200 px-5 py-4 text-sm font-semibold text-slate-700">{inquiries.total} {inquiries.total === 1 ? 'inquiry' : 'inquiries'}{filters.search ? ' found' : ' received'}</div>
                     <div><table className="w-full table-fixed text-left text-[10px] leading-snug xl:text-xs [&_td]:align-top [&_td]:[overflow-wrap:anywhere] [&_th]:[overflow-wrap:anywhere]">
-                        <colgroup>{[13, 10, 9, 9, 10, 10, 10, 8, 11, 10].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}</colgroup>
-                        <thead className="bg-slate-50 text-[9px] xl:text-[10px] uppercase text-slate-500"><tr>{['Name', 'Contact number', 'Applied Rank', 'Visa on Hand', 'Vessel', 'Type of Offshore Vessel', 'Current location', 'Submitted', 'Status', 'Action'].map((label) => <th key={label} scope="col" className="whitespace-normal px-1.5 py-3 font-semibold">{label}</th>)}</tr></thead>
+                        <colgroup>{[12, 9, 8, 9, 8, 9, 10, 9, 8, 9, 9].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}</colgroup>
+                        <thead className="bg-slate-50 text-[9px] xl:text-[10px] uppercase text-slate-500"><tr>{['Name', 'Contact number', 'Applied Rank', 'Company Type', 'Visa on Hand', 'Vessel', 'Type of Offshore Vessel', 'Current location', 'Submitted', 'Status', 'Action'].map((label) => <th key={label} scope="col" className="whitespace-normal px-1.5 py-3 font-semibold">{label}</th>)}</tr></thead>
                         <tbody className="divide-y divide-slate-100">{inquiries.data.length ? inquiries.data.map((item) => <tr key={item.id} className="hover:bg-slate-50/70">
                             <td className="px-1.5 py-3 font-medium text-slate-900">{fullName(item)}</td><td className="whitespace-normal px-1.5 py-3 text-slate-600">{item.contact_number}</td>
                             <td className="break-words px-1.5 py-3 text-slate-600">{inquiryText(item.applied_rank) || 'Not provided'}</td>
+                            <td className="break-words px-1.5 py-3 text-slate-600">{inquiryText(item.company_type) || 'Not provided'}</td>
                             <td className="break-words px-1.5 py-3 text-slate-600">{inquiryText(item.valid_visa_on_hand) || 'Not provided'}</td><td className="break-words px-1.5 py-3 text-slate-600">{inquiryText(item.vessel)}</td>
                             <td className="break-words px-1.5 py-3 text-slate-600">{inquiryText(item.offshore_vessel_type) || 'Not provided'}</td><td className="break-words px-1.5 py-3 text-slate-600">{inquiryText(item.current_location)}</td><td className="whitespace-normal px-1.5 py-3 text-slate-500">{displayDate(item.created_at)}</td>
                             <td className="px-1.5 py-3"><StatusBadge status={item.status} compact /></td>
@@ -110,7 +160,7 @@ export default function Inquiries({ inquiries, filters, statusOptions }) {
                                     </button>
                                 </div>
                             </td>
-                        </tr>) : <tr><td colSpan={10} className="px-5 py-14 text-center text-slate-500"><Mail className="mx-auto mb-3 text-slate-400" size={28} />{filters.search ? 'No inquiries match your search.' : 'No inquiries have been submitted yet.'}</td></tr>}</tbody>
+                        </tr>) : <tr><td colSpan={11} className="px-5 py-14 text-center text-slate-500"><Mail className="mx-auto mb-3 text-slate-400" size={28} />{filters.search ? 'No inquiries match your search.' : 'No inquiries have been submitted yet.'}</td></tr>}</tbody>
                     </table></div>
                     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-4 text-xs text-slate-500"><span>Showing {inquiries.from || 0}–{inquiries.to || 0} of {inquiries.total}</span><nav aria-label="Inquiry pagination" className="flex items-center gap-3">{inquiries.prev_page_url ? <Link href={inquiries.prev_page_url} className="rounded border px-3 py-2 hover:bg-slate-50">Previous</Link> : <span className="px-3 py-2 text-slate-400">Previous</span>}<span>Page {inquiries.current_page} of {inquiries.last_page}</span>{inquiries.next_page_url ? <Link href={inquiries.next_page_url} className="rounded border px-3 py-2 hover:bg-slate-50">Next</Link> : <span className="px-3 py-2 text-slate-400">Next</span>}</nav></div>
                 </div>
@@ -164,6 +214,35 @@ export default function Inquiries({ inquiries, filters, statusOptions }) {
                                 </TabPanel>
                             </TabPanels>
                         </TabGroup>
+                    </DialogPanel>
+                </div></div>
+            </Dialog>
+            <Dialog open={manualOpen} onClose={() => { if (!manualForm.processing) setManualOpen(false); }} className="relative z-[70]">
+                <div className="fixed inset-0 bg-black/40" aria-hidden="true" />
+                <div className="fixed inset-0 overflow-y-auto p-4"><div className="flex min-h-full items-center justify-center">
+                    <DialogPanel className="flex max-h-[calc(100dvh-2rem)] w-full max-w-5xl flex-col rounded border border-slate-200 bg-white shadow-xl">
+                        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5"><div><DialogTitle className="text-lg font-semibold text-[#16222B]">Add inquiry</DialogTitle><p className="mt-1 text-sm text-slate-500">Enter applicant information and initial status.</p></div><button type="button" onClick={() => setManualOpen(false)} disabled={manualForm.processing} aria-label="Close add inquiry form" className="rounded p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50"><X size={20} /></button></div>
+                        <form onSubmit={submitManual} className="min-h-0 overflow-y-auto">
+                            <div className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3">
+                                {manualForm.errors.duplicate && <p role="alert" className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 sm:col-span-2 lg:col-span-3">{manualForm.errors.duplicate}</p>}
+                                {manualFields.map((field) => {
+                                    const options = field.options === 'ranks' ? ranks : field.options === 'statuses' ? Object.keys(statusOptions) : field.options;
+                                    const Input = field.textarea ? 'textarea' : options ? 'select' : 'input';
+                                    const id = `manual-inquiry-${field.name}`;
+                                    return <div key={field.name} className={field.textarea ? 'sm:col-span-2' : ''}>
+                                        <label htmlFor={id} className="block text-xs font-medium text-slate-600">{field.label}{field.optional ? <span className="ml-1 font-normal text-slate-400">(optional)</span> : <span className="ml-1 text-red-500">*</span>}</label>
+                                        <Input id={id} name={field.name} type={field.textarea || options ? undefined : field.type || 'text'} rows={field.textarea ? 3 : undefined} maxLength={field.textarea ? 2000 : 255} min={field.type === 'number' ? 0 : undefined} max={field.type === 'number' ? 100 : undefined} step={field.type === 'number' ? '0.01' : undefined} required={!field.optional} value={manualForm.data[field.name]} onChange={(event) => manualForm.setData(field.name, event.target.value)} disabled={manualForm.processing} aria-invalid={!!manualForm.errors[field.name]} aria-describedby={manualForm.errors[field.name] ? `${id}-error` : undefined} className={`mt-1 w-full rounded border bg-white p-2.5 text-sm text-slate-900 focus:border-[#B8863B] focus:ring-[#B8863B] ${manualForm.errors[field.name] ? 'border-red-300' : 'border-slate-300'}`}>
+                                            {options ? <><option value="">{field.optional ? 'Select if applicable' : `Select ${field.label.toLowerCase()}`}</option>{options.map((option) => <option key={option} value={option}>{inquiryText(option)}</option>)}</> : undefined}
+                                        </Input>
+                                        {manualForm.errors[field.name] && <p id={`${id}-error`} role="alert" className="mt-1 text-xs text-red-600">{manualForm.errors[field.name]}</p>}
+                                    </div>;
+                                })}
+                            </div>
+                            <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-200 bg-white px-6 py-4">
+                                <button type="button" onClick={() => setManualOpen(false)} disabled={manualForm.processing} className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-600 disabled:opacity-50">Cancel</button>
+                                <button type="submit" disabled={manualForm.processing} className="inline-flex items-center gap-2 rounded bg-[#0A2436] px-4 py-2 text-sm font-semibold text-white hover:bg-[#12364F] disabled:opacity-60"><Plus size={15} />{manualForm.processing ? 'Adding…' : 'Add inquiry'}</button>
+                            </div>
+                        </form>
                     </DialogPanel>
                 </div></div>
             </Dialog>
