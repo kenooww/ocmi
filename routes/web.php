@@ -40,6 +40,8 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('/reports/applicant-monitoring/export', [AdminController::class, 'exportApplicantMonitoringReport'])->name('reports.applicant-monitoring.export');
     Route::get('/reports/applicant-status', [AdminController::class, 'applicantStatusReport'])->name('reports.applicant-status.index');
     Route::get('/reports/applicant-status/export', [AdminController::class, 'exportApplicantStatusReport'])->name('reports.applicant-status.export');
+    Route::get('/reports/inquiries/export', [AdminController::class, 'exportInquiriesReport'])->name('reports.inquiries.export');
+    Route::get('/reports/inquiries', [AdminController::class, 'inquiriesReport'])->name('reports.inquiries.index');
     Route::get('/preferences', [AdminController::class, 'preferences'])->name('preferences.edit');
     Route::put('/preferences', [AdminController::class, 'updatePreferences'])->name('preferences.update');
     Route::post('/logout', [AdminController::class, 'logout'])->name('logout');

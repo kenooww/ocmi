@@ -3,7 +3,7 @@ import { useForm, usePage } from '@inertiajs/react';
 import { AlertCircle, CalendarDays, CheckCircle2, ChevronDown, Download, FileText, Mail, Phone, Plus, Printer, Trash2, Upload, X } from 'lucide-react';
 
 const FIELD_KEYS = [
-  'avatar', 'resume_attachment', 'privacy_act_accepted', 'current_position', 'first_name', 'middle_name', 'last_name', 'gender', 'status', 'type_of_job', 'date_applied', 'nationality',
+  'avatar', 'resume_attachment', 'privacy_act_accepted', 'current_position', 'first_name', 'middle_name', 'last_name', 'gender', 'status', 'type_of_job', 'date_applied', 'deployment_status', 'availability_date', 'nationality',
   'place_of_birth', 'date_of_birth', 'mothers_maiden_name', 'fathers_name', 'religion', 'sector_sub_caste',
   'position_applied_for', 'educational_attainment', 'last_salary', 'expected_salary', 'e_registration_number',
   'body_weight_bmi', 'height_cm', 'coverall_shoe_size', 'safety_shoe_size', 'boiler_suit_size',
@@ -31,6 +31,8 @@ const GENDER_OPTIONS = [
   'Male',
   'Female',
 ];
+
+const DEPLOYMENT_STATUS_OPTIONS = ['Onboard', 'Ashore'];
 
 const EMPTY_DEPENDENT = { name: '', date_of_birth: '', relationship: '', dependent: '', beneficiary: '', address: '', attachment: null };
 const EMPTY_CERTIFICATE = {
@@ -137,6 +139,8 @@ const GROUPS = [
       ['Position applied for', 'position_applied_for'],
       ['Work Experience', 'type_of_job', 'select', TYPE_OF_JOB_OPTIONS],
       ['Date applied', 'date_applied', 'date'],
+      ['Seafarer deployment status', 'deployment_status', 'select', DEPLOYMENT_STATUS_OPTIONS],
+      ['Availability Date', 'availability_date', 'date'],
       ['Nationality', 'nationality'],
     ],
   },

@@ -119,6 +119,9 @@ class ClientAuthController extends Controller
         if (! empty($clientData['date_applied'])) {
             $clientData['date_applied'] = optional($client->date_applied)->format('Y-m-d');
         }
+        if (! empty($clientData['availability_date'])) {
+            $clientData['availability_date'] = optional($client->availability_date)->format('Y-m-d');
+        }
         if (! empty($clientData['date_of_birth'])) {
             $clientData['date_of_birth'] = optional($client->date_of_birth)->format('Y-m-d');
         }
@@ -294,6 +297,9 @@ class ClientAuthController extends Controller
             if (! empty($clientData['date_applied'])) {
                 $clientData['date_applied'] = optional($client->date_applied)->format('Y-m-d');
             }
+            if (! empty($clientData['availability_date'])) {
+                $clientData['availability_date'] = optional($client->availability_date)->format('Y-m-d');
+            }
             if (! empty($clientData['date_of_birth'])) {
                 $clientData['date_of_birth'] = optional($client->date_of_birth)->format('Y-m-d');
             }
@@ -353,6 +359,8 @@ class ClientAuthController extends Controller
             'status' => ['required', 'string', Rule::in(self::STATUS_OPTIONS)],
             'type_of_job' => ['required', 'string', Rule::in(self::TYPE_OF_JOB_OPTIONS)],
             'date_applied' => 'required|date',
+            'deployment_status' => ['nullable', 'string', Rule::in(['Onboard', 'Ashore'])],
+            'availability_date' => 'nullable|date',
 
             // Birth & family
             'place_of_birth' => 'required|string|max:255',

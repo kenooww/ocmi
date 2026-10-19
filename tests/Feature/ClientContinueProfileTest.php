@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Client;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class ClientContinueProfileTest extends TestCase
@@ -64,6 +66,43 @@ class ClientContinueProfileTest extends TestCase
             'personal_mobile_no',
             'sss_no',
         ]);
+    }
+
+    public function test_seafarer_can_save_deployment_status_and_availability_date(): void
+    {
+        $client = $this->createClient();
+
+        $this->actingAs($client, 'client')
+            ->post('/seafarers/continue', array_merge($this->completeProfileData(), [
+                'deployment_status' => 'Onboard',
+                'availability_date' => '2026-11-10',
+                'avatar' => UploadedFile::fake()->image('avatar.jpg'),
+                'resume_attachment' => UploadedFile::fake()->create('resume.pdf', 100, 'application/pdf'),
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('clients', [
+            'id' => $client->id,
+            'deployment_status' => 'Onboard',
+        ]);
+        $this->assertSame('2026-11-10', $client->fresh()->availability_date->format('Y-m-d'));
+    }
+
+    public function test_admin_can_save_deployment_status_and_availability_date(): void
+    {
+        $client = $this->createClient();
+
+        $this->actingAs(User::factory()->create())
+            ->put(route('admin.seafarers.update', $client), [
+                'status' => 'single',
+                'type_of_job' => 'No Experience',
+                'deployment_status' => 'Ashore',
+                'availability_date' => '2026-12-01',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('Ashore', $client->fresh()->deployment_status);
+        $this->assertSame('2026-12-01', $client->fresh()->availability_date->format('Y-m-d'));
     }
 
     public function test_guest_is_redirected_from_continue_profile_to_login(): void

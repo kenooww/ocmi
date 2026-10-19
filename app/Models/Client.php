@@ -68,7 +68,7 @@ class Client extends Authenticatable
     protected $fillable = [
         'name', 'email', 'password', 'must_change_password', 'phone', 'address', 'verification_token', 'email_verified_at',
         // profile fields
-        'first_name','middle_name','last_name','gender','status','type_of_job','processed_by','application_status','date_applied',
+        'first_name','middle_name','last_name','gender','status','type_of_job','processed_by','application_status','deployment_status','availability_date','date_applied',
         'place_of_birth','date_of_birth','mothers_maiden_name','fathers_name','nationality','religion','sector_sub_caste',
         'current_position','position_applied_for','educational_attainment','last_salary','expected_salary','e_registration_number',
         'body_weight_bmi','height_cm','coverall_shoe_size','safety_shoe_size','boiler_suit_size',
@@ -79,6 +79,7 @@ class Client extends Authenticatable
 
     protected $casts = [
         'date_applied' => 'date',
+        'availability_date' => 'date',
         'date_of_birth' => 'date',
         'marriage_date' => 'date',
         'email_verified_at' => 'datetime',

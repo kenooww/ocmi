@@ -7,6 +7,7 @@ use App\Models\ApplicationStatusLog;
 use App\Models\ApplicantMonitoring;
 use App\Models\ApplicantMonitoringItem;
 use App\Models\CompanySetting;
+use App\Models\Inquiry;
 use App\Models\OffshoreTraining;
 use App\Models\Principal;
 use App\Models\Rank;
@@ -81,7 +82,9 @@ class AdminController extends Controller
 
     private const APPLICATION_STATUS_OPTIONS = [
         'PENDING/ONHOLD',
+        'FLOATING',
         'TO REPORT',
+        'TO REPORT TO OFFICE',
         'FOR REEVAL/FOR APPROVAL',
         'FAILED',
         'PROPOSED',
@@ -404,6 +407,92 @@ class AdminController extends Controller
                 ->get(['id', 'rank_name', 'priority_level']),
             'statusOptions' => self::APPLICATION_STATUS_OPTIONS,
         ]);
+    }
+
+    public function inquiriesReport(Request $request)
+    {
+        $filters = $this->inquiriesReportFilters($request);
+        $rank = trim((string) ($filters['rank'] ?? ''));
+        $status = (string) ($filters['status'] ?? '');
+        $filtered = $request->boolean('filtered');
+        $inquiries = $filtered
+            ? $this->inquiriesReportQuery($rank, $status)->paginate(15)->withQueryString()
+            : new LengthAwarePaginator([], 0, 15, 1, [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]);
+
+        return Inertia::render('Admin/Reports/InquiriesReport', [
+            'rows' => $inquiries,
+            'printRows' => $filtered ? $this->inquiriesReportQuery($rank, $status)->get() : [],
+            'filters' => ['rank' => $rank, 'status' => $status, 'filtered' => $filtered ? '1' : ''],
+            'ranks' => Rank::query()
+                ->orderByRaw('priority_level IS NULL')
+                ->orderBy('priority_level')
+                ->orderBy('rank_name')
+                ->pluck('rank_name'),
+            'statusOptions' => array_keys(Inquiry::STATUSES),
+        ]);
+    }
+
+    public function exportInquiriesReport(Request $request)
+    {
+        $filters = $this->inquiriesReportFilters($request);
+        $rows = $request->boolean('filtered')
+            ? $this->inquiriesReportQuery(trim((string) ($filters['rank'] ?? '')), (string) ($filters['status'] ?? ''))->get()
+            : collect();
+        $filename = 'inquiries-list-' . now()->format('Ymd-His') . '.csv';
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        return response()->stream(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, [
+                'Seafarer',
+                'Contact Number',
+                'Present Rank',
+                'Applied Rank',
+                'Company Type',
+                'Current Location',
+                'Submitted On',
+                'Status',
+            ]);
+
+            foreach ($rows as $inquiry) {
+                fputcsv($handle, [
+                    trim(implode(' ', array_filter([$inquiry->first_name, $inquiry->middle_name, $inquiry->last_name]))),
+                    $inquiry->contact_number,
+                    $inquiry->present_rank,
+                    $inquiry->applied_rank,
+                    $inquiry->company_type,
+                    $inquiry->current_location,
+                    optional($inquiry->created_at)->format('Y-m-d'),
+                    $inquiry->status,
+                ]);
+            }
+
+            fclose($handle);
+        }, 200, $headers);
+    }
+
+    private function inquiriesReportFilters(Request $request): array
+    {
+        return $request->validate([
+            'rank' => ['nullable', 'string', 'max:255'],
+            'status' => ['nullable', 'string', Rule::in(array_keys(Inquiry::STATUSES))],
+        ]);
+    }
+
+    private function inquiriesReportQuery(string $rank, string $status): \Illuminate\Database\Eloquent\Builder
+    {
+        return Inquiry::query()
+            ->when($rank !== '', fn ($query) => $query->where(function ($query) use ($rank) {
+                $query->where('present_rank', $rank)->orWhere('applied_rank', $rank);
+            }))
+            ->when($status !== '', fn ($query) => $query->where('status', $status))
+            ->latest()->orderByDesc('id');
     }
 
     public function exportApplicantStatusReport(Request $request)
@@ -1151,6 +1240,10 @@ class AdminController extends Controller
             $clientData['date_applied'] = optional($client->date_applied)->format('Y-m-d');
         }
 
+        if (! empty($clientData['availability_date'])) {
+            $clientData['availability_date'] = optional($client->availability_date)->format('Y-m-d');
+        }
+
         if (! empty($clientData['date_of_birth'])) {
             $clientData['date_of_birth'] = optional($client->date_of_birth)->format('Y-m-d');
         }
@@ -1290,6 +1383,8 @@ class AdminController extends Controller
             'status' => ['required', 'string', Rule::in(self::STATUS_OPTIONS)],
             'type_of_job' => ['required', 'string', Rule::in(self::TYPE_OF_JOB_OPTIONS)],
             'date_applied' => 'nullable|date',
+            'deployment_status' => ['nullable', 'string', Rule::in(['Onboard', 'Ashore'])],
+            'availability_date' => 'nullable|date',
             'place_of_birth' => 'nullable|string|max:255',
             'date_of_birth' => 'nullable|date',
             'mothers_maiden_name' => 'nullable|string|max:255',

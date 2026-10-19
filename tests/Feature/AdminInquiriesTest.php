@@ -104,6 +104,41 @@ class AdminInquiriesTest extends TestCase
         }
     }
 
+    public function test_inquiries_report_filters_present_or_applied_rank_and_status(): void
+    {
+        \App\Models\Rank::create(['rank_name' => 'Master']);
+        \App\Models\Rank::create(['rank_name' => 'Chief Officer']);
+        $presentRankMatch = $this->inquiry(['first_name' => 'Present Match', 'present_rank' => 'Master']);
+        $appliedRankMatch = $this->inquiry(['first_name' => 'Applied Match', 'present_rank' => 'Chief Officer', 'applied_rank' => 'Master']);
+        $wrongStatus = $this->inquiry(['first_name' => 'Wrong Status', 'present_rank' => 'Master']);
+        $wrongStatus->status = 'Pending';
+        $wrongStatus->save();
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('admin.reports.inquiries.index', ['rank' => 'Master', 'status' => 'NEW', 'filtered' => 1]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('Admin/Reports/InquiriesReport')
+                ->where('filters.rank', 'Master')
+                ->where('filters.status', 'NEW')
+                ->where('filters.filtered', '1')
+                ->where('rows.total', 2)
+                ->where('rows.data.0.id', $appliedRankMatch->id)
+                ->where('rows.data.1.id', $presentRankMatch->id)
+                ->has('printRows', 2)
+                ->has('ranks', 2)
+                ->where('statusOptions', array_keys(Inquiry::STATUSES)));
+
+        $csvResponse = $this->get(route('admin.reports.inquiries.export', [
+            'rank' => 'Master', 'status' => 'NEW', 'filtered' => 1,
+        ]))->assertOk()->assertHeader('Content-Disposition');
+        $this->assertStringStartsWith('text/csv', $csvResponse->headers->get('Content-Type'));
+        $csv = $csvResponse->streamedContent();
+
+        $this->assertStringContainsString('Applied Match', $csv);
+        $this->assertStringContainsString('Present Match', $csv);
+        $this->assertStringNotContainsString('Wrong Status', $csv);
+    }
+
     public function test_status_defaults_to_new_and_all_supported_statuses_can_be_saved(): void
     {
         $inquiry = $this->inquiry();

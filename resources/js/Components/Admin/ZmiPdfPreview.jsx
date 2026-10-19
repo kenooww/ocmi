@@ -29,7 +29,7 @@ export default function ZmiPdfPreview({ client }) {
         <AdminTabs activeTab="clients" title="ZMI Application Form (PDF)">
             <div className="space-y-4 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                    <Link href={route('admin.seafarers.index')} className="text-sm text-slate-600">← Back to Seafarers</Link>
+                    <Link href={route('admin.seafarers.show', client.id)} className="text-sm text-slate-600">← Back to Seafarers</Link>
                     {result.url && <div className="flex gap-3">
                         <a href={result.url} target="_blank" rel="noopener noreferrer" className="rounded bg-[#0A2436] px-4 py-2 text-sm font-semibold text-white">Open PDF / Print</a>
                         <a href={result.url} download={`ZMI-Application-${name}.pdf`} className="rounded bg-emerald-700 px-4 py-2 text-sm font-semibold text-white">Download PDF</a>

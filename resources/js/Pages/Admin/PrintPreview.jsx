@@ -1305,7 +1305,7 @@ export default function PrintPreview({ client, printForm = 'complete' }) {
             `}</style>
 
             <div className="mx-auto mb-4 flex max-w-5xl items-center justify-between px-4 print:hidden">
-                <Link href={route('admin.seafarers.index')} className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900">
+                <Link href={route('admin.seafarers.show', client.id)} className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900">
                     <ArrowLeft size={16} />
                     Back to Seafarers
                 </Link>

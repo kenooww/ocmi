@@ -70,6 +70,7 @@ export default function AdminTabs({ activeTab, title, children }) {
             children: [
                 { key: 'reports-applicant-monitoring', label: 'Applicant Monitoring', href: route('admin.reports.applicant-monitoring.index') },
                 { key: 'reports-applicant-status', label: 'Applicant Status', href: route('admin.reports.applicant-status.index') },
+                { key: 'reports-inquiries', label: 'Inquiries List', href: route('admin.reports.inquiries.index') },
             ],
         },
         { key: 'company-settings', label: 'Company Settings', href: route('admin.company-settings.edit'), icon: Settings, adminOnly: true },
