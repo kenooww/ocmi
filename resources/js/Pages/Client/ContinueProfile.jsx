@@ -141,7 +141,7 @@ export default function ContinueProfile({ client }) {
                     Complete your profile
                 </h1>
                 <p className="mx-auto mt-2 max-w-2xl text-sm" style={{ color: PALETTE.sub }}>
-                    Fill the required personal information, then move step by step through each profile tab. Optional sections can be skipped and updated later.
+                    Fill in the required personal information to continue. You can complete the other profile sections later in your seafarer portal.
                 </p>
             </div>
 

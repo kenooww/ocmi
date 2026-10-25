@@ -12,7 +12,7 @@ class AdminSeafarerStatusTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_can_set_floating_and_to_report_to_office_statuses(): void
+    public function test_admin_can_set_additional_seafarer_application_statuses(): void
     {
         $client = Client::create([
             'name' => 'Juan Dela Cruz',
@@ -22,7 +22,7 @@ class AdminSeafarerStatusTest extends TestCase
 
         $this->actingAs(User::factory()->create());
 
-        foreach (['FLOATING', 'TO REPORT TO OFFICE'] as $status) {
+        foreach (['FLOATING', 'NOT AVAILABLE', 'TO REPORT TO OFFICE'] as $status) {
             $this->from(route('admin.seafarers.index'))
                 ->put(route('admin.seafarers.application-status.update', $client), [
                     'application_status' => $status,

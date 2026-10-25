@@ -1327,7 +1327,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
   }
 
   function validateSeaServiceRequiredFields() {
-    if (!requiresSeaService) {
+    if (onboarding || !requiresSeaService) {
       return true;
     }
 
@@ -1742,7 +1742,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
           </div>
         )}
 
-        {(onboarding || activeTab === 'dependents') && (
+        {!onboarding && activeTab === 'dependents' && (
           <>
             {onboarding && <OnboardingSectionLabel number="2" title="Dependents" />}
             <RepeatableList
@@ -1759,7 +1759,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
           </>
         )}
 
-        {(onboarding || activeTab === 'travel_documents') && (
+        {!onboarding && activeTab === 'travel_documents' && (
           <>
             {onboarding && <OnboardingSectionLabel number="3" title="Travel Documents" />}
             <TravelDocumentsTable
@@ -1771,7 +1771,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
           </>
         )}
 
-        {(onboarding || activeTab === 'certifications') && (
+        {!onboarding && activeTab === 'certifications' && (
           <>
             {onboarding && <OnboardingSectionLabel number="4" title="Certificate of Competency" />}
             <RepeatableList
@@ -1789,7 +1789,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
           </>
         )}
 
-        {(onboarding || activeTab === 'proficiency') && (
+        {!onboarding && activeTab === 'proficiency' && (
           <>
             {onboarding && <OnboardingSectionLabel number="5" title="Certificate of Proficiency" />}
             <RepeatableList
@@ -1806,7 +1806,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             />
           </>
         )}
-        {(onboarding || activeTab === 'gmdss_certificates') && (
+        {!onboarding && activeTab === 'gmdss_certificates' && (
           <>
             {onboarding && <OnboardingSectionLabel number="6" title="GMDSS Certificate" />}
             <RepeatableList
@@ -1823,7 +1823,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             />
           </>
         )}
-        {(onboarding || activeTab === 'vaccinations') && (
+        {!onboarding && activeTab === 'vaccinations' && (
           <>
             {onboarding && <OnboardingSectionLabel number="7" title="Vaccinations" />}
             <RepeatableList
@@ -1840,7 +1840,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             />
           </>
         )}
-        {(onboarding || activeTab === 'flag_documents') && (
+        {!onboarding && activeTab === 'flag_documents' && (
           <>
             {onboarding && <OnboardingSectionLabel number="8" title="Flag Documents" />}
             <RepeatableList
@@ -1857,7 +1857,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             />
           </>
         )}
-        {(onboarding || activeTab === 'other_certificates') && (
+        {!onboarding && activeTab === 'other_certificates' && (
           <>
             {onboarding && <OnboardingSectionLabel number="9" title="Other Certificates" />}
             <RepeatableList
@@ -1874,7 +1874,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             />
           </>
         )}
-        {(onboarding || activeTab === 'additional_stcw_certificates') && (
+        {!onboarding && activeTab === 'additional_stcw_certificates' && (
           <>
             {onboarding && <OnboardingSectionLabel number="10" title="Additional STCW Certificate" />}
             <RepeatableList
@@ -1891,7 +1891,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             />
           </>
         )}
-        {(onboarding || activeTab === 'offshore_training_certificates') && (
+        {!onboarding && activeTab === 'offshore_training_certificates' && (
           <>
             {onboarding && <OnboardingSectionLabel number="11" title="Offshore Training Certificate" />}
             <RepeatableList
@@ -1908,7 +1908,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             />
           </>
         )}
-        {(onboarding || activeTab === 'employment_history') && (
+        {!onboarding && activeTab === 'employment_history' && (
           <>
             {onboarding && <OnboardingSectionLabel number="12" title="Employment History" />}
             <RepeatableList
@@ -1925,7 +1925,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             />
           </>
         )}
-        {(onboarding || activeTab === 'sea_service') && (
+        {!onboarding && activeTab === 'sea_service' && (
           <>
             {onboarding && <OnboardingSectionLabel number="13" title="Sea Service" />}
             <SeaServiceTable
@@ -1939,7 +1939,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             />
           </>
         )}
-        {(onboarding || activeTab === 'deck_officer_experience') && (
+        {!onboarding && activeTab === 'deck_officer_experience' && (
           <>
             {onboarding && <OnboardingSectionLabel number="14" title="Deck Officer Experience" />}
             <DeckOfficerExperienceTable

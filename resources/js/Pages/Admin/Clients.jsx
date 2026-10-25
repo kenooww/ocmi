@@ -110,6 +110,7 @@ const PRINTOUT_FORMS = [
 const APPLICATION_STATUS_OPTIONS = [
     'PENDING/ONHOLD',
     'FLOATING',
+    'NOT AVAILABLE',
     'TO REPORT',
     'TO REPORT TO OFFICE',
     'FOR REEVAL/FOR APPROVAL',
@@ -137,6 +138,10 @@ function applicationStatusClass(status) {
 
     if (normalized === 'FLOATING') {
         return 'bg-sky-100 text-sky-700 ring-1 ring-sky-200';
+    }
+
+    if (normalized === 'NOT AVAILABLE') {
+        return 'bg-slate-100 text-slate-700 ring-1 ring-slate-200';
     }
 
     if (normalized === 'TO REPORT TO OFFICE') {

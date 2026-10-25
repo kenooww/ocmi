@@ -83,6 +83,7 @@ class AdminController extends Controller
     private const APPLICATION_STATUS_OPTIONS = [
         'PENDING/ONHOLD',
         'FLOATING',
+        'NOT AVAILABLE',
         'TO REPORT',
         'TO REPORT TO OFFICE',
         'FOR REEVAL/FOR APPROVAL',
