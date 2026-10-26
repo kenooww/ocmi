@@ -985,6 +985,34 @@ class AdminController extends Controller
                         ->orWhere('clients.nationality', 'like', "%{$search}%")
                         ->orWhere('clients.position_applied_for', 'like', "%{$search}%")
                         ->orWhere('clients.type_of_job', 'like', "%{$search}%")
+                        ->orWhereExists(function ($serviceQuery) use ($search) {
+                            $serviceQuery->selectRaw('1')
+                                ->from('client_sea_services as search_service')
+                                ->whereColumn('search_service.client_id', 'clients.id')
+                                ->where('search_service.type_imo_number', 'like', "%{$search}%")
+                                ->whereNotExists(function ($newerServiceQuery) {
+                                    $newerServiceQuery->selectRaw('1')
+                                        ->from('client_sea_services as newer_service')
+                                        ->whereColumn('newer_service.client_id', 'search_service.client_id')
+                                        ->where(function ($dateQuery) {
+                                            $dateQuery->where(function ($nonNullDateQuery) {
+                                                $nonNullDateQuery->whereNotNull('newer_service.to_date')
+                                                    ->whereNull('search_service.to_date');
+                                            })
+                                                ->orWhereColumn('newer_service.to_date', '>', 'search_service.to_date')
+                                                ->orWhere(function ($tieQuery) {
+                                                    $tieQuery->where(function ($sameDateQuery) {
+                                                        $sameDateQuery->whereColumn('newer_service.to_date', 'search_service.to_date')
+                                                            ->orWhere(function ($nullDatesQuery) {
+                                                                $nullDatesQuery->whereNull('newer_service.to_date')
+                                                                    ->whereNull('search_service.to_date');
+                                                            });
+                                                    })
+                                                        ->whereColumn('newer_service.id', '>', 'search_service.id');
+                                                });
+                                        });
+                                });
+                        })
                         ->orWhere('clients.whatsapp_number', 'like', "%{$search}%")
                         ->orWhere('clients.processed_by', 'like', "%{$search}%")
                         ->orWhere('clients.application_status', 'like', "%{$search}%");
