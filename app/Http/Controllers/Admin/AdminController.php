@@ -965,6 +965,14 @@ class AdminController extends Controller
         return Inertia::render('Admin/Clients', [
             'clients' => $this->visibleSeafarersQuery()
                 ->select('clients.*')
+                ->addSelect([
+                    'latest_vessel_type' => \Illuminate\Support\Facades\DB::table('client_sea_services')
+                        ->select('type_imo_number')
+                        ->whereColumn('client_sea_services.client_id', 'clients.id')
+                        ->orderByDesc('to_date')
+                        ->orderByDesc('id')
+                        ->limit(1),
+                ])
                 ->leftJoin('ranks', 'clients.current_position', '=', 'ranks.rank_name')
                 ->with(['applicationStatusLogs' => fn ($query) => $query->latest()])
                 ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
@@ -1003,6 +1011,7 @@ class AdminController extends Controller
                     'nationality' => $client->nationality,
                     'position_applied_for' => $client->position_applied_for,
                     'type_of_job' => $client->type_of_job,
+                    'vessel_type' => $client->latest_vessel_type,
                     'whatsapp_number' => $client->whatsapp_number,
                     'processed_by' => $client->processed_by,
                     'application_status' => $client->application_status,

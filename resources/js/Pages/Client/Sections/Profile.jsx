@@ -689,7 +689,8 @@ function totalAttachmentCount(client) {
   return sections.reduce((total, items) => total + attachmentCount(items), 0);
 }
 
-function RepeatableList({ items, editing, columns, onChange, onAdd, onRemove, emptyLabel, errorsPrefix, errors, printableAttachments = false }) {
+function RepeatableList({ items, editing, columns, onChange, onAdd, onRemove, emptyLabel, errorsPrefix, errors, printableAttachments = false, hideAttachments = false }) {
+  const visibleColumns = hideAttachments ? columns.filter((column) => column.key !== 'attachment') : columns;
   if (!editing) {
     if (!items || items.length === 0) {
       return (
@@ -705,7 +706,7 @@ function RepeatableList({ items, editing, columns, onChange, onAdd, onRemove, em
           <table className="w-full min-w-[640px] border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                {columns.map((column) => (
+                {visibleColumns.map((column) => (
                   <th key={column.key} className="px-5 py-3">{column.label}</th>
                 ))}
               </tr>
@@ -713,7 +714,7 @@ function RepeatableList({ items, editing, columns, onChange, onAdd, onRemove, em
             <tbody className="divide-y divide-slate-100">
               {items.map((item, index) => (
                 <tr key={index} className="text-sm">
-                  {columns.map((column) => (
+                  {visibleColumns.map((column) => (
                     <td key={column.key} className="px-5 py-4 text-slate-700">
                       {column.type === 'file' && item[column.key] ? (
                         printableAttachments ? (
@@ -756,7 +757,7 @@ function RepeatableList({ items, editing, columns, onChange, onAdd, onRemove, em
             <Trash2 size={15} />
           </button>
           <div className="grid grid-cols-1 gap-4 pr-10 sm:grid-cols-2">
-            {columns.map((column) => {
+            {visibleColumns.map((column) => {
               const errKey = `${errorsPrefix}.${index}.${column.key}`;
 
               return (
@@ -837,14 +838,15 @@ function RepeatableList({ items, editing, columns, onChange, onAdd, onRemove, em
   );
 }
 
-function TravelDocumentsTable({ items, editing, onChange, errors }) {
-  const columns = [
+function TravelDocumentsTable({ items, editing, onChange, errors, hideAttachments = false }) {
+  const allColumns = [
     { key: 'number', label: 'Number' },
     { key: 'place_of_issue', label: 'Place of issue' },
     { key: 'date_of_issue', label: 'Date of issue', type: 'date' },
     { key: 'date_of_expiry', label: 'Date of expiry', type: 'date' },
     { key: 'attachment', label: 'Attachment', type: 'file' },
   ];
+  const columns = hideAttachments ? allColumns.filter((column) => column.key !== 'attachment') : allColumns;
 
   return (
     <div className="overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
@@ -1189,7 +1191,7 @@ function EmptyTabPanel({ title }) {
   );
 }
 
-export default function Profile({ client, updateRouteName = 'seafarers.update-profile', updateRouteParams = [], methodOverride = null, headerActions = null, onboarding = false }) {
+export default function Profile({ client, updateRouteName = 'seafarers.update-profile', updateRouteParams = [], methodOverride = null, headerActions = null, onboarding = false, hideAttachments = false }) {
   const { certificateOptions = {}, rankOptions = [] } = usePage().props;
   const [editing, setEditing] = useState(onboarding);
   const [activeTab, setActiveTab] = useState('personal');
@@ -1742,13 +1744,14 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
           </div>
         )}
 
-        {!onboarding && activeTab === 'dependents' && (
+        {(onboarding || activeTab === 'dependents') && (
           <>
             {onboarding && <OnboardingSectionLabel number="2" title="Dependents" />}
             <RepeatableList
               items={editing ? data.dependents : (client?.dependents || [])}
               editing={editing}
               columns={dependentColumns}
+              hideAttachments={hideAttachments}
               onChange={updateDependent}
               onAdd={addDependent}
               onRemove={removeDependent}
@@ -1759,7 +1762,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
           </>
         )}
 
-        {!onboarding && activeTab === 'travel_documents' && (
+        {(onboarding || activeTab === 'travel_documents') && (
           <>
             {onboarding && <OnboardingSectionLabel number="3" title="Travel Documents" />}
             <TravelDocumentsTable
@@ -1767,11 +1770,12 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               editing={editing}
               onChange={updateTravelDocument}
               errors={visibleErrors}
+              hideAttachments={hideAttachments}
             />
           </>
         )}
 
-        {!onboarding && activeTab === 'certifications' && (
+        {(onboarding || activeTab === 'certifications') && (
           <>
             {onboarding && <OnboardingSectionLabel number="4" title="Certificate of Competency" />}
             <RepeatableList
@@ -1785,11 +1789,12 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               errorsPrefix="certifications"
               errors={visibleErrors}
               printableAttachments
+              hideAttachments={hideAttachments}
             />
           </>
         )}
 
-        {!onboarding && activeTab === 'proficiency' && (
+        {(onboarding || activeTab === 'proficiency') && (
           <>
             {onboarding && <OnboardingSectionLabel number="5" title="Certificate of Proficiency" />}
             <RepeatableList
@@ -1803,10 +1808,11 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               errorsPrefix="proficiency"
               errors={visibleErrors}
               printableAttachments
+              hideAttachments={hideAttachments}
             />
           </>
         )}
-        {!onboarding && activeTab === 'gmdss_certificates' && (
+        {(onboarding || activeTab === 'gmdss_certificates') && (
           <>
             {onboarding && <OnboardingSectionLabel number="6" title="GMDSS Certificate" />}
             <RepeatableList
@@ -1820,10 +1826,11 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               errorsPrefix="gmdss_certificates"
               errors={visibleErrors}
               printableAttachments
+              hideAttachments={hideAttachments}
             />
           </>
         )}
-        {!onboarding && activeTab === 'vaccinations' && (
+        {(onboarding || activeTab === 'vaccinations') && (
           <>
             {onboarding && <OnboardingSectionLabel number="7" title="Vaccinations" />}
             <RepeatableList
@@ -1837,10 +1844,11 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               errorsPrefix="vaccinations"
               errors={visibleErrors}
               printableAttachments
+              hideAttachments={hideAttachments}
             />
           </>
         )}
-        {!onboarding && activeTab === 'flag_documents' && (
+        {(onboarding || activeTab === 'flag_documents') && (
           <>
             {onboarding && <OnboardingSectionLabel number="8" title="Flag Documents" />}
             <RepeatableList
@@ -1854,10 +1862,11 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               errorsPrefix="flag_documents"
               errors={visibleErrors}
               printableAttachments
+              hideAttachments={hideAttachments}
             />
           </>
         )}
-        {!onboarding && activeTab === 'other_certificates' && (
+        {(onboarding || activeTab === 'other_certificates') && (
           <>
             {onboarding && <OnboardingSectionLabel number="9" title="Other Certificates" />}
             <RepeatableList
@@ -1871,10 +1880,11 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               errorsPrefix="other_certificates"
               errors={visibleErrors}
               printableAttachments
+              hideAttachments={hideAttachments}
             />
           </>
         )}
-        {!onboarding && activeTab === 'additional_stcw_certificates' && (
+        {(onboarding || activeTab === 'additional_stcw_certificates') && (
           <>
             {onboarding && <OnboardingSectionLabel number="10" title="Additional STCW Certificate" />}
             <RepeatableList
@@ -1888,10 +1898,11 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               errorsPrefix="additional_stcw_certificates"
               errors={visibleErrors}
               printableAttachments
+              hideAttachments={hideAttachments}
             />
           </>
         )}
-        {!onboarding && activeTab === 'offshore_training_certificates' && (
+        {(onboarding || activeTab === 'offshore_training_certificates') && (
           <>
             {onboarding && <OnboardingSectionLabel number="11" title="Offshore Training Certificate" />}
             <RepeatableList
@@ -1905,10 +1916,11 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               errorsPrefix="offshore_training_certificates"
               errors={visibleErrors}
               printableAttachments
+              hideAttachments={hideAttachments}
             />
           </>
         )}
-        {!onboarding && activeTab === 'employment_history' && (
+        {(onboarding || activeTab === 'employment_history') && (
           <>
             {onboarding && <OnboardingSectionLabel number="12" title="Employment History" />}
             <RepeatableList
@@ -1922,10 +1934,11 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
               errorsPrefix="employment_history"
               errors={visibleErrors}
               printableAttachments
+              hideAttachments={hideAttachments}
             />
           </>
         )}
-        {!onboarding && activeTab === 'sea_service' && (
+        {(onboarding || activeTab === 'sea_service') && (
           <>
             {onboarding && <OnboardingSectionLabel number="13" title="Sea Service" />}
             <SeaServiceTable
@@ -1939,7 +1952,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
             />
           </>
         )}
-        {!onboarding && activeTab === 'deck_officer_experience' && (
+        {(onboarding || activeTab === 'deck_officer_experience') && (
           <>
             {onboarding && <OnboardingSectionLabel number="14" title="Deck Officer Experience" />}
             <DeckOfficerExperienceTable

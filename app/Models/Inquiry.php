@@ -10,6 +10,7 @@ class Inquiry extends Model
         'NEW' => 'New inquiry awaiting review.',
         'Pending' => 'No offer, no vacancy for the position, incomplete documents, or still onboard.',
         'Floating' => 'Available between assignments.',
+        'Not Available' => 'Currently unavailable for placement.',
         'Failed' => 'Insufficient vessel experience, age, medical concern, unfinished contract due to a problem onboard, long standby, or other reasons that may hinder processing of the application.',
         'To report' => 'Passed the initial screening.',
         'To Report to Office' => 'Ready to report to the office.',

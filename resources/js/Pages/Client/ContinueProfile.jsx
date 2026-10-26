@@ -145,7 +145,7 @@ export default function ContinueProfile({ client }) {
                 </p>
             </div>
 
-            <Profile client={client} onboarding updateRouteName="seafarers.update-profile" />
+            <Profile client={client} onboarding hideAttachments updateRouteName="seafarers.update-profile" />
         </div>
     );
 }

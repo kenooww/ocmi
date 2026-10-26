@@ -430,20 +430,22 @@ export default function Clients({ clients, filters = {} }) {
                     <div className="overflow-hidden">
                         <table className="w-full table-fixed border-collapse">
                             <colgroup>
-                                <col className="w-[19%]" />
-                                <col className="w-[13%]" />
-                                <col className="w-[12%]" />
+                                <col className="w-[17%]" />
                                 <col className="w-[11%]" />
                                 <col className="w-[9%]" />
+                                <col className="w-[10%]" />
+                                <col className="w-[10%]" />
+                                <col className="w-[9%]" />
                                 <col className="w-[11%]" />
-                                <col className="w-[13%]" />
                                 <col className="w-[12%]" />
+                                <col className="w-[11%]" />
                             </colgroup>
                             <thead>
                                 <tr className="border-b border-slate-200 bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                                     <th className="px-2 py-3 leading-tight">Rank</th>
                                     <th className="px-2 py-3 leading-tight">Applied Position</th>
                                     <th className="px-2 py-3 leading-tight">Work Experience</th>
+                                    <th className="px-2 py-3 leading-tight">Vessel Type</th>
                                     <th className="px-2 py-3 leading-tight">WhatsApp</th>
                                     <th className="px-2 py-3 leading-tight">Nationality</th>
                                     <th className="px-2 py-3 leading-tight">Processed By</th>
@@ -482,6 +484,9 @@ export default function Clients({ clients, filters = {} }) {
                                             </td>
                                             <td className="break-words px-2 py-4 leading-snug text-slate-600">
                                                 {client.type_of_job || 'Not set'}
+                                            </td>
+                                            <td className="break-words px-2 py-4 leading-snug text-slate-600">
+                                                {client.vessel_type || 'Not set'}
                                             </td>
                                             <td className="break-words px-2 py-4 leading-snug text-slate-600">
                                                 {client.whatsapp_number || 'Not set'}
