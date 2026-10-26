@@ -572,7 +572,7 @@ class ClientAuthController extends Controller
                 'image',
             ],
             'resume_attachment' => [
-                $client->resume_attachment ? 'nullable' : 'required',
+                'nullable',
                 'file',
                 'mimes:pdf,doc,docx,jpg,jpeg,png',
                 'max:5120',

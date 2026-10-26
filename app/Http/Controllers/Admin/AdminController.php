@@ -85,7 +85,7 @@ class AdminController extends Controller
         'FLOATING',
         'NOT AVAILABLE',
         'TO REPORT',
-        'TO REPORT TO OFFICE',
+        'DONE REPORTING',
         'FOR REEVAL/FOR APPROVAL',
         'FAILED',
         'PROPOSED',
@@ -1191,6 +1191,14 @@ class AdminController extends Controller
 
         return $this->visibleSeafarersQuery()
             ->select('clients.*')
+            ->addSelect([
+                'latest_vessel_type' => \Illuminate\Support\Facades\DB::table('client_sea_services')
+                    ->select('type_imo_number')
+                    ->whereColumn('client_sea_services.client_id', 'clients.id')
+                    ->orderByDesc('to_date')
+                    ->orderByDesc('id')
+                    ->limit(1),
+            ])
             ->leftJoin('ranks', 'clients.current_position', '=', 'ranks.rank_name')
             ->with(['applicationStatusLogs' => fn ($query) => $query->latest()])
             ->when($rank, fn ($query) => $query->where('clients.current_position', $rank))
@@ -1216,6 +1224,7 @@ class AdminController extends Controller
             'seafarer' => $this->clientDisplayName($client),
             'rank' => $client->current_position,
             'applied_for' => $client->position_applied_for,
+            'vessel_type' => $client->latest_vessel_type,
             'contact_number' => $client->personal_mobile_no ?: $client->whatsapp_number ?: $client->phone,
             'processed_by' => $latestLog->processed_by ?? $client->processed_by,
             'application_status' => $client->application_status,

@@ -61,7 +61,6 @@ class Client extends Authenticatable
         'pagibig_no' => 'Pag-IBIG number',
         'philhealth_no' => 'PhilHealth number',
         'avatar' => 'Profile photo',
-        'resume_attachment' => 'Resume attachment',
         'privacy_act_accepted' => 'Privacy act consent',
     ];
 

@@ -13,7 +13,7 @@ class Inquiry extends Model
         'Not Available' => 'Currently unavailable for placement.',
         'Failed' => 'Insufficient vessel experience, age, medical concern, unfinished contract due to a problem onboard, long standby, or other reasons that may hinder processing of the application.',
         'To report' => 'Passed the initial screening.',
-        'To Report to Office' => 'Ready to report to the office.',
+        'Done Reporting' => 'Ready to report to the office.',
         'For application processing' => 'Reported to the office.',
     ];
 

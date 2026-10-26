@@ -167,19 +167,21 @@ export default function ApplicantStatusReport({ rows = [], printRows = [], filte
                 <section className="overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
                     <table className="w-full table-fixed border-collapse text-xs">
                         <colgroup>
-                            <col className="w-[18%]" />
-                            <col className="w-[13%]" />
-                            <col className="w-[14%]" />
-                            <col className="w-[13%]" />
-                            <col className="w-[12%]" />
-                            <col className="w-[14%]" />
                             <col className="w-[16%]" />
+                            <col className="w-[11%]" />
+                            <col className="w-[12%]" />
+                            <col className="w-[10%]" />
+                            <col className="w-[11%]" />
+                            <col className="w-[10%]" />
+                            <col className="w-[13%]" />
+                            <col className="w-[17%]" />
                         </colgroup>
                         <thead>
                             <tr className="border-b border-slate-200 bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                                 <th className="break-words px-2 py-3">Seafarer</th>
                                 <th className="break-words px-2 py-3">Ranks</th>
                                 <th className="break-words px-2 py-3">Applied For</th>
+                                <th className="break-words px-2 py-3">Vessel Type</th>
                                 <th className="break-words px-2 py-3">Contact Number</th>
                                 <th className="break-words px-2 py-3">Processed By</th>
                                 <th className="break-words px-2 py-3">Application Status (Latest)</th>
@@ -189,7 +191,7 @@ export default function ApplicantStatusReport({ rows = [], printRows = [], filte
                         <tbody className="divide-y divide-slate-100">
                             {reportRows.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="px-2 py-12 text-center text-sm text-slate-500">
+                                    <td colSpan="8" className="px-2 py-12 text-center text-sm text-slate-500">
                                         {hasFiltered ? 'No applicant status report records found.' : 'No data to display. Click Filter to load report records.'}
                                     </td>
                                 </tr>
@@ -198,6 +200,7 @@ export default function ApplicantStatusReport({ rows = [], printRows = [], filte
                                     <td className="break-words px-2 py-3 font-medium text-slate-900">{row.seafarer || 'Not set'}</td>
                                     <td className="break-words px-2 py-3 text-slate-700">{row.rank || 'Not set'}</td>
                                     <td className="break-words px-2 py-3 text-slate-700">{row.applied_for || 'Not set'}</td>
+                                    <td className="break-words px-2 py-3 text-slate-700">{row.vessel_type || 'Not set'}</td>
                                     <td className="break-words px-2 py-3 text-slate-700">{row.contact_number || 'Not set'}</td>
                                     <td className="break-words px-2 py-3 text-slate-700">{row.processed_by || 'Not set'}</td>
                                     <td className="break-words px-2 py-3 text-slate-700">{row.application_status || 'Not set'}</td>
@@ -219,6 +222,7 @@ export default function ApplicantStatusReport({ rows = [], printRows = [], filte
                             <th>SEAFARER</th>
                             <th>RANKS</th>
                             <th>APPLIED FOR</th>
+                            <th>VESSEL TYPE</th>
                             <th>CONTACT NUMBER</th>
                             <th>PROCESSED BY</th>
                             <th>APPLICATION STATUS (LATEST)</th>
@@ -231,6 +235,7 @@ export default function ApplicantStatusReport({ rows = [], printRows = [], filte
                                 <td>{row.seafarer}</td>
                                 <td>{row.rank}</td>
                                 <td>{row.applied_for}</td>
+                                <td>{row.vessel_type || 'Not set'}</td>
                                 <td>{row.contact_number}</td>
                                 <td>{row.processed_by}</td>
                                 <td>{row.application_status}</td>

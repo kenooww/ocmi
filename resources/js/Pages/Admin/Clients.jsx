@@ -112,7 +112,7 @@ const APPLICATION_STATUS_OPTIONS = [
     'FLOATING',
     'NOT AVAILABLE',
     'TO REPORT',
-    'TO REPORT TO OFFICE',
+    'DONE REPORTING',
     'FOR REEVAL/FOR APPROVAL',
     'FAILED',
     'PROPOSED',
@@ -144,7 +144,7 @@ function applicationStatusClass(status) {
         return 'bg-slate-100 text-slate-700 ring-1 ring-slate-200';
     }
 
-    if (normalized === 'TO REPORT TO OFFICE') {
+    if (normalized === 'DONE REPORTING') {
         return 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200';
     }
 

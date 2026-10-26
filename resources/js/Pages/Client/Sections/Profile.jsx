@@ -1304,10 +1304,6 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
       addMissingField('Profile photo', 'avatar');
     }
 
-    if (!client?.resume_attachment && !(data.resume_attachment instanceof File)) {
-      addMissingField('Resume attachment', 'resume_attachment');
-    }
-
     if (!data.privacy_act_accepted) {
       addMissingField('Data Privacy Act consent', 'privacy_act_accepted', 'Please accept the Data Privacy Act consent.');
     }
@@ -1665,7 +1661,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
                       {data.avatar instanceof File ? `Selected: ${data.avatar.name}` : client?.avatar ? 'Current photo uploaded' : 'No photo selected'}
                     </p>
                   </div>
-                  <div className="max-w-56">
+                  {!onboarding && <div className="max-w-56">
                     <label className={`inline-flex cursor-pointer items-center gap-2 rounded border px-4 py-2 text-sm font-medium transition hover:bg-slate-50 ${
                       visibleErrors.resume_attachment ? 'border-red-300 text-red-700' : 'border-slate-300 text-slate-700'
                     }`}>
@@ -1684,7 +1680,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
                     <p className="mt-1 truncate text-xs text-slate-500">
                       {data.resume_attachment instanceof File ? `Selected: ${data.resume_attachment.name}` : client?.resume_attachment ? `Current: ${client.resume_attachment.split('/').pop()}` : 'No resume selected'}
                     </p>
-                  </div>
+                  </div>}
                   {!onboarding && (
                     <>
                       <button
