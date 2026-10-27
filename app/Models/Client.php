@@ -100,6 +100,20 @@ class Client extends Authenticatable
             ->values()
             ->all();
 
+        if ($this->type_of_job === self::SEABASED_WORK_EXPERIENCE) {
+            $this->loadMissing('seaServices');
+
+            $hasIncompleteSeaService = $this->seaServices->isEmpty()
+                || $this->seaServices->contains(function ($seaService) {
+                    return collect(self::SEA_SERVICE_REQUIRED_FIELDS)
+                        ->contains(fn ($field) => blank($seaService->{$field}));
+                });
+
+            if ($hasIncompleteSeaService) {
+                $missingFields[] = 'Sea service';
+            }
+        }
+
         return $missingFields;
     }
 

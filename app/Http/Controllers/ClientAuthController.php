@@ -347,7 +347,8 @@ class ClientAuthController extends Controller
             'sea_service' => $this->applySeaServiceDurations((array) $request->input('sea_service', [])),
         ]);
 
-        $seaServicePresenceRule = 'nullable';
+        $seaServiceIsRequired = $request->input('type_of_job') === self::SEABASED_WORK_EXPERIENCE;
+        $seaServicePresenceRule = $seaServiceIsRequired ? 'required' : 'nullable';
 
         $data = $request->validate([
             // Identity
@@ -523,7 +524,7 @@ class ClientAuthController extends Controller
             'employment_history.*.country' => 'nullable|string|max:255',
             'employment_history.*.attachment' => 'nullable',
 
-            'sea_service' => [$seaServicePresenceRule, 'array'],
+            'sea_service' => [$seaServicePresenceRule, 'array', $seaServiceIsRequired ? 'min:1' : 'nullable'],
             'sea_service.*.id' => ['nullable', 'integer', Rule::exists('client_sea_services', 'id')->where('client_id', $client->id)],
             'sea_service.*.from_date' => [$seaServicePresenceRule, 'date'],
             'sea_service.*.to_date' => [$seaServicePresenceRule, 'date'],

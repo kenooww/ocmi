@@ -1325,7 +1325,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
   }
 
   function validateSeaServiceRequiredFields() {
-    if (onboarding || !requiresSeaService) {
+    if (!requiresSeaService) {
       return true;
     }
 

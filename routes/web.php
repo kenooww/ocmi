@@ -29,6 +29,9 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('/inquiries', [\App\Http\Controllers\Admin\InquiryController::class, 'index'])->name('inquiries.index');
     Route::post('/inquiries', [\App\Http\Controllers\Admin\InquiryController::class, 'store'])->name('inquiries.store');
     Route::patch('/inquiries/{inquiry}/status', [\App\Http\Controllers\Admin\InquiryController::class, 'updateStatus'])->name('inquiries.status.update');
+    Route::get('/documents', [AdminController::class, 'documentsIndex'])->name('documents.index');
+    Route::get('/documents/{client}/{folder}/{document}/view', [AdminController::class, 'viewSeafarerDocument'])->name('documents.view');
+    Route::get('/documents/{client}/{folder}/{document}/download', [AdminController::class, 'downloadSeafarerDocument'])->name('documents.download');
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard.index');
     Route::get('/applicant-monitoring', [AdminController::class, 'applicantMonitoring'])->name('applicant-monitoring.index');
     Route::get('/applicant-monitoring/create', [AdminController::class, 'createApplicantMonitoring'])->name('applicant-monitoring.create');

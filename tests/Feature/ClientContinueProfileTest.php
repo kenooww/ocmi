@@ -88,7 +88,7 @@ class ClientContinueProfileTest extends TestCase
         $this->assertSame('2026-11-10', $client->fresh()->availability_date->format('Y-m-d'));
     }
 
-    public function test_seabased_seafarer_can_continue_without_hidden_sea_service_form(): void
+    public function test_seabased_seafarer_must_provide_sea_service_to_continue(): void
     {
         $client = $this->createClient();
 
@@ -98,11 +98,11 @@ class ClientContinueProfileTest extends TestCase
                 'avatar' => UploadedFile::fake()->image('avatar.jpg'),
                 'resume_attachment' => UploadedFile::fake()->create('resume.pdf', 100, 'application/pdf'),
             ]))
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('seafarers.dashboard', ['section' => 'dashboard']));
+            ->assertSessionHasErrors('sea_service');
 
-        $this->assertTrue($client->fresh()->hasCompletedContinueProfile());
         $this->assertDatabaseCount('client_sea_services', 0);
+        $client->type_of_job = 'Seabased/Seaman';
+        $this->assertContains('Sea service', $client->missingContinueProfileFields());
     }
 
     public function test_admin_can_save_deployment_status_and_availability_date(): void

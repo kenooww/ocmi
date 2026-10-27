@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
-import { Anchor, Award, Bell, ChevronDown, ClipboardList, FileText, LayoutDashboard, LogOut, Mail, Menu, Settings, Ship, UserRound, X } from 'lucide-react';
+import { Anchor, Award, Bell, ChevronDown, ClipboardList, FileText, FolderOpen, LayoutDashboard, LogOut, Mail, Menu, Settings, Ship, UserRound, X } from 'lucide-react';
 
 const PALETTE = {
     navyDeep: '#0A2436',
@@ -49,6 +49,7 @@ export default function AdminTabs({ activeTab, title, children }) {
         },
         { key: 'users', label: 'Users', href: route('admin.users.index'), icon: UserRound, adminOnly: true },
         { key: 'clients', label: 'Seafarers', href: route('admin.seafarers.index'), icon: Ship },
+        { key: 'documents', label: 'Documents', href: route('admin.documents.index'), icon: FolderOpen },
         { key: 'inquiries', label: 'Inquiries', href: route('admin.inquiries.index'), icon: Mail },
         { key: 'ranks', label: 'Ranks', href: route('admin.ranks.index'), icon: Award },
         { key: 'principals', label: 'Principal', href: route('admin.principals.index'), icon: Anchor },

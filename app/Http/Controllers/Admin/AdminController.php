@@ -2029,6 +2029,64 @@ class AdminController extends Controller
         return back()->with('success', 'Client deleted successfully.');
     }
 
+    public function documentsIndex(Request $request, ClientAttachmentArchiveService $archives)
+    {
+        $data = $request->validate(['search' => ['nullable', 'string', 'max:255']]);
+        $search = trim((string) ($data['search'] ?? ''));
+        $clients = Client::query()
+            ->with([
+                'dependents', 'travelDocuments', 'certificateCompetencies', 'certificateProficiencies',
+                'gmdssCertificates', 'vaccinations', 'flagDocuments', 'additionalStcwCertificates',
+                'offshoreTrainingCertificates', 'otherCertificates', 'employmentHistories',
+            ])
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('first_name', 'like', '%'.$search.'%')
+                    ->orWhere('middle_name', 'like', '%'.$search.'%')
+                    ->orWhere('last_name', 'like', '%'.$search.'%')
+                    ->orWhere('email', 'like', '%'.$search.'%');
+            }))
+            ->orderBy('name')
+            ->paginate(20)
+            ->withQueryString()
+            ->through(fn (Client $client) => [
+                'id' => $client->id,
+                'name' => $this->clientDisplayName($client),
+                'email' => $client->email_address ?: $client->email,
+                'rank' => $client->current_position,
+                'documents' => collect($archives->documentsFor($client))
+                    ->map(function (array $document) use ($client) {
+                        $params = [$client->id, $document['folder'], $document['id']];
+
+                        return $document + [
+                            'view_url' => $document['previewable'] ? route('admin.documents.view', $params) : null,
+                            'download_url' => route('admin.documents.download', $params),
+                        ];
+                    })
+                    ->all(),
+            ]);
+
+        return Inertia::render('Admin/Documents', [
+            'clients' => $clients,
+            'filters' => ['search' => $search],
+        ]);
+    }
+
+    public function viewSeafarerDocument(Client $client, string $folder, string $document, ClientAttachmentArchiveService $archives)
+    {
+        $file = $archives->fileFor($client, $folder, $document);
+        abort_unless($file['previewable'], 404);
+
+        return response()->file($file['path'], ['X-Content-Type-Options' => 'nosniff']);
+    }
+
+    public function downloadSeafarerDocument(Client $client, string $folder, string $document, ClientAttachmentArchiveService $archives)
+    {
+        $file = $archives->fileFor($client, $folder, $document);
+
+        return response()->download($file['path'], $file['name']);
+    }
+
     public function viewClientResume(Client $client)
     {
         return $this->resumeViewerResponse(

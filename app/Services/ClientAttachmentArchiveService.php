@@ -71,6 +71,43 @@ class ClientAttachmentArchiveService
         ],
     ];
 
+    public function documentsFor(Client $client): array
+    {
+        $documents = [];
+
+        foreach (self::FOLDERS as $folder => $config) {
+            if (isset($config['field'])) {
+                $this->appendDocument($documents, $client, $folder, $config, 'resume', 'Resume');
+                continue;
+            }
+
+            $client->loadMissing($config['relation']);
+            foreach ($client->{$config['relation']} as $record) {
+                $recordLabel = $record->name ?: ($record->company ?: ($record->document_type ? Str::headline($record->document_type) : $config['title']));
+                $this->appendDocument($documents, $record, $folder, $config, (string) $record->id, $recordLabel);
+            }
+        }
+
+        return $documents;
+    }
+
+    public function fileFor(Client $client, string $folder, string $document): array
+    {
+        abort_unless(isset(self::FOLDERS[$folder]), 404);
+        $config = self::FOLDERS[$folder];
+
+        if (isset($config['field'])) {
+            abort_unless($document === 'resume', 404);
+            $storedPath = $client->{$config['field']} ?? null;
+        } else {
+            abort_unless(ctype_digit($document), 404);
+            $record = $client->{$config['relation']}()->findOrFail((int) $document);
+            $storedPath = $record->attachment ?? null;
+        }
+
+        return $this->storedFile($storedPath, $config);
+    }
+
     public function download(Client $client, string $folder)
     {
         abort_unless($folder === 'all' || isset(self::FOLDERS[$folder]), 404);
@@ -105,6 +142,43 @@ class ClientAttachmentArchiveService
             })
             ->values()
             ->all();
+    }
+
+    private function appendDocument(array &$documents, $record, string $folder, array $config, string $id, string $recordLabel): void
+    {
+        $storedPath = isset($config['field']) ? $record->{$config['field']} : ($record->attachment ?? null);
+        $file = $this->storedFile($storedPath, $config, false);
+
+        if (! $file) {
+            return;
+        }
+
+        $documents[] = [
+            'id' => $id,
+            'folder' => $folder,
+            'category' => $config['title'],
+            'record_label' => $recordLabel,
+            'name' => $file['name'],
+            'extension' => $file['extension'],
+            'previewable' => $file['previewable'],
+        ];
+    }
+
+    private function storedFile(?string $storedPath, array $config, bool $abortWhenMissing = true): ?array
+    {
+        $file = $this->publicFile($storedPath, $config);
+
+        if (! $file) {
+            abort_if($abortWhenMissing, 404);
+            return null;
+        }
+
+        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+        return $file + [
+            'extension' => $extension,
+            'previewable' => in_array($extension, ['pdf', 'jpg', 'jpeg', 'png'], true),
+        ];
     }
 
     private function filesFor(Client $client, array $config): array

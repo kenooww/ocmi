@@ -1081,8 +1081,9 @@ function FleetApplicationForm({ client, title, heading = title, showDocumentHead
                 {showDocumentHeader && <Header client={client} page={`${title} Page 1 of 2`} />}
                 {isFlexFleet ? <FlexFleetHeader /> : <h1 className="mb-3 text-center text-base font-bold">{heading}</h1>}
                 <h2 className="mb-2 text-center text-sm font-bold">PERSONAL PARTICULAR</h2>
-                <CompanyFieldGrid
-                    fields={[
+                <div className="grid grid-cols-[minmax(0,1fr)_108px] items-stretch">
+                    <CompanyFieldGrid
+                        fields={[
                         ['Full Name', fullName],
                         ['Rank', client?.position_applied_for || client?.current_position],
                         ['Place & DOB', [client?.place_of_birth, client?.date_of_birth].filter(Boolean).join(' / ')],
@@ -1110,8 +1111,12 @@ function FleetApplicationForm({ client, title, heading = title, showDocumentHead
                         ['Height', client?.height_cm],
                         ['Blood', client?.blood],
                         ['Weight', client?.body_weight_bmi],
-                    ]}
-                />
+                        ]}
+                    />
+                    <div className="flex min-h-[280px] items-center justify-center border-b border-r border-t border-black p-2 text-center text-xs">
+                        {client?.avatar ? <img src={`/storage/${client.avatar}`} alt={fullName} className="max-h-44 w-full object-contain" /> : 'Photo'}
+                    </div>
+                </div>
                 <SimpleTable
                     title="Document and Certificate Details"
                     columns={[
@@ -1410,7 +1415,7 @@ export default function PrintPreview({ client, printForm = 'complete' }) {
                 {showSeaService && (
                 <section className="print-page print-page-landscape min-h-[790px] w-[1120px] max-w-full bg-white p-8 shadow-sm print:w-full">
                     <Header client={client} page={isComplete ? 'Page 3 of 4' : pageLabel(1)} />
-                    <SeaServiceTable rows={client?.sea_service || []} />
+                    <SeaServiceTable rows={sortRowsBySignOffDate(client?.sea_service || [])} />
                     <p className="mt-4 text-xs font-bold">Note: Type of Engines &amp; BHP: Mandatory for Engineers</p>
                 </section>
                 )}
