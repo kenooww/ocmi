@@ -175,7 +175,15 @@ class AdminController extends Controller
                         ->orWhereHas('items.client', fn ($clientQuery) => $clientQuery
                             ->where('name', 'like', "%{$search}%")
                             ->orWhere('first_name', 'like', "%{$search}%")
-                            ->orWhere('last_name', 'like', "%{$search}%"));
+                            ->orWhere('last_name', 'like', "%{$search}%"))
+                        ->orWhere('clients.processed_by', 'like', "%{$search}%")
+                        ->orWhere('clients.application_status', 'like', "%{$search}%")
+                        ->orWhereExists(function ($logQuery) use ($search) {
+                            $logQuery->selectRaw('1')
+                                ->from('application_status_logs as search_status_log')
+                                ->whereColumn('search_status_log.client_id', 'clients.id')
+                                ->where('search_status_log.remarks', 'like', "%{$search}%");
+                        });
 
                     if ($referenceId !== null) {
                         $query->orWhere('id', $referenceId);
@@ -1015,7 +1023,13 @@ class AdminController extends Controller
                         })
                         ->orWhere('clients.whatsapp_number', 'like', "%{$search}%")
                         ->orWhere('clients.processed_by', 'like', "%{$search}%")
-                        ->orWhere('clients.application_status', 'like', "%{$search}%");
+                        ->orWhere('clients.application_status', 'like', "%{$search}%")
+                        ->orWhereExists(function ($logQuery) use ($search) {
+                            $logQuery->selectRaw('1')
+                                ->from('application_status_logs as search_status_log')
+                                ->whereColumn('search_status_log.client_id', 'clients.id')
+                                ->where('search_status_log.remarks', 'like', "%{$search}%");
+                        });
                 }))
                 ->when($hasRankPriorityLevel, fn ($query) => $query
                     ->orderByRaw('ranks.priority_level IS NULL')
@@ -1043,6 +1057,7 @@ class AdminController extends Controller
                     'whatsapp_number' => $client->whatsapp_number,
                     'processed_by' => $client->processed_by,
                     'application_status' => $client->application_status,
+                    'latest_application_notes' => $client->applicationStatusLogs->first()?->remarks,
                     'application_status_logs' => $client->applicationStatusLogs
                         ->map(fn ($log) => [
                             'id' => $log->id,
@@ -2034,6 +2049,7 @@ class AdminController extends Controller
         $data = $request->validate(['search' => ['nullable', 'string', 'max:255']]);
         $search = trim((string) ($data['search'] ?? ''));
         $clients = Client::query()
+            ->where('privacy_act_accepted', true)
             ->with([
                 'dependents', 'travelDocuments', 'certificateCompetencies', 'certificateProficiencies',
                 'gmdssCertificates', 'vaccinations', 'flagDocuments', 'additionalStcwCertificates',

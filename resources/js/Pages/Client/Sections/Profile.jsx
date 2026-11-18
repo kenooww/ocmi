@@ -1191,6 +1191,18 @@ function EmptyTabPanel({ title }) {
   );
 }
 
+function sortSeaServicesLatestFirst(rows = []) {
+  return [...(rows || [])].sort((a, b) => {
+    const signOffDifference = (Date.parse(b?.to_date || '') || 0) - (Date.parse(a?.to_date || '') || 0);
+    if (signOffDifference !== 0) return signOffDifference;
+
+    const signOnDifference = (Date.parse(b?.from_date || '') || 0) - (Date.parse(a?.from_date || '') || 0);
+    if (signOnDifference !== 0) return signOnDifference;
+
+    return Number(b?.id || 0) - Number(a?.id || 0);
+  });
+}
+
 export default function Profile({ client, updateRouteName = 'seafarers.update-profile', updateRouteParams = [], methodOverride = null, headerActions = null, onboarding = false, hideAttachments = false }) {
   const { certificateOptions = {}, rankOptions = [] } = usePage().props;
   const [editing, setEditing] = useState(onboarding);
@@ -1213,7 +1225,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
   initialValues.additional_stcw_certificates = client?.additional_stcw_certificates?.length ? client.additional_stcw_certificates : [];
   initialValues.offshore_training_certificates = client?.offshore_training_certificates?.length ? client.offshore_training_certificates : [];
   initialValues.employment_history = client?.employment_history?.length ? client.employment_history : [];
-  initialValues.sea_service = client?.sea_service?.length ? client.sea_service : [];
+  initialValues.sea_service = sortSeaServicesLatestFirst(client?.sea_service?.length ? client.sea_service : []);
   initialValues.deck_officer_experience = client?.deck_officer_experience?.length ? client.deck_officer_experience : [];
   initialValues.privacy_act_accepted = Boolean(client?.privacy_act_accepted);
 
@@ -1475,7 +1487,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
     }
 
     next[index] = row;
-    setData('sea_service', next);
+    setData('sea_service', key === 'from_date' || key === 'to_date' ? sortSeaServicesLatestFirst(next) : next);
   }
 
   function addRow(section, emptyRow) {
@@ -1938,7 +1950,7 @@ export default function Profile({ client, updateRouteName = 'seafarers.update-pr
           <>
             {onboarding && <OnboardingSectionLabel number="13" title="Sea Service" />}
             <SeaServiceTable
-              items={editing ? data.sea_service : (client?.sea_service || [])}
+              items={editing ? data.sea_service : sortSeaServicesLatestFirst(client?.sea_service || [])}
               editing={editing}
               onChange={updateSeaService}
               onAdd={() => addRow('sea_service', EMPTY_SEA_SERVICE)}

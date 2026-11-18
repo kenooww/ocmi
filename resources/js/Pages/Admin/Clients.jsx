@@ -375,7 +375,7 @@ export default function Clients({ clients, filters = {} }) {
                     background: linear-gradient(180deg, #64748b, #475569);
                 }
             `}</style>
-            <div className="mx-auto max-w-6xl">
+            <div className="w-full">
                 <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <p className="text-sm font-medium uppercase tracking-wider text-[#8A642C]">Admin</p>
@@ -395,7 +395,7 @@ export default function Clients({ clients, filters = {} }) {
                     <div className="flex flex-col gap-3 border-b border-slate-200 p-5 lg:flex-row lg:items-center lg:justify-between">
                         <div>
                             <h3 className="text-lg font-semibold text-slate-900">Seafarer Listing</h3>
-                            <p className="mt-1 text-sm text-slate-500">Search by rank, applied position, work experience, WhatsApp, processed by, or status.</p>
+                            <p className="mt-1 text-sm text-slate-500">Search by rank, applied position, work experience, WhatsApp, processed by, status, or notes.</p>
                         </div>
                         <form onSubmit={handleSearch} className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
                             <div className="relative w-full sm:w-80">
@@ -430,15 +430,16 @@ export default function Clients({ clients, filters = {} }) {
                     <div className="overflow-hidden">
                         <table className="w-full table-fixed border-collapse">
                             <colgroup>
-                                <col className="w-[17%]" />
-                                <col className="w-[11%]" />
+                                <col className="w-[15%]" />
+                                <col className="w-[10%]" />
+                                <col className="w-[8%]" />
                                 <col className="w-[9%]" />
+                                <col className="w-[9%]" />
+                                <col className="w-[8%]" />
+                                <col className="w-[10%]" />
+                                <col className="w-[11%]" />
                                 <col className="w-[10%]" />
                                 <col className="w-[10%]" />
-                                <col className="w-[9%]" />
-                                <col className="w-[11%]" />
-                                <col className="w-[12%]" />
-                                <col className="w-[11%]" />
                             </colgroup>
                             <thead>
                                 <tr className="border-b border-slate-200 bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
@@ -450,6 +451,7 @@ export default function Clients({ clients, filters = {} }) {
                                     <th className="px-2 py-3 leading-tight">Nationality</th>
                                     <th className="px-2 py-3 leading-tight">Processed By</th>
                                     <th className="px-2 py-3 leading-tight">Application Status</th>
+                                    <th className="px-2 py-3 leading-tight">Notes</th>
                                     <th className="px-2 py-3 text-right leading-tight">Actions</th>
                                 </tr>
                             </thead>
@@ -502,6 +504,9 @@ export default function Clients({ clients, filters = {} }) {
                                                     <span className="break-words whitespace-normal">{client.application_status || 'Not set'}</span>
                                                 </span>
                                             </td>
+                                            <td className="break-words px-2 py-4 leading-snug text-slate-600">
+                                                {client.latest_application_notes || 'No notes'}
+                                            </td>
                                             <td className="px-2 py-4">
                                                 <div className="flex flex-nowrap justify-end gap-1">
                                                     <Link
@@ -543,7 +548,7 @@ export default function Clients({ clients, filters = {} }) {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="8" className="px-5 py-12 text-center text-sm text-slate-500">
+                                        <td colSpan="10" className="px-5 py-12 text-center text-sm text-slate-500">
                                             No seafarers found.
                                         </td>
                                     </tr>

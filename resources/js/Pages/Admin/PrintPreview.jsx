@@ -157,6 +157,7 @@ function SeaServiceTable({ rows, preserveOrder = false }) {
     const columns = [
         ['vessel_name', 'Vessel Name'],
         ['ship_owner_manager_contact', 'Company (Owners)'],
+        ['end_client', 'End Client'],
         ['position', 'Rank'],
         ['type_imo_number', 'Type of Vessel'],
         ['propulsion_type', 'Propulsion type AZ, CPP'],
@@ -176,7 +177,7 @@ function SeaServiceTable({ rows, preserveOrder = false }) {
                 <table className="print-wide-table w-full min-w-[1700px] border-collapse text-[10px]">
                     <thead>
                         <tr>
-                            <th colSpan={14} className="border border-black px-1 py-1 text-center font-normal">
+                            <th colSpan={15} className="border border-black px-1 py-1 text-center font-normal">
                                 <div>Record of Sea Service</div>
                                 <div className="italic">(Recent Vessel/MOU First)</div>
                             </th>

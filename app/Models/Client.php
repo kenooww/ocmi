@@ -179,7 +179,10 @@ class Client extends Authenticatable
 
     public function seaServices(): HasMany
     {
-        return $this->hasMany(SeaService::class);
+        return $this->hasMany(SeaService::class)
+            ->orderByDesc('to_date')
+            ->orderByDesc('from_date')
+            ->orderByDesc('id');
     }
 
     public function deckOfficerExperiences(): HasMany
