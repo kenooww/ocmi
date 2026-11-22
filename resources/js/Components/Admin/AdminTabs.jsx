@@ -50,6 +50,7 @@ export default function AdminTabs({ activeTab, title, children }) {
         { key: 'users', label: 'Users', href: route('admin.users.index'), icon: UserRound, adminOnly: true },
         { key: 'clients', label: 'Seafarers', href: route('admin.seafarers.index'), icon: Ship },
         { key: 'documents', label: 'Documents', href: route('admin.documents.index'), icon: FolderOpen },
+        { key: 'contracts', label: 'Contract', href: route('admin.contracts.index'), icon: FileText },
         { key: 'inquiries', label: 'Inquiries', href: route('admin.inquiries.index'), icon: Mail },
         { key: 'ranks', label: 'Ranks', href: route('admin.ranks.index'), icon: Award },
         { key: 'principals', label: 'Principal', href: route('admin.principals.index'), icon: Anchor },

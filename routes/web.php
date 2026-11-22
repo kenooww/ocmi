@@ -87,6 +87,13 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('/seafarers/{client}', [AdminController::class, 'showClient'])->name('seafarers.show');
     Route::put('/seafarers/{client}', [AdminController::class, 'updateClient'])->name('seafarers.update');
     Route::delete('/seafarers/{client}', [AdminController::class, 'deleteClient'])->name('seafarers.destroy');
+    Route::get('/contracts', [\App\Http\Controllers\Admin\SeafarerContractController::class, 'index'])->name('contracts.index');
+    Route::get('/contracts/create', [\App\Http\Controllers\Admin\SeafarerContractController::class, 'create'])->name('contracts.create');
+    Route::post('/contracts', [\App\Http\Controllers\Admin\SeafarerContractController::class, 'store'])->name('contracts.store');
+    Route::get('/contracts/{contract}/edit', [\App\Http\Controllers\Admin\SeafarerContractController::class, 'edit'])->name('contracts.edit');
+    Route::put('/contracts/{contract}', [\App\Http\Controllers\Admin\SeafarerContractController::class, 'update'])->name('contracts.update');
+    Route::delete('/contracts/{contract}', [\App\Http\Controllers\Admin\SeafarerContractController::class, 'destroy'])->name('contracts.destroy');
+    Route::get('/contracts/{contract}/print', [\App\Http\Controllers\Admin\SeafarerContractController::class, 'print'])->name('contracts.print');
 });
 Route::post('/logout', [AdminController::class, 'logout'])->name('logout');
 
