@@ -87,6 +87,25 @@ function sortRowsBySignOffDate(rows = []) {
     });
 }
 
+function sortRowsBySignOnDate(rows = []) {
+    return [...(rows || [])].sort((a, b) => {
+        const aTime = Date.parse(a?.from_date || '') || 0;
+        const bTime = Date.parse(b?.from_date || '') || 0;
+
+        if (aTime !== bTime) {
+            return bTime - aTime;
+        }
+
+        const aEndTime = Date.parse(a?.to_date || '') || 0;
+        const bEndTime = Date.parse(b?.to_date || '') || 0;
+        if (aEndTime !== bEndTime) {
+            return bEndTime - aEndTime;
+        }
+
+        return Number(b?.id || 0) - Number(a?.id || 0);
+    });
+}
+
 function Header({ client, page }) {
     const { companySettings } = usePage().props;
     const company = companySettings || {};
@@ -1040,7 +1059,7 @@ function ZmiApplicationForm({ client, cvOnly = false, showCvPage = false }) {
 
             <section className={cvOnly ? 'hidden' : 'zmi-page zmi-page-landscape print-page print-page-landscape relative min-h-[790px] w-[1120px] max-w-full bg-white p-8 pb-20 shadow-sm print:w-full'}>
                 <ZmiHeader page="3 of 4" showTitle />
-                <SeaServiceTable rows={seaServiceRows} preserveOrder />
+                <SeaServiceTable rows={sortRowsBySignOffDate(client?.sea_service || [])} preserveOrder />
                 <ZmiFooter />
             </section>
 
@@ -1416,7 +1435,7 @@ export default function PrintPreview({ client, printForm = 'complete' }) {
                 {showSeaService && (
                 <section className="print-page print-page-landscape min-h-[790px] w-[1120px] max-w-full bg-white p-8 shadow-sm print:w-full">
                     <Header client={client} page={isComplete ? 'Page 3 of 4' : pageLabel(1)} />
-                    <SeaServiceTable rows={sortRowsBySignOffDate(client?.sea_service || [])} />
+                    <SeaServiceTable rows={sortRowsBySignOffDate(client?.sea_service || [])} preserveOrder />
                     <p className="mt-4 text-xs font-bold">Note: Type of Engines &amp; BHP: Mandatory for Engineers</p>
                 </section>
                 )}

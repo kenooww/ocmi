@@ -15,6 +15,7 @@ class SeafarerContract extends Model
         'year_built', 'flag', 'vessel_type', 'classification_society', 'duration', 'position',
         'basic_monthly_salary', 'hours_of_work', 'overtime', 'coverage_of_cba', 'leave_pay',
         'collective_bargaining_agreement', 'contract_date', 'contract_place',
+        'contract_status', 'end_contract_date',
         'seafarer_signature_name', 'employer_name', 'employer_designation',
         'approved_by_name', 'approved_by_designation', 'dmw_place', 'approved_date',
         'allotment_seafarer_name', 'allotment_position', 'allotment_vessel_name',
@@ -31,6 +32,7 @@ class SeafarerContract extends Model
     protected $casts = [
         'date_of_birth' => 'date',
         'contract_date' => 'date',
+        'end_contract_date' => 'date',
         'approved_date' => 'date',
         'allotment_date' => 'date',
     ];

@@ -8,7 +8,7 @@ const emptyContract = {
     agency_name: '', agency_address: '', dmw_agency_principal: '', principal_name: '', principal_address: '', shipper_name: '', shipper_address: '',
     vessel_name: '', imo_number: '', gross_registered_tonnage: '', year_built: '', flag: '', vessel_type: '', classification_society: '',
     duration: '', position: '', basic_monthly_salary: '', hours_of_work: '', overtime: '', coverage_of_cba: '', leave_pay: '', collective_bargaining_agreement: '',
-    contract_date: '', contract_place: '', seafarer_signature_name: '', employer_name: '', employer_designation: '', approved_by_name: '',
+    contract_date: '', contract_place: '', contract_status: '', end_contract_date: '', seafarer_signature_name: '', employer_name: '', employer_designation: '', approved_by_name: '',
     approved_by_designation: '', dmw_place: '', approved_date: '',
     allotment_seafarer_name: '', allotment_position: '', allotment_vessel_name: '', allotment_monthly_salary: '', allotment_amount: '',
     allottee_name: '', allottee_relationship: '', allottee_address: '', allottee_bank: '', allottee_account_number: '',
@@ -30,18 +30,26 @@ function ContractSection({ title, children }) {
     );
 }
 
-export default function ContractForm({ contract, seafarers = [], defaults = {} }) {
+export default function ContractForm({ contract, seafarers = [], principals = [], defaults = {} }) {
     const initial = contract ? {
         ...emptyContract,
         ...contract,
         date_of_birth: dateValue(contract.date_of_birth),
         contract_date: dateValue(contract.contract_date),
+        end_contract_date: dateValue(contract.end_contract_date),
         approved_date: dateValue(contract.approved_date),
         allotment_date: dateValue(contract.allotment_date),
     } : { ...emptyContract, ...defaults };
 
     const { data, setData, post, put, processing, errors } = useForm(initial);
     const [activeTab, setActiveTab] = useState('contract');
+    const [seafarerSearch, setSeafarerSearch] = useState(initial.seafarer_name || '');
+    const [seafarerDropdownOpen, setSeafarerDropdownOpen] = useState(false);
+
+    const seafarerName = (seafarer) => [seafarer.first_name, seafarer.middle_name, seafarer.last_name].filter(Boolean).join(' ') || seafarer.name || '';
+    const seafarerMatches = seafarerSearch.trim()
+        ? seafarers.filter((seafarer) => seafarerName(seafarer).toLowerCase().includes(seafarerSearch.trim().toLowerCase())).slice(0, 20)
+        : [];
 
     useEffect(() => {
         setData((current) => ({
@@ -92,7 +100,7 @@ export default function ContractForm({ contract, seafarers = [], defaults = {} }
             {type === 'textarea' ? (
                 <textarea rows={options.rows || 3} value={data[key] || ''} onChange={(event) => setData(key, event.target.value)} className="w-full rounded border-slate-300 text-sm focus:border-[#B8863B] focus:ring-[#B8863B]" />
             ) : (
-                <input type={type} value={data[key] || ''} onChange={(event) => setData(key, event.target.value)} className="w-full rounded border-slate-300 text-sm focus:border-[#B8863B] focus:ring-[#B8863B]" />
+                <input type={type} value={data[key] || ''} onChange={(event) => setData(key, event.target.value)} required={options.required || false} disabled={options.disabled || false} className="w-full rounded border-slate-300 text-sm focus:border-[#B8863B] focus:ring-[#B8863B] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500" />
             )}
             {errors[key] && <span className="mt-1 block text-xs text-red-600">{errors[key]}</span>}
         </label>
@@ -135,8 +143,43 @@ export default function ContractForm({ contract, seafarers = [], defaults = {} }
                 {activeTab === 'contract' && (
                     <>
                         <Section title="Contract Information">
-                            <label className="block"><span className="mb-1 block text-xs font-semibold text-slate-600">Seafarer</span><select value={data.client_id || ''} onChange={(event) => selectSeafarer(event.target.value)} className="w-full rounded border-slate-300 text-sm"><option value="">Select seafarer</option>{seafarers.map((item) => <option key={item.id} value={item.id}>{[item.first_name, item.middle_name, item.last_name].filter(Boolean).join(' ') || item.name}</option>)}</select></label>
-                            {field('contract_number', 'Contract Number')}
+                            <div className="relative block">
+                                <span className="mb-1 block text-xs font-semibold text-slate-600">Seafarer</span>
+                                <input
+                                    type="text"
+                                    value={seafarerSearch}
+                                    onChange={(event) => {
+                                        setSeafarerSearch(event.target.value);
+                                        setSeafarerDropdownOpen(Boolean(event.target.value.trim()));
+                                        if (!event.target.value) setData((current) => ({ ...current, client_id: '' }));
+                                    }}
+                                    onFocus={() => setSeafarerDropdownOpen(Boolean(seafarerSearch.trim()))}
+                                    onBlur={() => setSeafarerDropdownOpen(false)}
+                                    placeholder="Search seafarer"
+                                    className="w-full rounded border-slate-300 text-sm focus:border-[#B8863B] focus:ring-[#B8863B]"
+                                />
+                                {seafarerDropdownOpen && seafarerMatches.length > 0 && (
+                                    <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded border border-slate-200 bg-white shadow-lg">
+                                        {seafarerMatches.map((seafarer) => (
+                                            <button
+                                                key={seafarer.id}
+                                                type="button"
+                                                onMouseDown={(event) => event.preventDefault()}
+                                                onClick={() => {
+                                                    setSeafarerSearch(seafarerName(seafarer));
+                                                    setSeafarerDropdownOpen(false);
+                                                    selectSeafarer(seafarer.id);
+                                                }}
+                                                className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                            >
+                                                {seafarerName(seafarer)}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                                {errors.client_id && <span className="mt-1 block text-xs text-red-600">{errors.client_id}</span>}
+                            </div>
+                            {field('contract_number', 'Contract Number', 'text', { disabled: true })}
                             <label className="block"><span className="mb-1 block text-xs font-semibold text-slate-600">Status</span><select value={data.status} onChange={(event) => setData('status', event.target.value)} className="w-full rounded border-slate-300 text-sm"><option>Draft</option><option>Signed</option><option>Cancelled</option></select></label>
                         </Section>
 
@@ -154,7 +197,29 @@ export default function ContractForm({ contract, seafarers = [], defaults = {} }
                             {field('agency_name', 'Licensed Manning Agency')}
                             {field('agency_address', 'Agency Address', 'textarea')}
                             {field('dmw_agency_principal', 'DMW Accredited Principal')}
-                            {field('principal_name', 'Principal/Shipowner')}
+                            <label className="block">
+                                <span className="mb-1 block text-xs font-semibold text-slate-600">Principal/Shipowner</span>
+                                <select
+                                    value={data.principal_name || ''}
+                                    onChange={(event) => {
+                                        const principal = principals.find((item) => item.principal_name === event.target.value);
+                                        setData((current) => ({
+                                            ...current,
+                                            principal_name: event.target.value,
+                                            principal_address: principal?.address || current.principal_address,
+                                        }));
+                                    }}
+                                    className="w-full rounded border-slate-300 text-sm focus:border-[#B8863B] focus:ring-[#B8863B]"
+                                >
+                                    <option value="">Select principal/shipowner</option>
+                                    {principals.map((principal) => (
+                                        <option key={principal.id} value={principal.principal_name}>
+                                            {principal.principal_name}{principal.principal_code ? ` (${principal.principal_code})` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.principal_name && <span className="mt-1 block text-xs text-red-600">{errors.principal_name}</span>}
+                            </label>
                             {field('principal_address', 'Principal Address', 'textarea')}
                             {field('shipper_name', 'Name of Shipper/Shipowner')}
                             {field('shipper_address', 'Shipper Address', 'textarea')}
@@ -179,8 +244,22 @@ export default function ContractForm({ contract, seafarers = [], defaults = {} }
                             {field('leave_pay', 'Leave Pay')}
                             {field('coverage_of_cba', 'Point of Hire')}
                             {field('collective_bargaining_agreement', 'Collective Bargaining Agreement (If Any)')}
-                            {field('contract_date', 'Contract Date', 'date')}
-                            {field('contract_place', 'Contract Place')}
+                            {field('contract_date', 'Contract Date', 'date', { required: data.contract_status === 'End Contract' })}
+                            <label className="block">
+                                <span className="mb-1 block text-xs font-semibold text-slate-600">Contract Status</span>
+                                <select
+                                    value={data.contract_status || ''}
+                                    onChange={(event) => setData('contract_status', event.target.value)}
+                                    className="w-full rounded border-slate-300 text-sm focus:border-[#B8863B] focus:ring-[#B8863B]"
+                                >
+                                    <option value="">Select status</option>
+                                    <option value="Onboard">Onboard</option>
+                                    <option value="Extend">Extend</option>
+                                    <option value="End Contract">End Contract</option>
+                                </select>
+                                {errors.contract_status && <span className="mt-1 block text-xs text-red-600">{errors.contract_status}</span>}
+                            </label>
+                            {field('end_contract_date', 'End Contract Date', 'date', { required: data.contract_status === 'End Contract' })}
                         </Section>
 
                         <Section title="Signatures and Approval">

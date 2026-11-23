@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CompanySetting;
 use App\Models\SeafarerContract;
 use App\Models\Client;
+use App\Models\Principal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -21,9 +22,17 @@ class SeafarerContractController extends Controller
             ->get(['id', 'name', 'first_name', 'middle_name', 'last_name', 'date_of_birth', 'place_of_birth', 'current_home_address', 'current_position', 'e_registration_number']);
     }
 
+    private function principals()
+    {
+        return Principal::query()
+            ->orderBy('principal_name')
+            ->get(['id', 'principal_name', 'principal_code', 'address']);
+    }
+
     public function index(Request $request)
     {
         $search = trim((string) $request->query('search', ''));
+        $contractStatus = trim((string) $request->query('contract_status', ''));
 
         $contracts = SeafarerContract::query()
             ->with('client:id,name,first_name,middle_name,last_name')
@@ -32,15 +41,20 @@ class SeafarerContractController extends Controller
                     ->orWhere('seafarer_name', 'like', "%{$search}%")
                     ->orWhere('vessel_name', 'like', "%{$search}%")
                     ->orWhere('principal_name', 'like', "%{$search}%")
-                    ->orWhere('status', 'like', "%{$search}%");
+                    ->orWhere('status', 'like', "%{$search}%")
+                    ->orWhere('contract_status', 'like', "%{$search}%");
             }))
+            ->when($contractStatus !== '', fn ($query) => $query->where('contract_status', $contractStatus))
             ->latest()
             ->paginate(15)
             ->withQueryString();
 
         return Inertia::render('Admin/Contracts/Index', [
             'contracts' => $contracts,
-            'filters' => ['search' => $search],
+            'filters' => [
+                'search' => $search,
+                'contract_status' => $contractStatus,
+            ],
         ]);
     }
 
@@ -51,6 +65,7 @@ class SeafarerContractController extends Controller
         return Inertia::render('Admin/Contracts/Form', [
             'contract' => null,
             'seafarers' => $this->seafarers(),
+            'principals' => $this->principals(),
             'defaults' => [
                 'agency_name' => $company->company_name,
                 'agency_address' => $company->address,
@@ -79,6 +94,7 @@ class SeafarerContractController extends Controller
         return Inertia::render('Admin/Contracts/Form', [
             'contract' => $contract->load('client:id,name,first_name,middle_name,last_name'),
             'seafarers' => $this->seafarers(),
+            'principals' => $this->principals(),
             'defaults' => [
                 'agency_name' => $company->company_name,
                 'agency_address' => $company->address,
@@ -145,7 +161,9 @@ class SeafarerContractController extends Controller
             'coverage_of_cba' => ['nullable', 'string', 'max:255'],
             'leave_pay' => ['nullable', 'string', 'max:255'],
             'collective_bargaining_agreement' => ['nullable', 'string', 'max:255'],
-            'contract_date' => ['nullable', 'date'],
+            'contract_date' => ['required_if:contract_status,End Contract', 'nullable', 'date'],
+            'contract_status' => ['nullable', 'in:Onboard,Extend,End Contract'],
+            'end_contract_date' => ['required_if:contract_status,End Contract', 'nullable', 'date'],
             'contract_place' => ['nullable', 'string', 'max:255'],
             'seafarer_signature_name' => ['nullable', 'string', 'max:255'],
             'employer_name' => ['nullable', 'string', 'max:255'],

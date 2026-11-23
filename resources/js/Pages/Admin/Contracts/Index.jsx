@@ -5,10 +5,14 @@ import AdminTabs from '@/Components/Admin/AdminTabs';
 
 export default function ContractsIndex({ contracts, filters = {} }) {
     const [search, setSearch] = useState(filters.search || '');
+    const [contractStatus, setContractStatus] = useState(filters.contract_status || '');
 
     const handleSearch = (event) => {
         event.preventDefault();
-        router.get(route('admin.contracts.index'), search.trim() ? { search: search.trim() } : {}, { preserveState: true, replace: true });
+        router.get(route('admin.contracts.index'), {
+            search: search.trim() || undefined,
+            contract_status: contractStatus || undefined,
+        }, { preserveState: true, replace: true });
     };
 
     const removeContract = (contract) => {
@@ -16,6 +20,8 @@ export default function ContractsIndex({ contracts, filters = {} }) {
             router.delete(route('admin.contracts.destroy', contract.id), { preserveScroll: true });
         }
     };
+
+    const formatDate = (value) => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Not set';
 
     return (
         <AdminTabs activeTab="contracts" title="Contracts">
@@ -32,12 +38,18 @@ export default function ContractsIndex({ contracts, filters = {} }) {
                     </Link>
                 </header>
 
-                <form onSubmit={handleSearch} className="flex gap-2 rounded border border-slate-200 bg-white p-4 shadow-sm">
+                <form onSubmit={handleSearch} className="flex flex-col gap-3 rounded border border-slate-200 bg-white p-4 shadow-sm sm:flex-row">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                         <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search contract, seafarer, vessel, principal, or status" className="w-full rounded border-slate-300 py-2.5 pl-10 text-sm" />
                     </div>
-                    <button type="submit" className="rounded bg-[#B8863B] px-4 text-sm font-semibold text-white">Search</button>
+                    <select value={contractStatus} onChange={(event) => setContractStatus(event.target.value)} className="rounded border-slate-300 py-2.5 text-sm sm:w-52">
+                        <option value="">All Contract Status</option>
+                        <option value="Onboard">Onboard</option>
+                        <option value="Extend">Extend</option>
+                        <option value="End Contract">End Contract</option>
+                    </select>
+                    <button type="submit" className="rounded bg-[#B8863B] px-4 py-2.5 text-sm font-semibold text-white">Search</button>
                 </form>
 
                 <section className="overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
@@ -50,6 +62,9 @@ export default function ContractsIndex({ contracts, filters = {} }) {
                                     <th className="border-b px-4 py-3">Vessel</th>
                                     <th className="border-b px-4 py-3">Principal</th>
                                     <th className="border-b px-4 py-3">Status</th>
+                                    <th className="border-b px-4 py-3">Contract Date</th>
+                                    <th className="border-b px-4 py-3">Contract Status</th>
+                                    <th className="border-b px-4 py-3">End Contract</th>
                                     <th className="border-b px-4 py-3 text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -61,6 +76,9 @@ export default function ContractsIndex({ contracts, filters = {} }) {
                                         <td className="px-4 py-4 text-slate-600">{contract.vessel_name || 'Not set'}</td>
                                         <td className="px-4 py-4 text-slate-600">{contract.principal_name || 'Not set'}</td>
                                         <td className="px-4 py-4"><span className="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{contract.status}</span></td>
+                                        <td className="px-4 py-4">{formatDate(contract.contract_date)}</td>
+                                        <td className="px-4 py-4">{contract.contract_status}</td>
+                                        <td className="px-4 py-4">{formatDate(contract.end_contract_date)}</td>
                                         <td className="px-4 py-4">
                                             <div className="flex justify-end gap-2">
                                                 <Link href={route('admin.contracts.print', contract.id)} className="inline-flex h-8 w-8 items-center justify-center rounded border border-sky-200 text-sky-700 hover:bg-sky-50" title="Print"><Printer size={15} /></Link>
@@ -70,7 +88,7 @@ export default function ContractsIndex({ contracts, filters = {} }) {
                                         </td>
                                     </tr>
                                 )) : (
-                                    <tr><td colSpan="6" className="px-5 py-14 text-center text-sm text-slate-500">No contracts found.</td></tr>
+                                    <tr><td colSpan="9" className="px-5 py-14 text-center text-sm text-slate-500">No contracts found.</td></tr>
                                 )}
                             </tbody>
                         </table>
